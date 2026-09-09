@@ -1,0 +1,5 @@
+# Verify annotates the draft; it never triggers a retry or re-draft
+
+When `verify` finds low confidence or no supporting context, the pipeline returns the drafted answer as-is, flagged (`low_confidence` and/or `no_supporting_context`). It does not loop back to re-retrieve or re-draft in search of an answer verify will approve. Each Step runs exactly once per query.
+
+A retry/reflection loop was considered — re-drafting or re-retrieving until verify's score improves — but rejected for now. It would let the pipeline quietly optimize toward "whatever the verify model will approve," which is a worse failure mode for a compliance tool than an honestly low-confidence answer a human can see and override. It's also a bigger design question on its own (retry budgets, cost, whether retries nest inside the same Event or start a new one) that doesn't need answering to hit this project's core differentiator. This matches the design already committed to via `Flag` and `Override`: a possibly-wrong answer is shown and marked, not hidden or silently reworked.
