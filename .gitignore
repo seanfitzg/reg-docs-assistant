@@ -1,3 +1,6 @@
 CV-SeanFitzgerald-March2026.docx.pdf
 .claude/settings.local.json
 corpus/*.pdf
+schema/.venv/
+**/__pycache__/
+.pytest_cache/
