@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnswerOverridden",
+  "description": "A human correction to a query's answer. Never modifies the original Event (ADR-0001) — this is its own new record, referencing the original QueryAnswered Event by id, with no field that could target or overwrite the original's own fields.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "event_type": { "const": "AnswerOverridden" },
+    "original_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The id of the QueryAnswered Event this corrects."
+    },
+    "corrected_answer": { "type": "string", "minLength": 1 },
+    "note": {
+      "type": "string",
+      "description": "Optional human-written reason for the correction."
+    }
+  },
+  "required": ["id", "event_type", "original_event_id", "corrected_answer"],
+  "additionalProperties": false
+}

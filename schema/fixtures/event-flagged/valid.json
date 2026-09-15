@@ -1,0 +1,7 @@
+{
+  "id": "event-flagged-001",
+  "event_type": "EventFlagged",
+  "original_event_id": "event-002",
+  "flag": "human_flagged",
+  "note": "A compliance reviewer disagrees with this answer's characterisation of the retrieved section."
+}

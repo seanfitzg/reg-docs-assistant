@@ -1,0 +1,42 @@
+{
+  "id": "event-002",
+  "event_type": "QueryAnswered",
+  "query": "Does the Consumer Protection Code apply to crypto-asset firms?",
+  "answer": "The retrieved sections do not clearly address crypto-asset firms; this answer may not be fully supported by the source material.",
+  "flags": ["low_confidence"],
+  "steps": [
+    {
+      "step_type": "classify",
+      "model": "local-llama-3.1-8b",
+      "cost": 0.0001,
+      "latency_ms": 110
+    },
+    {
+      "step_type": "retrieve",
+      "model": "local-embedding-model",
+      "cost": 0.0002,
+      "latency_ms": 300,
+      "retrieved_chunks": [
+        {
+          "chunk_id": "chunk-cpc2012-gen2-001",
+          "document_id": "doc-cpc-2012",
+          "text": "A regulated entity shall provide a minimum of 30 business days' written notice to the consumer in advance of applying any fee waiver.",
+          "score": 0.42
+        }
+      ]
+    },
+    {
+      "step_type": "draft",
+      "model": "claude-sonnet-5",
+      "cost": 0.011,
+      "latency_ms": 790
+    },
+    {
+      "step_type": "verify",
+      "model": "local-llama-3.1-8b",
+      "cost": 0.0003,
+      "latency_ms": 190,
+      "confidence": 0.31
+    }
+  ]
+}

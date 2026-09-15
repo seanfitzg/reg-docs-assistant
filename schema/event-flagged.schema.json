@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EventFlagged",
+  "description": "Records a human raising the human_flagged Flag on an existing Event after the fact. Never modifies the original Event (ADR-0001) — this is its own new record, referencing the original by id, with no field that could target or overwrite the original's own fields.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "event_type": { "const": "EventFlagged" },
+    "original_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The id of the QueryAnswered Event this flags."
+    },
+    "flag": { "const": "human_flagged" },
+    "note": {
+      "type": "string",
+      "description": "Optional human-written reason for the flag."
+    }
+  },
+  "required": ["id", "event_type", "original_event_id", "flag"],
+  "additionalProperties": false
+}

@@ -1,0 +1,7 @@
+{
+  "id": "answer-overridden-001",
+  "event_type": "AnswerOverridden",
+  "original_event_id": "event-001",
+  "corrected_answer": "A firm must give a minimum of 30 business days' written notice before applying a fee waiver, per Section 3.2(a) — this applies to all regulated fee waivers, not only those affecting existing customers.",
+  "note": "Original answer omitted that the notice requirement applies regardless of customer tenure."
+}

@@ -48,6 +48,12 @@ def test_superseding_document_references_the_original_by_id():
     # indexer, except there's no declared value type since Python resolves
     # types at runtime. A missing key raises KeyError rather than returning
     # null, so this line also doubles as "the field is actually present".
+    #
+    # "assert" is a language keyword here, not a method call — pytest
+    # rewrites it under the hood so that on failure it reports the actual
+    # values of both sides (e.g. "assert 'doc-1' == 'doc-2'"), similar to
+    # what Assert.AreEqual(expected, actual) gives you in nUnit, but without
+    # having to call a separate Assert API.
     assert superseding["supersedes"] == original["id"]
 
 

@@ -1,0 +1,15 @@
+{
+  "id": "event-invalid-005",
+  "event_type": "QueryAnswered",
+  "query": "What does Icelandic banking law say about overdraft fees?",
+  "answer": "No relevant information was found in the available regulatory documents.",
+  "flags": ["no_chunks_retrieved"],
+  "steps": [
+    {
+      "step_type": "classify",
+      "model": "local-llama-3.1-8b",
+      "cost": 0.0001,
+      "latency_ms": 100
+    }
+  ]
+}
