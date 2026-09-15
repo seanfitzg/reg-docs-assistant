@@ -83,6 +83,15 @@ def test_chunk_locators_are_bare_clause_numbers_not_page_decorated():
     # A bare clause number like "1.8" -- not "1.8 (p. 7)". heading_sections/
     # academic_sections documents get page-decorated locators (ADR-0015);
     # clause_numbered ones deliberately don't (Q5 of the grilling session).
+    #
+    # "c for c in chunks if ..." is a *generator expression* -- like the
+    # list comprehensions used elsewhere in this project, but without the
+    # surrounding [ ], so it produces values lazily one at a time instead of
+    # building the whole list up front. next(...) pulls just the first
+    # value out of it (and would raise StopIteration if nothing matched) --
+    # roughly the same job as C#'s chunks.First(c => c.Locator == "1.8"),
+    # but built from two separate, more general pieces (a generator, plus
+    # next()) rather than one LINQ method.
     known_real_clause = next(c for c in chunks if c["locator"] == "1.8")
     assert "(p." not in known_real_clause["locator"]
 

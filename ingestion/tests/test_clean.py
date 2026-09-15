@@ -44,6 +44,12 @@ def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stri
     # of pages" would ever fire there. What both this real case and this
     # synthetic one share is a line repeating far more often than real
     # prose plausibly would: here, 5 of 20 pages.
+    #
+    # "X if cond else Y" is Python's conditional expression (the equivalent
+    # of C#'s "cond ? X : Y" ternary), used here *inside* a list
+    # comprehension -- for each i in range(20), it evaluates the ternary to
+    # decide which string that page gets, producing a 20-item list in one
+    # expression rather than a separate loop with an if/else inside it.
     pages = ["Running Header\nReal page content." if i < 5 else f"Page {i} unique content." for i in range(20)]
 
     cleaned = strip_headers_footers_and_page_numbers(pages)

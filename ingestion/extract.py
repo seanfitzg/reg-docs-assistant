@@ -12,6 +12,11 @@ import pymupdf
 
 
 def extract_pages(pdf_path: Path) -> list[str]:
+    # "-> list[str]" is a return-type hint: this function returns a list of
+    # strings -- Python's built-in spelling of C#'s List<string>. Like all
+    # type hints in this project, it's documentation only, not enforced at
+    # runtime.
+
     # pymupdf.open(path) loads the PDF; the resulting Document object
     # supports iteration, yielding one Page object per page in order --
     # comparable to iterating a collection with foreach in C#.
