@@ -1,0 +1,18 @@
+{
+  // Both schema/ and ingestion/ have their own venv. ingestion/.venv is used
+  // here for all Python test discovery/debugging because it's currently a
+  // superset of schema/.venv's dependencies (it has jsonschema+pytest too,
+  // plus pymupdf which schema doesn't need). VS Code's Python extension only
+  // supports one interpreter per workspace, so this is a deliberate
+  // single-interpreter trade-off, not an oversight — see the conversation
+  // that set this up for the alternative (a multi-root .code-workspace with
+  // one interpreter per subfolder) if schema/ and ingestion/ dependencies
+  // ever diverge in the other direction.
+  "python.defaultInterpreterPath": "${workspaceFolder}/ingestion/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "schema/tests",
+    "ingestion/tests"
+  ]
+}

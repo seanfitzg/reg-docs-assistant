@@ -1,26 +1,29 @@
 # Orchestrates the ingestion pipeline: manifest entry -> extract -> clean ->
-# chunk -> validate -> write. This is the "tracer bullet" ticket (#5), so it
-# only wires up the clause_numbered strategy end to end; #6/#7 add
-# heading_sections and academic_sections into CHUNKING_STRATEGIES below
-# without needing to change anything else here.
+# chunk -> validate -> write. Issue #5 wired up clause_numbered end to end;
+# #6 adds heading_sections. Each strategy module owns its own extraction and
+# cleaning (clause_numbered works from plain per-page text; heading_sections
+# needs the bold/font-aware layout extraction instead), exposed uniformly as
+# a chunk_document(pdf_path) -> list[dict] function -- so this file only
+# needs to know a strategy's *name*, never which extraction shape it needs
+# internally. Registering a new strategy in CHUNKING_STRATEGIES below is the
+# only change future strategies (e.g. #7's academic_sections) require here.
 
 import json
 from pathlib import Path
 
-from clean import strip_headers_footers_and_page_numbers
-from extract import extract_pages
 from ids import chunk_id, document_id_from_filename, generation_id
-from strategies import clause_numbered
+from strategies import clause_numbered, heading_sections
 from validate import load_schema, validate_against_schema
 
 # A dict used as a lookup table from a manifest's "chunking_strategy" string
 # to the function that implements it -- Python functions are ordinary
 # values that can be stored in a dict/passed around like any other object
 # (comparable to storing C# method references in a
-# Dictionary<string, Func<...>>). Each strategy function has the same
-# shape: (text: str) -> list[dict] of {"locator", "text"}.
+# Dictionary<string, Func<...>>). Each strategy's chunk_document has the
+# same shape: (pdf_path: Path) -> list[dict] of {"locator", "text"}.
 CHUNKING_STRATEGIES = {
-    "clause_numbered": clause_numbered.chunk,
+    "clause_numbered": clause_numbered.chunk_document,
+    "heading_sections": heading_sections.chunk_document,
 }
 
 
@@ -36,13 +39,6 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     document_id = document_id_from_filename(entry["filename"])
     pdf_path = corpus_dir / entry["filename"]
 
-    raw_pages = extract_pages(pdf_path)
-    cleaned_pages = strip_headers_footers_and_page_numbers(raw_pages)
-    # The clause-numbered strategy works over the whole document's text at
-    # once (a clause can't be assumed to stay within one page), so the
-    # per-page strings are joined back into a single string here.
-    full_text = "\n".join(cleaned_pages)
-
     # entry["chunking_strategy"] is a plain dict lookup, same as
     # entry.get("filename") above but using [] since a missing key here
     # should be a loud error, not silently produce None -- there's no
@@ -51,8 +47,8 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     # below; per-entry failure isolation (so one bad manifest entry can't
     # take down an entire batch) is issue #8, not this ticket.
     strategy_name = entry["chunking_strategy"]
-    chunk_function = CHUNKING_STRATEGIES[strategy_name]
-    raw_chunks = chunk_function(full_text)
+    chunk_document_with_strategy = CHUNKING_STRATEGIES[strategy_name]
+    raw_chunks = chunk_document_with_strategy(pdf_path)
 
     # This ticket only covers a document's first-ever ingestion, so it's
     # always generation 1 -- re-chunking an already-ingested Document into a

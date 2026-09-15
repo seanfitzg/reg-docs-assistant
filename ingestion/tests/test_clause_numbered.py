@@ -10,7 +10,19 @@
 # guesswork -- real regulatory-PDF text extraction is inconsistent about
 # which of these shapes shows up where.
 
-from strategies.clause_numbered import chunk
+from pathlib import Path
+
+import pytest
+
+from strategies.clause_numbered import chunk, chunk_document
+
+CORPUS_DIR = Path(__file__).parent.parent.parent / "corpus"
+CP54_PDF = CORPUS_DIR / "04-cp54-second-consultation-consumer-protection-code.pdf"
+
+requires_corpus = pytest.mark.skipif(
+    not CP54_PDF.exists(),
+    reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
+)
 
 
 def test_splits_on_each_clause_number():
@@ -79,3 +91,14 @@ def test_no_clause_numbers_produces_no_chunks():
     chunks = chunk(text)
 
     assert chunks == []
+
+
+@requires_corpus
+def test_chunk_document_extracts_cleans_and_chunks_the_real_pdf_end_to_end():
+    # chunk() alone (tested above) never touches a PDF -- this proves the
+    # extract -> clean -> chunk wiring chunk_document() adds on top of it
+    # actually works together against the real corpus, not just in theory.
+    chunks = chunk_document(CP54_PDF)
+
+    assert any(c["locator"] == "1.8" for c in chunks)
+    assert all("Consultation Paper CP 54" not in c["text"] for c in chunks)

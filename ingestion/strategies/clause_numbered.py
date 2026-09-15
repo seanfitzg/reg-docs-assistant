@@ -5,6 +5,10 @@
 # academic_sections it needs no page number decoration -- Q5).
 
 import re
+from pathlib import Path
+
+from clean import strip_headers_footers_and_page_numbers
+from extract import extract_pages
 
 # re.compile(...) pre-builds a regular expression once, rather than
 # re-parsing the pattern string every time it's used -- comparable to a
@@ -60,3 +64,16 @@ def chunk(text: str) -> list[dict]:
             chunks.append({"locator": locator, "text": chunk_text})
 
     return chunks
+
+
+def chunk_document(pdf_path: Path) -> list[dict]:
+    # Every strategy module exposes this same chunk_document(pdf_path)
+    # shape (see heading_sections.chunk_document for the other one so far),
+    # so pipeline.py can call whichever strategy a manifest entry names
+    # without needing to know that strategy's own extraction/cleaning
+    # needs -- clause_numbered works from plain per-page text, but nothing
+    # outside this module has to care.
+    raw_pages = extract_pages(pdf_path)
+    cleaned_pages = strip_headers_footers_and_page_numbers(raw_pages)
+    full_text = "\n".join(cleaned_pages)
+    return chunk(full_text)

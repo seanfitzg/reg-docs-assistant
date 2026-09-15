@@ -7,5 +7,14 @@
     "source_url": "https://www.centralbank.ie/docs/default-source/publications/consultation-papers/cp54/cp54-second-consultation-on-review-of-consumer-protection-code.pdf?sfvrsn=98e5d51d_0",
     "supersedes": null,
     "chunking_strategy": "clause_numbered"
+  },
+  {
+    "filename": "12-dp8-outsourcing-findings-and-issues.pdf",
+    "title": "Outsourcing - Findings and Issues for Discussion",
+    "publisher": "Central Bank of Ireland",
+    "published_date": "2018-11-01",
+    "source_url": "https://www.centralbank.ie/docs/default-source/publications/discussion-papers/discussion-paper-8/discussion-paper-8---outsourcing-findings-and-issues-for-discussion.pdf?sfvrsn=cc51b61d_12",
+    "supersedes": null,
+    "chunking_strategy": "heading_sections"
   }
 ]

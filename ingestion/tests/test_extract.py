@@ -8,7 +8,7 @@
 
 import pymupdf
 
-from extract import extract_pages
+from extract import extract_pages, extract_pages_with_headings
 
 
 def test_extract_pages_returns_one_string_per_page(tmp_path):
@@ -32,3 +32,27 @@ def test_extract_pages_returns_one_string_per_page(tmp_path):
     assert len(pages) == 2
     assert "Page one text." in pages[0]
     assert "Page two text." in pages[1]
+
+
+def test_extract_pages_with_headings_flags_bold_lines_as_headings(tmp_path):
+    # "hebo"/"helv" are two of pymupdf's built-in Base-14 font shortcuts --
+    # Helvetica-Bold and plain Helvetica -- needing no font file of their
+    # own. Real headings in this corpus are detected the same way: a line
+    # where every character is set in a bold-flagged font, versus the
+    # regular-weight font body paragraphs use.
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "A Heading", fontname="hebo", fontsize=14)
+    page.insert_text((72, 100), "Regular body text.", fontname="helv", fontsize=10)
+
+    pdf_path = tmp_path / "scratch.pdf"
+    document.save(pdf_path)
+
+    pages = extract_pages_with_headings(pdf_path)
+
+    assert len(pages) == 1
+    lines = pages[0]
+    heading_line = next(line for line in lines if line["text"] == "A Heading")
+    body_line = next(line for line in lines if line["text"] == "Regular body text.")
+    assert heading_line["is_heading"] is True
+    assert body_line["is_heading"] is False
