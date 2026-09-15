@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Document",
+  "description": "An immutable record of one point-in-time regulatory publication. Never edited after ingestion (ADR-0002) — an amendment is a new Document, linked back via 'supersedes'.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "publisher": { "type": "string", "minLength": 1 },
+    "published_date": { "type": "string", "format": "date" },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1,
+      "description": "Pointer to the original file this Document was ingested from — not the content itself, so there is no field here that mutation could target."
+    },
+    "active_chunking_generation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Which Chunking Generation is current for this Document (ADR-0004). Absent until the Document has been chunked at least once."
+    },
+    "supersedes": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The id of the earlier Document this one replaces, if any (ADR-0002)."
+    }
+  },
+  "required": ["id", "title", "publisher", "published_date", "source_url"],
+  "additionalProperties": false
+}

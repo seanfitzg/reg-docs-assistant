@@ -1,0 +1,7 @@
+{
+  "id": "doc-bad-url",
+  "title": "Document With A Malformed Source URL",
+  "publisher": "Central Bank of Ireland",
+  "published_date": "2012-01-01",
+  "source_url": "not a url at all"
+}

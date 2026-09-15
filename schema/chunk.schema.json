@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chunk",
+  "description": "An immutable retrieval and citation unit derived from a Document, aligned to the Document's own structure rather than a fixed-size window. Reprocessing a Document produces a fresh Chunking Generation, never overwriting existing Chunks (ADR-0003).",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "document_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Document this Chunk was derived from."
+    },
+    "chunking_generation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Which run of the chunking strategy produced this Chunk (ADR-0003, ADR-0004). Multiple generations for the same document_id can coexist; only the Document's active_chunking_generation_id is eligible for retrieval."
+    },
+    "locator": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The structural locator within the source Document (e.g. a section or clause identifier), so a citation can be verified against the original."
+    },
+    "text": { "type": "string", "minLength": 1 }
+  },
+  "required": ["id", "document_id", "chunking_generation_id", "locator", "text"],
+  "additionalProperties": false
+}

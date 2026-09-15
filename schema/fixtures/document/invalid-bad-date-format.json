@@ -1,0 +1,7 @@
+{
+  "id": "doc-bad-date",
+  "title": "Document With A Malformed Date",
+  "publisher": "Central Bank of Ireland",
+  "published_date": "not-a-date",
+  "source_url": "https://www.centralbank.ie/publication/consultation-papers"
+}

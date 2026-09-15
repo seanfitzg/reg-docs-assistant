@@ -16,15 +16,18 @@ pip install -r schema/requirements.txt
 ## Running the tests
 
 ```
-pytest schema/tests
+python -m pytest schema/tests
 ```
 
 Exit code `0` means every fixture validated as expected; a non-zero exit code means at least one didn't.
 
+On Windows machines with an Application Control policy (WDAC/AppLocker), running `pytest.exe` directly can be blocked since pip-installed console-script `.exe` wrappers are typically unsigned. `python -m pytest` runs the same code through the signed `python.exe` interpreter instead, avoiding the block — use this form rather than the bare `pytest` command.
+
 ## Layout
 
-- `fixtures/<name>/schema.json` — one JSON Schema.
-- `fixtures/<name>/valid.json`, `fixtures/<name>/invalid.json` (or similarly named) — example payloads asserted to pass or fail validation against that schema.
-- `tests/test_<name>.py` — the pytest file validating that schema's fixtures.
+- `<name>.schema.json` at the top level — one JSON Schema per domain concept (e.g. `document.schema.json`, `chunk.schema.json`).
+- `fixtures/<name>/` — example payloads for that schema, named for what they demonstrate (e.g. `valid-original.json`, `invalid-missing-required.json`) and asserted to pass or fail validation accordingly.
+- `tests/` — one pytest file per group of *related* schemas, not strictly one per schema name: `test_document_chunk.py` covers both `document.schema.json` and `chunk.schema.json` together, because they share fixtures and cross-schema relationship assertions (a `Document` that `supersedes` another, a `Chunk` generation pointing back at the right `Document`) that don't belong to either schema alone. Split into per-schema files instead once two schemas stop sharing that kind of relationship test.
+- `tests/support.py` — shared test helpers (`load_json`, and `validate`, which enforces JSON Schema `format` constraints that `jsonschema.validate()` skips by default unless told to check them). Every new test file should validate through `support.validate()`, not call `jsonschema.validate()` directly, so format enforcement is never silently opted out of. The one exception is `test_harness.py` itself, which predates `support.py` and stays hand-annotated in its original form as a line-by-line Python primer — its trivial schema has no `format` constraints to enforce, so nothing is actually lost by it not using the shared helpers.
 
-`fixtures/trivial/` is a throwaway example proving the harness itself works end-to-end; it's not part of the real domain model.
+`fixtures/trivial/` (with its schema alongside it, not at the top level) is a throwaway example proving the harness itself works end-to-end; it's not part of the real domain model.
