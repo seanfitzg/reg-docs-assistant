@@ -73,6 +73,21 @@ def _find_boilerplate_lines(pages_of_lines: list[list[str]]) -> set[str]:
     }
 
 
+def _keep_line(normalized_text: str, boilerplate_lines: set[str]) -> bool:
+    # Shared by both public functions below, so the actual keep/discard
+    # rule is written -- and explained -- exactly once, however many
+    # different input shapes end up calling it.
+    return (
+        # A blank line carries nothing to keep either way.
+        bool(normalized_text)
+        # A line that repeats often enough is a header/footer.
+        and normalized_text not in boilerplate_lines
+        # A line that's just an optional "page" word plus a number
+        # (e.g. "5", "Page 5") is a page number, not real content.
+        and not _is_page_number(normalized_text)
+    )
+
+
 def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
     # .split("\n") breaks each page's raw text into one string per line
     # (pymupdf's get_text() already uses "\n" as the line separator). This
@@ -91,17 +106,7 @@ def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
 
     cleaned_pages = []
     for lines in normalized_pages:
-        kept_lines = [
-            line
-            for line in lines
-            # Blank lines carry nothing to keep either way.
-            if line
-            # A line that repeats often enough is a header/footer.
-            and line not in boilerplate_lines
-            # A line that's just an optional "page" word plus a number
-            # (e.g. "5", "Page 5") is a page number, not real content.
-            and not _is_page_number(line)
-        ]
+        kept_lines = [line for line in lines if _keep_line(line, boilerplate_lines)]
         cleaned_pages.append("\n".join(kept_lines))
 
     return cleaned_pages
@@ -110,6 +115,13 @@ def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
 def strip_headers_footers_and_page_numbers_from_layout(
     pages: list[list[dict]],
 ) -> list[list[dict]]:
+    # This variant takes the shape extract_pages_with_headings() produces:
+    # one list per page, each item a dict {"text": str, "is_heading": bool}
+    # for one line -- not a plain string per page, the way extract_pages()
+    # (and the function above) works. line["text"]/line["is_heading"] is a
+    # dict lookup by key, the same as C#'s dict["key"] indexer; it's safe
+    # here (no KeyError risk) because every dict in this shape always has
+    # both keys, guaranteed by whichever function built it.
     normalized_pages = [
         [line["text"].strip() for line in page_lines] for page_lines in pages
     ]
@@ -121,11 +133,7 @@ def strip_headers_footers_and_page_numbers_from_layout(
         kept_lines = []
         for line in page_lines:
             normalized_text = line["text"].strip()
-            if (
-                normalized_text
-                and normalized_text not in boilerplate_lines
-                and not _is_page_number(normalized_text)
-            ):
+            if _keep_line(normalized_text, boilerplate_lines):
                 # Rebuild the dict with the *normalized* text (matching what
                 # strip_headers_footers_and_page_numbers keeps above), but
                 # carry the original "is_heading" flag through untouched --

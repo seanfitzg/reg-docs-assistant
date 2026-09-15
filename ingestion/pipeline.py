@@ -47,8 +47,8 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     # below; per-entry failure isolation (so one bad manifest entry can't
     # take down an entire batch) is issue #8, not this ticket.
     strategy_name = entry["chunking_strategy"]
-    chunk_document_with_strategy = CHUNKING_STRATEGIES[strategy_name]
-    raw_chunks = chunk_document_with_strategy(pdf_path)
+    strategy_chunk_document = CHUNKING_STRATEGIES[strategy_name]
+    raw_chunks = strategy_chunk_document(pdf_path)
 
     # This ticket only covers a document's first-ever ingestion, so it's
     # always generation 1 -- re-chunking an already-ingested Document into a
