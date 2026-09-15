@@ -5,6 +5,7 @@ This project exists so the owner (an experienced .NET developer, new to AI/ML) c
 - Explain concepts as you go, especially anything AI/ML-specific (RAG, embeddings, model behavior, agent patterns, evals, etc.) — don't assume familiarity, and don't skip the explanation just because a decision seems obvious to you.
 - Analogies to things the owner already knows (.NET, event sourcing/CQRS, DDD, TDD/BDD) are a teaching aid, not a shortcut — use them to build intuition, then still explain the AI-specific mechanics in full rather than stopping at "it's basically like X."
 - When making design decisions together (e.g. via `/grill-with-docs`), don't just state a recommendation — explain the trade-off so the owner can reason to their own answer, then confirm understanding before locking it in.
+- Python code should be commented more heavily than usual — line-by-line where the syntax or library usage itself is unfamiliar territory (per "Genuinely new territory" below), not just for non-obvious *why*. This is a deliberate exception to normal terse-comment style, for learning purposes. Applies to Python specifically; other languages here (C#, TS) follow normal comment discipline.
 
 ## Owner background
 
