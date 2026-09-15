@@ -31,3 +31,7 @@ Issues live in this repo's GitHub Issues (uses the `gh` CLI). See `docs/agents/i
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Branching & PRs
+
+Every issue gets its own branch and its own PR — never commit straight to `master`. The Matt Pocock `/implement` skill only commits to whatever branch is currently checked out, so create the issue's branch *before* invoking it. Once implementation is done, use `/ship` (or `/ship-no-issue` if there's no linked issue) to push and open the PR.
