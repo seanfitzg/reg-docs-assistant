@@ -2,5 +2,7 @@ CV-SeanFitzgerald-March2026.docx.pdf
 .claude/settings.local.json
 corpus/*.pdf
 schema/.venv/
+ingestion/.venv/
+ingestion/output/
 **/__pycache__/
 .pytest_cache/

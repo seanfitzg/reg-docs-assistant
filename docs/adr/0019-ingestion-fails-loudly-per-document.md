@@ -1,0 +1,5 @@
+# Ingestion isolates failures per document and fails loudly, never silently
+
+A document that can't be extracted, or whose declared chunking strategy matches nothing (e.g. zero clauses found on a `clause_numbered` document), is skipped with a surfaced error — the rest of the batch still ingests. It is never silently persisted as a Document with zero Chunks, and one document's failure never halts the whole run.
+
+This mirrors ADR-0008's reasoning at the batch level: `possible_prompt_injection` halts only the one query's pipeline, not the system, because nothing downstream of that failure is salvageable — but unrelated queries are unaffected. Documents are independent the same way, which matters more now that documents arrive on an ongoing basis (not as one one-off run) rather than less. A zero-clause result on a document declared `clause_numbered` is almost certainly a wrong strategy tag, not a genuinely empty document — silently accepting it would defeat the entire point of declaring strategy explicitly (ADR-0014).

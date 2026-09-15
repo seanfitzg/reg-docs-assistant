@@ -52,7 +52,7 @@ A link recorded on a new Document at ingestion, pointing back to the earlier Doc
 _Avoid_: Replaces, version of — a Document is not modeled as a version of some longer-lived entity; each is independent, connected only by this link
 
 **Chunk**:
-An immutable retrieval and citation unit derived from a Document, aligned to the Document's own structure (a clause or numbered section) rather than a fixed-size token window. Reprocessing a Document with a new chunking strategy produces a fresh set of Chunks — existing ones are never overwritten.
+An immutable retrieval and citation unit derived from a Document, aligned to the Document's own structure (a clause or numbered section) rather than a fixed-size token window. Reprocessing a Document with a new chunking strategy produces a fresh set of Chunks — existing ones are never overwritten. Its locator directly names searchable structure (a clause number) where the Document has one; where it doesn't — narrative Documents with only free-text headings — the locator instead pairs the heading with the page it starts on, since a heading alone is neither unique nor locatable in a long Document.
 _Avoid_: Passage, segment, window — "window" in particular implies fixed-size chunking, which this project deliberately avoids
 
 **Chunking Generation**:
