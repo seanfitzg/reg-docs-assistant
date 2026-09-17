@@ -1,18 +1,19 @@
 # Orchestrates the ingestion pipeline: manifest entry -> extract -> clean ->
 # chunk -> validate -> write. Issue #5 wired up clause_numbered end to end;
-# #6 adds heading_sections. Each strategy module owns its own extraction and
-# cleaning (clause_numbered works from plain per-page text; heading_sections
-# needs the bold/font-aware layout extraction instead), exposed uniformly as
-# a chunk_document(pdf_path) -> list[dict] function -- so this file only
-# needs to know a strategy's *name*, never which extraction shape it needs
+# #6 added heading_sections; #7 adds academic_sections. Each strategy module
+# owns its own extraction and cleaning (clause_numbered works from plain
+# per-page text; heading_sections and academic_sections both need the
+# bold/font-aware layout extraction instead), exposed uniformly as a
+# chunk_document(pdf_path) -> list[dict] function -- so this file only needs
+# to know a strategy's *name*, never which extraction shape it needs
 # internally. Registering a new strategy in CHUNKING_STRATEGIES below is the
-# only change future strategies (e.g. #7's academic_sections) require here.
+# only change a future strategy requires here.
 
 import json
 from pathlib import Path
 
 from ids import chunk_id, document_id_from_filename, generation_id
-from strategies import clause_numbered, heading_sections
+from strategies import academic_sections, clause_numbered, heading_sections
 from validate import load_schema, validate_against_schema
 
 # A dict used as a lookup table from a manifest's "chunking_strategy" string
@@ -24,6 +25,7 @@ from validate import load_schema, validate_against_schema
 CHUNKING_STRATEGIES = {
     "clause_numbered": clause_numbered.chunk_document,
     "heading_sections": heading_sections.chunk_document,
+    "academic_sections": academic_sections.chunk_document,
 }
 
 
