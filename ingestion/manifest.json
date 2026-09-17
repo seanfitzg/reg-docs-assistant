@@ -16,5 +16,14 @@
     "source_url": "https://www.centralbank.ie/docs/default-source/publications/discussion-papers/discussion-paper-8/discussion-paper-8---outsourcing-findings-and-issues-for-discussion.pdf?sfvrsn=cc51b61d_12",
     "supersedes": null,
     "chunking_strategy": "heading_sections"
+  },
+  {
+    "filename": "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf",
+    "title": "Money Market Funds and Unconventional Monetary Policy",
+    "publisher": "Central Bank of Ireland",
+    "published_date": "2019-06-05",
+    "source_url": "https://www.centralbank.ie/docs/default-source/publications/research-technical-papers/07rt19-money-market-funds-and-unconventional-monetary-policy-(bua-dunne-and-sorbo).pdf",
+    "supersedes": null,
+    "chunking_strategy": "academic_sections"
   }
 ]

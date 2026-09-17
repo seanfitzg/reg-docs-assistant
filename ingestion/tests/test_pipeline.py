@@ -1,10 +1,11 @@
 # End-to-end tests for pipeline.py: manifest -> extract -> clean -> chunk ->
 # validate -> write, run against real corpus PDFs -- CP54 for
-# clause_numbered (issue #5), DP8 for heading_sections (issue #6). These
-# are the only tests in this ticket exercising every module together rather
-# than in isolation; everything else here (test_ids.py, test_clean.py,
-# test_clause_numbered.py, test_heading_sections.py, test_extract.py) is a
-# focused unit test for one module, following the same shape as
+# clause_numbered (issue #5), DP8 for heading_sections (issue #6), RTP07/19
+# for academic_sections (issue #7). These are the only tests in this ticket
+# exercising every module together rather than in isolation; everything
+# else here (test_ids.py, test_clean.py, test_clause_numbered.py,
+# test_heading_sections.py, test_academic_sections.py, test_extract.py) is
+# a focused unit test for one module, following the same shape as
 # schema/tests.
 #
 # The corpus isn't committed to git (see corpus/SOURCES.md -- it's
@@ -12,6 +13,7 @@
 # than failing outright when a PDF isn't present locally.
 
 import json
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -22,6 +24,7 @@ from validate import load_schema, validate_against_schema
 CORPUS_DIR = Path(__file__).parent.parent.parent / "corpus"
 CP54_PDF = CORPUS_DIR / "04-cp54-second-consultation-consumer-protection-code.pdf"
 DP8_PDF = CORPUS_DIR / "12-dp8-outsourcing-findings-and-issues.pdf"
+RTP_PDF = CORPUS_DIR / "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf"
 MANIFEST_PATH = Path(__file__).parent.parent / "manifest.json"
 
 # pytest.mark.skipif decorates every test below with a condition: if it's
@@ -36,8 +39,12 @@ requires_dp8 = pytest.mark.skipif(
     not DP8_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
+requires_rtp = pytest.mark.skipif(
+    not RTP_PDF.exists(),
+    reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
+)
 requires_corpus = pytest.mark.skipif(
-    not (CP54_PDF.exists() and DP8_PDF.exists()),
+    not (CP54_PDF.exists() and DP8_PDF.exists() and RTP_PDF.exists()),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
 
@@ -46,10 +53,10 @@ def _entry_for(entries: list[dict], filename: str) -> dict:
     return next(e for e in entries if e["filename"] == filename)
 
 
-def test_load_manifest_reads_both_entries():
+def test_load_manifest_reads_all_three_entries():
     entries = load_manifest(MANIFEST_PATH)
 
-    assert len(entries) == 2
+    assert len(entries) == 3
 
     cp54 = _entry_for(entries, "04-cp54-second-consultation-consumer-protection-code.pdf")
     assert cp54["chunking_strategy"] == "clause_numbered"
@@ -57,9 +64,13 @@ def test_load_manifest_reads_both_entries():
     dp8 = _entry_for(entries, "12-dp8-outsourcing-findings-and-issues.pdf")
     assert dp8["chunking_strategy"] == "heading_sections"
 
+    rtp = _entry_for(entries, "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf")
+    assert rtp["chunking_strategy"] == "academic_sections"
+
 
 CP54_FILENAME = "04-cp54-second-consultation-consumer-protection-code.pdf"
 DP8_FILENAME = "12-dp8-outsourcing-findings-and-issues.pdf"
+RTP_FILENAME = "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf"
 
 
 @requires_cp54
@@ -191,6 +202,80 @@ def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
         assert not any(line.startswith("Page ") and line[5:].isdigit() for line in chunk_lines)
 
 
+# ---- academic_sections: RTP07/19 (issue #7) ----
+
+@requires_rtp
+def test_rtp_build_document_and_chunks_produces_schema_valid_output():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+
+    validate_against_schema(document, load_schema("document.schema.json"))
+    chunk_schema = load_schema("chunk.schema.json")
+    assert len(chunks) > 0
+    for one_chunk in chunks:
+        validate_against_schema(one_chunk, chunk_schema)
+
+
+@requires_rtp
+def test_rtp_document_id_is_derived_and_generation_is_active():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+
+    assert document["id"] == "doc-19-rtp-07rt19-money-market-funds-unconventional-policy"
+    for one_chunk in chunks:
+        assert one_chunk["chunking_generation_id"] == document["active_chunking_generation_id"]
+        assert one_chunk["document_id"] == document["id"]
+
+
+@requires_rtp
+def test_rtp_chunk_locators_pair_a_real_heading_with_a_page_number():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+
+    # "Introduction" is a real, single-line heading confirmed by direct
+    # inspection of the PDF (page 4) -- proving the strategy found a real
+    # bold heading and decorated it with a page number (ADR-0015).
+    introduction_chunk = next(c for c in chunks if c["locator"] == "Introduction (p. 4)")
+    assert introduction_chunk["text"]
+
+
+@requires_rtp
+def test_rtp_a_heading_wrapped_across_two_bold_lines_is_joined_in_the_real_pdf():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+
+    # Appendix A's heading is genuinely two consecutive bold lines in this
+    # PDF ("A Sources and Construction of Variables Used in Panel" /
+    # "Regressions") -- confirming academic_sections' join behaviour
+    # (module-level docstring) fires correctly against the real document,
+    # not just the synthetic fixture in test_academic_sections.py.
+    appendix_chunk = next(c for c in chunks if c["locator"].startswith("A Sources"))
+    assert appendix_chunk["locator"] == (
+        "A Sources and Construction of Variables Used in Panel Regressions (p. 26)"
+    )
+
+
+@requires_rtp
+def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
+    # pypdf previously corrupted this document's text (garbled
+    # glyphs/ligatures -- see extract.py's module comment); pymupdf's fix is
+    # what unblocked this ticket (#7 was blocked by #5). pymupdf represents
+    # an "fi" pair as a single ligature codepoint (U+FB01) rather than
+    # corrupting it, so a plain substring search for "certificates" won't
+    # match directly -- unicodedata.normalize("NFKC", ...) is the standard
+    # decomposition that turns a compatibility ligature character back into
+    # its component letters, the same way "①" normalizes to "1". Doing that
+    # here and finding the real word proves the extracted text is genuine,
+    # recoverable Unicode -- not corrupted -- confirming the fix holds
+    # inside the real pipeline, not just the earlier scratch check.
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+
+    abstract_chunk = next(c for c in chunks if c["locator"] == "Abstract (p. 2)")
+    normalized_text = unicodedata.normalize("NFKC", abstract_chunk["text"])
+    assert "certificates of deposits" in normalized_text
+
+
 @requires_corpus
 def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path):
     output_dir = tmp_path / "output"
@@ -203,6 +288,7 @@ def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path)
     for document_id in [
         "doc-04-cp54-second-consultation-consumer-protection-code",
         "doc-12-dp8-outsourcing-findings-and-issues",
+        "doc-19-rtp-07rt19-money-market-funds-unconventional-policy",
     ]:
         document_path = output_dir / "documents" / f"{document_id}.json"
         chunks_path = output_dir / "chunks" / f"{document_id}.json"
