@@ -152,7 +152,7 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path, cleanup_flags: list[str] | None = None) -> list[dict]:
+def chunk_document(pdf_path: Path, cleanup_flags: list[dict] | None = None) -> list[dict]:
     # cleanup_flags (ADR-0016, issue #9) is accepted here purely for the
     # uniform chunk_document(pdf_path, cleanup_flags) shape every strategy
     # exposes (see clause_numbered.chunk_document) -- no manifest entry

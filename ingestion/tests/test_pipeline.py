@@ -80,11 +80,19 @@ def test_load_manifest_reads_all_five_entries():
 
     dp7 = _entry_for(entries, "11-dp7-digitalisation-and-consumer-protection-code.pdf")
     assert dp7["chunking_strategy"] == "heading_sections"
-    assert dp7["cleanup_flags"] == ["navigation_chrome"]
+    assert dp7["cleanup_flags"] == [
+        {"type": "navigation_chrome", "pattern": "Annex \\d", "minimum_matches": 4}
+    ]
 
     fsr = _entry_for(entries, "17-fsr-2026-i-financial-stability-review.pdf")
     assert fsr["chunking_strategy"] == "heading_sections"
-    assert fsr["cleanup_flags"] == ["bilingual_duplicate_content"]
+    assert fsr["cleanup_flags"] == [
+        {
+            "type": "duplicate_section_removal",
+            "start_heading": "Réamhrá",
+            "end_heading": "Global risk assessment",
+        }
+    ]
 
 
 CP54_FILENAME = "04-cp54-second-consultation-consumer-protection-code.pdf"
@@ -295,7 +303,8 @@ def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
     assert "certificates of deposits" in normalized_text
 
 
-# ---- manifest-flagged cleanup: DP7 "navigation_chrome" (ADR-0016, issue #9) ----
+# ---- manifest-flagged cleanup: DP7 "navigation_chrome" (ADR-0016, issue #9,
+# ---- parameterised in issue #13) ----
 
 DP7_FILENAME = "11-dp7-digitalisation-and-consumer-protection-code.pdf"
 FSR_FILENAME = "17-fsr-2026-i-financial-stability-review.pdf"
@@ -342,7 +351,8 @@ def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
     assert any("Annex 2" in one_chunk["text"] for one_chunk in chunks)
 
 
-# ---- manifest-flagged cleanup: FSR "bilingual_duplicate_content" (ADR-0016, issue #9) ----
+# ---- manifest-flagged cleanup: FSR "duplicate_section_removal" (ADR-0016,
+# ---- issue #9, parameterised in issue #13) ----
 
 @requires_fsr
 def test_fsr_build_document_and_chunks_produces_schema_valid_output():
@@ -363,8 +373,9 @@ def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
 
     # "Réamhrá"/"Forbhreathnú" (Irish for "Preface"/"Overview") are the real
     # section headings the Irish duplicate content sits under in the source
-    # PDF -- confirmed by direct inspection. If the bilingual_duplicate_content
-    # flag is working, neither should survive as a locator of its own.
+    # PDF -- confirmed by direct inspection. If the duplicate_section_removal
+    # flag is working (this document's manifest entry sets its start_heading
+    # to "Réamhrá"), neither should survive as a locator of its own.
     locators = [one_chunk["locator"] for one_chunk in chunks]
     assert not any(locator.startswith("Réamhrá") for locator in locators)
     assert not any(locator.startswith("Forbhreathnú") for locator in locators)

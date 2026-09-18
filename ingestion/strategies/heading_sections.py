@@ -70,14 +70,18 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path, cleanup_flags: list[str] | None = None) -> list[dict]:
+def chunk_document(pdf_path: Path, cleanup_flags: list[dict] | None = None) -> list[dict]:
     # cleanup_flags comes straight from a manifest entry's "cleanup_flags"
-    # (ADR-0016, issue #9) -- e.g. DP8's own manifest entry never sets it,
-    # so it stays None/empty and apply_cleanup_flags() below is a no-op,
-    # while DP7's entry names "navigation_chrome" to strip its Annex-nav
-    # footer. Every strategy's chunk_document accepts this same parameter
-    # (pipeline.py always passes it) even though clause_numbered and
-    # academic_sections don't currently act on it -- see their own modules.
+    # (ADR-0016, issue #9; parameterised in issue #13) -- a list of objects
+    # like {"type": "navigation_chrome", "pattern": "Annex \\d",
+    # "minimum_matches": 4}, one per flag that document declares. DP8's own
+    # manifest entry never sets it, so it stays None/empty and
+    # apply_cleanup_flags() below is a no-op, while DP7's entry names
+    # "navigation_chrome" (with its own pattern/threshold) to strip its
+    # Annex-nav footer. Every strategy's chunk_document accepts this same
+    # parameter (pipeline.py always passes it) even though clause_numbered
+    # and academic_sections don't currently act on it -- see their own
+    # modules.
     raw_pages = extract_pages_with_headings(pdf_path)
     cleaned_pages = strip_headers_footers_and_page_numbers_from_layout(raw_pages)
     cleaned_pages = apply_cleanup_flags(cleaned_pages, cleanup_flags or [])
