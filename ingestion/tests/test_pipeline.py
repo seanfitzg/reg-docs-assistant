@@ -2,23 +2,25 @@
 # validate -> write, run against real corpus PDFs -- CP54 for
 # clause_numbered (issue #5), DP8 for heading_sections (issue #6), RTP07/19
 # for academic_sections (issue #7), DP7 and FSR for manifest-flagged cleanup
-# (ADR-0016, issue #9). These are the only tests in this ticket exercising
-# every module together rather than in isolation; everything else here
-# (test_ids.py, test_clean.py, test_clause_numbered.py,
-# test_heading_sections.py, test_academic_sections.py, test_extract.py) is
-# a focused unit test for one module, following the same shape as
-# schema/tests.
+# (ADR-0016, issue #9), and the full 20-document corpus (issue #10). These
+# are the only tests in this ticket exercising every module together rather
+# than in isolation; everything else here (test_ids.py, test_clean.py,
+# test_clause_numbered.py, test_heading_sections.py, test_academic_sections.py,
+# test_extract.py) is a focused unit test for one module, following the same
+# shape as schema/tests.
 #
 # The corpus isn't committed to git (see corpus/SOURCES.md -- it's
 # re-downloadable, not checked in), so these tests skip themselves rather
 # than failing outright when a PDF isn't present locally.
 
 import json
+import logging
 import unicodedata
 from pathlib import Path
 
 import pytest
 
+from ids import document_id_from_filename
 from pipeline import build_document_and_chunks, load_manifest, run_pipeline
 from validate import load_schema, validate_against_schema
 
@@ -54,8 +56,15 @@ requires_fsr = pytest.mark.skipif(
     not FSR_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
-requires_corpus = pytest.mark.skipif(
-    not (CP54_PDF.exists() and DP7_PDF.exists() and DP8_PDF.exists() and RTP_PDF.exists() and FSR_PDF.exists()),
+# The issue #10 tests below need every PDF the manifest actually declares,
+# not just the five other tests in this file individually depend on -- a
+# separate guard so those specific tests skip (rather than fail) on a
+# machine that only has a partial corpus downloaded. Checking each declared
+# filename's existence (not just counting *.pdf files in the directory)
+# means this stays correct even if the corpus directory ever has stray
+# extra PDFs sitting in it that aren't in the manifest.
+requires_full_corpus = pytest.mark.skipif(
+    not all((CORPUS_DIR / entry["filename"]).exists() for entry in load_manifest(MANIFEST_PATH)),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
 
@@ -64,13 +73,40 @@ def _entry_for(entries: list[dict], filename: str) -> dict:
     return next(e for e in entries if e["filename"] == filename)
 
 
-def test_load_manifest_reads_all_five_entries():
+def test_load_manifest_reads_all_twenty_entries():
     entries = load_manifest(MANIFEST_PATH)
 
-    assert len(entries) == 5
+    assert len(entries) == 20
 
     cp54 = _entry_for(entries, "04-cp54-second-consultation-consumer-protection-code.pdf")
     assert cp54["chunking_strategy"] == "clause_numbered"
+    # CP54 is the Central Bank's second consultation on the same Code review
+    # CP47 opened -- its manifest entry should link back to CP47 (ADR-0002),
+    # confirmed by direct inspection of both documents' cover text (issue #10).
+    assert cp54["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
+
+    cp158 = _entry_for(entries, "09-cp158-consumer-protection-code.pdf")
+    # heading_sections, not clause_numbered -- confirmed by direct inspection
+    # (issue #10): unlike CP54/CP131, CP158's body prose isn't consistently
+    # decimal-clause-numbered throughout. clause_numbered on this document
+    # produces duplicate locators (a "2.1"-"3.5" run from the Table of
+    # Contents' dotted page-reference lines, then a second, real "2.1"-"3.5"
+    # run for the body) and one 43,762-character mega-chunk covering
+    # everything the sparse real clause markers miss -- heading_sections
+    # instead finds 98 clean, bounded chunks (each under ~7KB) using this
+    # document's real titled sections ("Chapter 1: Introduction", "A
+    # Modernised Code", ...).
+    assert cp158["chunking_strategy"] == "heading_sections"
+    # CP158's own text cites "Our 2022 Code Review Discussion Paper" as its
+    # direct predecessor -- not DP7 (a narrower, single-topic 2017 paper on
+    # digitalisation specifically, never mentioned anywhere in CP158). That
+    # 2022 discussion paper isn't one of this corpus's 20 documents, so
+    # there's no real Document id CP158 could correctly supersede -- setting
+    # one anyway (even to the "nearest" discussion paper in the corpus)
+    # would record a factually wrong link, which is worse than recording
+    # none (ADR-0010's same "wrong but plausible beats obviously missing"
+    # reasoning, applied here to Supersedes rather than a citation).
+    assert cp158["supersedes"] is None
 
     dp8 = _entry_for(entries, "12-dp8-outsourcing-findings-and-issues.pdf")
     assert dp8["chunking_strategy"] == "heading_sections"
@@ -395,31 +431,92 @@ def test_fsr_english_content_either_side_of_the_irish_section_survives():
     assert any(locator.startswith("Global risk assessment") for locator in locators)
 
 
-@requires_corpus
+# ---- full 20-document corpus (issue #10) ----
+#
+# Everything above already exercises one representative document per
+# chunking strategy/cleanup flag; these tests instead check the corpus as a
+# *whole* -- every real document actually makes it through the pipeline
+# (the acceptance criteria's "no document silently fails or is skipped
+# without a surfaced reason"), and the two supersedes links resolve
+# correctly end to end.
+
+@requires_full_corpus
 def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path):
     output_dir = tmp_path / "output"
 
-    run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
+    manifest_entries = load_manifest(MANIFEST_PATH)
+    results = run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
+
+    # run_pipeline returns one (document, chunks) pair per entry it
+    # successfully ingested (ADR-0019) -- its length matching the
+    # manifest's own entry count is the strongest available proof every one
+    # of the 20 real corpus documents actually made it through, not just
+    # that *some* number of documents did.
+    assert len(results) == len(manifest_entries) == 20
 
     document_schema = load_schema("document.schema.json")
     chunk_schema = load_schema("chunk.schema.json")
 
-    for document_id in [
-        "doc-04-cp54-second-consultation-consumer-protection-code",
-        "doc-12-dp8-outsourcing-findings-and-issues",
-        "doc-19-rtp-07rt19-money-market-funds-unconventional-policy",
-        "doc-11-dp7-digitalisation-and-consumer-protection-code",
-        "doc-17-fsr-2026-i-financial-stability-review",
-    ]:
+    for entry in manifest_entries:
+        document_id = document_id_from_filename(entry["filename"])
         document_path = output_dir / "documents" / f"{document_id}.json"
         chunks_path = output_dir / "chunks" / f"{document_id}.json"
 
         assert document_path.exists()
         assert chunks_path.exists()
 
-        written_document = json.loads(document_path.read_text())
-        written_chunks = json.loads(chunks_path.read_text())
+        written_document = json.loads(document_path.read_text(encoding="utf-8"))
+        written_chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
 
         validate_against_schema(written_document, document_schema)
+        assert len(written_chunks) > 0
         for one_chunk in written_chunks:
             validate_against_schema(one_chunk, chunk_schema)
+
+
+@requires_full_corpus
+def test_run_pipeline_surfaces_no_silent_failures_across_the_full_corpus(tmp_path, caplog):
+    # ADR-0019/issue #8's per-document failure isolation exists precisely so
+    # one bad document can't take down the batch -- but issue #10's own
+    # acceptance criterion runs the other direction: against the *real*
+    # 20-document corpus, nothing should actually trigger that isolation.
+    # run_pipeline only ever logs at ERROR level when it skips an entry
+    # (pipeline.py's except block), so asserting no ERROR records were
+    # emitted during a full real run is a direct check against "no document
+    # silently fails" -- caplog is pytest's built-in fixture for asserting
+    # on logging output, the same idea as asserting on a captured
+    # ILogger<T> in a .NET test.
+    output_dir = tmp_path / "output"
+    with caplog.at_level(logging.ERROR):
+        run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
+
+    assert caplog.records == []
+
+
+@requires_full_corpus
+def test_run_pipeline_writes_the_supersedes_link_for_cp54(tmp_path):
+    output_dir = tmp_path / "output"
+
+    run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
+
+    cp54_path = output_dir / "documents" / "doc-04-cp54-second-consultation-consumer-protection-code.json"
+    cp54_document = json.loads(cp54_path.read_text(encoding="utf-8"))
+    assert cp54_document["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
+
+
+@requires_full_corpus
+def test_run_pipeline_writes_no_supersedes_key_for_cp158(tmp_path):
+    # CP158's manifest entry deliberately has no supersedes link (see
+    # test_load_manifest_reads_all_twenty_entries for why) -- pipeline.py's
+    # build_document_and_chunks only adds the "supersedes" key to a Document
+    # when entry.get("supersedes") is truthy, so the written JSON should
+    # never contain the key at all, not the key set to null (document.schema
+    # .json's "supersedes" field isn't in "required", and null wouldn't pass
+    # its "type": "string" validation anyway).
+    output_dir = tmp_path / "output"
+
+    run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
+
+    cp158_path = output_dir / "documents" / "doc-09-cp158-consumer-protection-code.json"
+    cp158_document = json.loads(cp158_path.read_text(encoding="utf-8"))
+    assert "supersedes" not in cp158_document
