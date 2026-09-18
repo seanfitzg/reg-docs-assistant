@@ -1,7 +1,8 @@
 # Orchestrates the ingestion pipeline: manifest entry -> extract -> clean ->
 # chunk -> validate -> write. Issue #5 wired up clause_numbered end to end;
 # #6 added heading_sections; #7 added academic_sections; #8 adds per-document
-# failure isolation (ADR-0019); #9 adds manifest-flagged cleanup (ADR-0016).
+# failure isolation (ADR-0019); #9 adds manifest-flagged cleanup (ADR-0016);
+# #13 generalises that cleanup mechanism away from hardcoded document text.
 # Each strategy module owns its own extraction and cleaning (clause_numbered
 # works from plain per-page text; heading_sections and academic_sections
 # both need the bold/font-aware layout extraction instead), exposed
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 # values that can be stored in a dict/passed around like any other object
 # (comparable to storing C# method references in a
 # Dictionary<string, Func<...>>). Each strategy's chunk_document has the
-# same shape: (pdf_path: Path, cleanup_flags: list[str] | None) ->
+# same shape: (pdf_path: Path, cleanup_flags: list[dict] | None) ->
 # list[dict] of {"locator", "text"}.
 CHUNKING_STRATEGIES = {
     "clause_numbered": clause_numbered.chunk_document,
@@ -44,7 +45,16 @@ CHUNKING_STRATEGIES = {
 
 
 def load_manifest(manifest_path: Path) -> list[dict]:
-    return json.loads(manifest_path.read_text())
+    # encoding="utf-8" is explicit, not the default -- Path.read_text()
+    # without it falls back to locale.getpreferredencoding(), which on
+    # Windows is commonly cp1252, not UTF-8. manifest.json is UTF-8 (as any
+    # JSON file should be) and, since issue #13, can contain real non-ASCII
+    # text -- a cleanup flag's "start_heading" for a document like FSR is
+    # literally "Réamhrá" -- so decoding it as cp1252 would silently mangle
+    # those bytes into the wrong characters instead of raising, the kind of
+    # bug that's easy to miss because it only shows up once a manifest
+    # entry actually contains non-ASCII text.
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
 def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list[dict]]:

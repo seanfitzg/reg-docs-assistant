@@ -1,17 +1,19 @@
-# Tests for clean.py: the automatic (no manifest flag needed) cleanup step
-# from ADR-0016 -- stripping running headers/footers, plus the closely
-# related case of bare page-number lines, which don't repeat verbatim (the
-# number itself changes every page) but are just as mechanical and
-# judgment-free to detect and remove.
+# Tests for clean.py (ADR-0016), in two parts: the automatic cleanup step
+# (no manifest flag needed) -- stripping running headers/footers, plus the
+# closely related case of bare page-number lines, which don't repeat
+# verbatim (the number itself changes every page) but are just as
+# mechanical and judgment-free to detect and remove -- and, further down,
+# the manifest-flagged cleanup step (issue #9, generalised in issue #13),
+# which only ever runs when a manifest entry names it explicitly.
 
 import pytest
 
 from clean import (
     apply_cleanup_flags,
-    strip_bilingual_duplicate_content,
     strip_headers_footers_and_page_numbers,
     strip_headers_footers_and_page_numbers_from_layout,
-    strip_navigation_chrome,
+    strip_lines_with_repeated_pattern,
+    strip_section_between_headings,
 )
 
 
@@ -185,27 +187,33 @@ def test_layout_variant_strips_page_number_lines():
 # Unlike the automatic rules above, these only ever run when a manifest
 # entry names them explicitly (issue #9) -- so every test here builds its
 # own small fixture rather than relying on anything being auto-detected.
+# Both functions are generic/parameterised (issue #13): FSR and DP7's own
+# real quirks (their exact heading text, their exact nav-chrome pattern) are
+# only ever mentioned in *comments* below, as motivating examples -- the
+# functions under test take those specifics as plain arguments, not as
+# hardcoded constants, so most fixtures here deliberately use invented
+# headings/patterns to prove the functions aren't secretly still tied to
+# one real document.
 
-def test_bilingual_duplicate_content_is_removed_between_start_and_end_markers():
-    # Mirrors the real FSR document's shape: an English "Preface" section,
-    # then the Irish-language "Réamhrá" duplicate, then real content resumes
-    # at "Global risk assessment". Only the middle section should go.
+def test_strip_section_between_headings_removes_the_span_between_markers():
     pages = [
         [
             {"text": "Preface", "is_heading": True},
             {"text": "English preface content.", "is_heading": False},
         ],
         [
-            {"text": "Réamhrá", "is_heading": True},
-            {"text": "Irish duplicate content.", "is_heading": False},
+            {"text": "Withdrawn Notice", "is_heading": True},
+            {"text": "Superseded content.", "is_heading": False},
         ],
         [
-            {"text": "Global risk assessment", "is_heading": True},
+            {"text": "Real Section", "is_heading": True},
             {"text": "Real content resumes here.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_bilingual_duplicate_content(pages)
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Withdrawn Notice", end_heading="Real Section"
+    )
 
     assert cleaned[0] == [
         {"text": "Preface", "is_heading": True},
@@ -213,115 +221,125 @@ def test_bilingual_duplicate_content_is_removed_between_start_and_end_markers():
     ]
     assert cleaned[1] == []
     assert cleaned[2] == [
-        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "Real Section", "is_heading": True},
         {"text": "Real content resumes here.", "is_heading": False},
     ]
 
 
-def test_bilingual_duplicate_content_spanning_multiple_pages_is_removed():
-    # The real FSR document's Irish section runs across several pages
-    # (Réamhrá on one page, Forbhreathnú starting on the next, with its own
-    # content continuing onto a third) before "Global risk assessment"
-    # finally appears -- the removal has to survive page boundaries, not
-    # just work within a single page.
+def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
+    # Mirrors the real FSR document's shape (its own removed span runs
+    # Réamhrá -> Forbhreathnú -> a third page with no heading of its own ->
+    # Global risk assessment) -- the removal has to survive page
+    # boundaries, not just work within a single page.
     pages = [
-        [{"text": "Réamhrá", "is_heading": True}, {"text": "Irish page one.", "is_heading": False}],
-        [{"text": "Forbhreathnú", "is_heading": True}, {"text": "Irish page two.", "is_heading": False}],
-        [{"text": "Irish page three, no heading here.", "is_heading": False}],
-        [{"text": "Global risk assessment", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
+        [{"text": "Start", "is_heading": True}, {"text": "Page one.", "is_heading": False}],
+        [{"text": "Middle Heading", "is_heading": True}, {"text": "Page two.", "is_heading": False}],
+        [{"text": "Page three, no heading here.", "is_heading": False}],
+        [{"text": "End", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
     ]
 
-    cleaned = strip_bilingual_duplicate_content(pages)
+    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
 
     assert cleaned[0] == []
     assert cleaned[1] == []
     assert cleaned[2] == []
     assert cleaned[3] == [
-        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "End", "is_heading": True},
         {"text": "Real content.", "is_heading": False},
     ]
 
 
-def test_bold_body_line_inside_duplicate_section_does_not_end_it_early():
-    # The real Réamhrá/Forbhreathnú sections in FSR come out of
+def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span():
+    # The real FSR document's Réamhrá/Forbhreathnú sections come out of
     # extract_pages_with_headings with their *entire* body marked
     # is_heading=True, not just the section title -- pymupdf reports that
     # text as bold, and extract_pages_with_headings has no way to tell "a
     # real heading" from "a bold paragraph" apart (heading_sections.py's own
     # module comment documents this same ambiguity for a different case). A
     # naive "any heading line exits the zone" rule would wrongly stop
-    # removing right after the section title, keeping everything else in
-    # the section. This line's text isn't the end marker, so it must not
-    # end the zone.
+    # removing right after the start marker, keeping everything else in the
+    # section. This bold line's text isn't the configured end marker, so it
+    # must not end the removal early.
     pages = [
         [
-            {"text": "Réamhrá", "is_heading": True},
+            {"text": "Start", "is_heading": True},
             {"text": "This whole line is bold too, but isn't the end marker.", "is_heading": True},
-            {"text": "Global risk assessment", "is_heading": True},
+            {"text": "End", "is_heading": True},
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_bilingual_duplicate_content(pages)
+    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
 
     assert cleaned[0] == [
-        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "End", "is_heading": True},
         {"text": "Real content.", "is_heading": False},
     ]
 
 
-def test_content_with_no_bilingual_markers_is_unaffected():
+def test_strip_section_between_headings_with_no_matching_markers_is_unaffected():
     pages = [
         [{"text": "Purpose", "is_heading": True}, {"text": "Ordinary content.", "is_heading": False}],
     ]
 
-    cleaned = strip_bilingual_duplicate_content(pages)
+    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
 
     assert cleaned == pages
 
 
-def test_navigation_chrome_line_naming_all_four_annexes_is_stripped():
+def test_strip_lines_with_repeated_pattern_removes_a_line_meeting_the_threshold():
     # Modelled on DP7's real Annex nav-breadcrumb footer, e.g.
     # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- the
     # "page X of Y" part changes every occurrence, so unlike a running
     # header/footer this line never repeats verbatim (ADR-0016) and needs
-    # its own rule.
+    # its own rule. Using an invented "Widget" pattern here, not "Annex", to
+    # prove the function itself carries no real document's wording.
     pages = [
         [
-            {"text": "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": True},
-            {"text": "Real annex content.", "is_heading": False},
+            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": True},
+            {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_navigation_chrome(pages)
+    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
 
-    assert cleaned[0] == [{"text": "Real annex content.", "is_heading": False}]
+    assert cleaned[0] == [{"text": "Real content.", "is_heading": False}]
 
 
-def test_navigation_chrome_line_naming_fewer_than_four_annexes_is_kept():
+def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
     # DP7's real Table of Contents lists "Annex 1", "Annex 2", "Annex 3" and
     # "Annex 4" as four *separate* lines, each naming only one Annex -- real
-    # content, not the nav footer, and must survive. A sentence that
-    # legitimately references one Annex (e.g. "in Annex 2.") must too.
+    # content, not the nav footer, and must survive; a sentence that
+    # legitimately mentions the pattern once must too.
     pages = [
         [
-            {"text": "Annex 1", "is_heading": False},
-            {"text": "Annex 2", "is_heading": False},
-            {"text": "See the detail in Annex 2.", "is_heading": False},
+            {"text": "Widget 1", "is_heading": False},
+            {"text": "Widget 2", "is_heading": False},
+            {"text": "See the detail in Widget 2.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_navigation_chrome(pages)
+    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
 
     assert cleaned == pages
 
 
-def test_apply_cleanup_flags_runs_the_named_flag():
+def test_strip_lines_with_repeated_pattern_is_case_insensitive():
+    pages = [[{"text": "widget 1  widget 2  WIDGET 3  Widget 4", "is_heading": False}]]
+
+    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"widget \d", minimum_matches=4)
+
+    assert cleaned[0] == []
+
+
+def test_apply_cleanup_flags_runs_the_named_flag_type_with_its_parameters():
     pages = [
-        [{"text": "Annex 1 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": False}],
+        [{"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False}],
     ]
 
-    cleaned = apply_cleanup_flags(pages, ["navigation_chrome"])
+    cleaned = apply_cleanup_flags(
+        pages, [{"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4}]
+    )
 
     assert cleaned[0] == []
 
@@ -339,35 +357,55 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
     # (ADR-0016, issue #9) -- no single real document in this corpus needs
     # both flags at once, but the mechanism itself must genuinely chain
     # multiple flags, not just work for a single-flag list. Each flag's
-    # effect is independently verifiable here: the Irish section (matched by
-    # heading text) is gone, and so is the navigation-chrome line (matched
-    # by its own, unrelated pattern) that was sitting right next to it.
+    # effect is independently verifiable here: the removed section (matched
+    # by heading text) is gone, and so is the navigation-chrome line
+    # (matched by its own, unrelated pattern) that was sitting right next to
+    # it.
     pages = [
         [
-            {"text": "Réamhrá", "is_heading": True},
-            {"text": "Irish duplicate content.", "is_heading": False},
+            {"text": "Start", "is_heading": True},
+            {"text": "Removed content.", "is_heading": False},
         ],
         [
-            {"text": "Global risk assessment", "is_heading": True},
-            {"text": "Annex 1 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": False},
+            {"text": "End", "is_heading": True},
+            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False},
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = apply_cleanup_flags(pages, ["bilingual_duplicate_content", "navigation_chrome"])
+    cleaned = apply_cleanup_flags(
+        pages,
+        [
+            {"type": "duplicate_section_removal", "start_heading": "Start", "end_heading": "End"},
+            {"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4},
+        ],
+    )
 
     assert cleaned[0] == []
     assert cleaned[1] == [
-        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "End", "is_heading": True},
         {"text": "Real content.", "is_heading": False},
     ]
 
 
-def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_name():
-    # An unrecognized flag is almost certainly a typo in the manifest, not a
-    # genuinely empty set of cleanup rules -- this should raise loudly
+def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_type():
+    # An unrecognized flag type is almost certainly a typo in the manifest,
+    # not a genuinely empty set of cleanup rules -- this should raise loudly
     # (ADR-0019's "fail loudly" reasoning, applied here the same way an
     # unrecognized chunking_strategy already raises in pipeline.py), not
     # silently do nothing.
     with pytest.raises(KeyError):
-        apply_cleanup_flags([[{"text": "x", "is_heading": False}]], ["not_a_real_flag"])
+        apply_cleanup_flags([[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}])
+
+
+def test_apply_cleanup_flags_raises_on_a_flag_with_a_mismatched_parameter_name():
+    # A flag's parameters must match its function's keyword argument names
+    # exactly (apply_cleanup_flags passes them straight through as
+    # **kwargs) -- a manifest typo like "min_matches" instead of
+    # "minimum_matches" should fail loudly, not silently apply some
+    # unintended default.
+    with pytest.raises(TypeError):
+        apply_cleanup_flags(
+            [[{"text": "x", "is_heading": False}]],
+            [{"type": "navigation_chrome", "pattern": r"Widget \d", "min_matches": 4}],
+        )

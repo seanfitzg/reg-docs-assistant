@@ -66,7 +66,7 @@ def chunk(text: str) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path, cleanup_flags: list[str] | None = None) -> list[dict]:
+def chunk_document(pdf_path: Path, cleanup_flags: list[dict] | None = None) -> list[dict]:
     # Every strategy module exposes this same chunk_document(pdf_path,
     # cleanup_flags) shape (see heading_sections.chunk_document for the
     # other one so far), so pipeline.py can call whichever strategy a

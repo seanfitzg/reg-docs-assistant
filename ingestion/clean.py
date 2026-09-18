@@ -155,81 +155,120 @@ def strip_headers_footers_and_page_numbers_from_layout(
 # through to apply_cleanup_flags() below). Both functions here work on the
 # same list[list[dict]] layout shape as the _from_layout variant above,
 # since both documents these were built for (issue #9) use heading_sections.
+#
+# Issue #9 first built these two functions with the FSR/DP7 documents'
+# *exact* text hardcoded in (a fixed "Réamhrá"/"Global risk assessment" pair,
+# a fixed "Annex \d" pattern) -- which meant this file, meant to be a
+# reusable pipeline module, only actually worked for two specific Central
+# Bank of Ireland documents. Issue #13 generalises both into parameterised
+# utilities: the *document-specific* values now live in each manifest
+# entry's "cleanup_flags" (each one a {"type": ..., ...params} object,
+# where "type" selects the function via CLEANUP_FLAG_TYPES below and
+# every other key is passed straight through as that function's keyword
+# arguments), while this file only supplies the *mechanism* -- "remove
+# everything between two named headings", "remove a line where some pattern
+# shows up at least N times" -- which is generic enough to apply to any
+# future document with the same *shape* of quirk, not just these two.
 
-# The Financial Stability Review prints its Preface/Overview a second time
-# in Irish immediately afterwards -- "Réamhrá"/"Forbhreathnú" are the Irish
-# for "Preface"/"Overview" -- before the document's real content resumes at
-# "Global risk assessment" (confirmed by directly inspecting the real PDF
-# while building this). This can't be caught by the automatic rule above:
-# it's a *translation*, different text expressing the same content, not a
-# verbatim-repeated line.
-BILINGUAL_DUPLICATE_SECTION_START = "Réamhrá"
-BILINGUAL_DUPLICATE_SECTION_END = "Global risk assessment"
 
-
-def strip_bilingual_duplicate_content(pages: list[list[dict]]) -> list[list[dict]]:
+def strip_section_between_headings(
+    pages: list[list[dict]], start_heading: str, end_heading: str
+) -> list[list[dict]]:
+    # Removes every line from a heading whose text exactly matches
+    # start_heading, up to (but not including) the next heading whose text
+    # exactly matches end_heading -- the general shape behind FSR's real
+    # "duplicate_section_removal" flag, which sets start_heading="Réamhrá"
+    # and end_heading="Global risk assessment" to drop its duplicated
+    # Irish-language Preface/Overview. Any other document whose noise is "an
+    # unwanted section that starts and ends at two known headings" (a
+    # superseded notice, a withdrawn-draft section, ...) can reuse this same
+    # function with its own two heading names -- nothing here is specific to
+    # FSR's actual headings any more.
     cleaned_pages = []
-    # Tracks whether the walk is currently inside the Irish-language
-    # duplicate span. Only a heading line whose text is *exactly* one of the
-    # two markers above toggles this -- every other line, heading or not, is
-    # left alone. That matters because some of this document's body
-    # paragraphs are themselves bold (get_text("dict") marks the whole
-    # Réamhrá/Forbhreathnú body as "is_heading", not just the section
-    # titles) -- a simpler "any heading line exits the zone" rule would
-    # wrongly exit on the very first bold body line of the Irish section,
-    # instead of at its real end.
-    in_duplicate_section = False
+    # Tracks whether the walk is currently inside the span being removed.
+    # Only a heading line whose text is *exactly* one of the two markers
+    # toggles this -- every other line, heading or not, is left alone. That
+    # matters because some of FSR's own body paragraphs are themselves bold
+    # (get_text("dict") marks the whole Réamhrá/Forbhreathnú body as
+    # "is_heading", not just the section titles) -- a simpler "any heading
+    # line exits the zone" rule would wrongly exit on the very first bold
+    # body line of the removed section, instead of at its real end. Keying
+    # only off an *exact* text match to the two configured markers avoids
+    # that regardless of which document supplies them.
+    in_removed_section = False
     for page_lines in pages:
         kept_lines = []
         for line in page_lines:
-            if line["is_heading"] and line["text"] == BILINGUAL_DUPLICATE_SECTION_START:
-                in_duplicate_section = True
-            elif line["is_heading"] and line["text"] == BILINGUAL_DUPLICATE_SECTION_END:
-                in_duplicate_section = False
-            if not in_duplicate_section:
+            if line["is_heading"] and line["text"] == start_heading:
+                in_removed_section = True
+            elif line["is_heading"] and line["text"] == end_heading:
+                in_removed_section = False
+            if not in_removed_section:
                 kept_lines.append(line)
         cleaned_pages.append(kept_lines)
     return cleaned_pages
 
 
-# DP7's Annex pages carry a nav-breadcrumb footer naming all four Annexes so
-# a reader can jump between them, e.g. "Annex 1 page 1 of 3 >  | Annex 2  |
-# Annex 3  | Annex 4" -- but because the "page X of Y" part changes on every
-# occurrence, the line never repeats verbatim, so it evades the automatic
-# rule above the same way a running "Page N" footer did before that got its
-# own rule. A line naming all four Annexes is specific enough to this
-# document's chrome that real prose won't plausibly produce a false
-# positive.
-ANNEX_MENTION_PATTERN = re.compile(r"Annex \d", re.IGNORECASE)
-NAVIGATION_CHROME_ANNEX_MENTIONS_THRESHOLD = 4
-
-
-def _is_navigation_chrome(text: str) -> bool:
-    return len(ANNEX_MENTION_PATTERN.findall(text)) >= NAVIGATION_CHROME_ANNEX_MENTIONS_THRESHOLD
-
-
-def strip_navigation_chrome(pages: list[list[dict]]) -> list[list[dict]]:
+def strip_lines_with_repeated_pattern(
+    pages: list[list[dict]], pattern: str, minimum_matches: int
+) -> list[list[dict]]:
+    # Removes any line where `pattern` (a regular-expression string) matches
+    # at least `minimum_matches` times -- the general shape behind DP7's
+    # real "navigation_chrome" flag, which sets pattern="Annex \\d" and
+    # minimum_matches=4 to catch its Annex-page nav-breadcrumb footer (e.g.
+    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4"): the
+    # "page X of Y" part changes on every occurrence, so unlike a running
+    # header/footer the line never repeats verbatim and evades the
+    # automatic rule above. Any other document whose chrome has the same
+    # shape -- some marker mentioned several times on one line, in a way
+    # real prose won't plausibly produce -- can reuse this with its own
+    # pattern and threshold; nothing here is specific to DP7's Annexes any
+    # more.
+    #
+    # re.compile(...) happens on every call here, unlike the module-level
+    # PAGE_NUMBER_PATTERN above -- that constant pattern never changes, so
+    # compiling it once at import time is free; `pattern` here is a string
+    # supplied per-flag from the manifest, so there's nothing to precompile
+    # ahead of time.
+    compiled_pattern = re.compile(pattern, re.IGNORECASE)
     return [
-        [line for line in page_lines if not _is_navigation_chrome(line["text"])]
+        [
+            line
+            for line in page_lines
+            if len(compiled_pattern.findall(line["text"])) < minimum_matches
+        ]
         for page_lines in pages
     ]
 
 
-# A dict from a manifest's "cleanup_flags" entry (a string) to the function
-# that implements it -- the same lookup-table-of-functions idea pipeline.py
-# uses for CHUNKING_STRATEGIES, so a new flag only needs registering here,
+# A dict from a manifest cleanup flag's "type" to the function that
+# implements it -- the same lookup-table-of-functions idea pipeline.py uses
+# for CHUNKING_STRATEGIES, so a new flag type only needs registering here,
 # never a change to whichever strategy module applies it.
-CLEANUP_FLAGS = {
-    "bilingual_duplicate_content": strip_bilingual_duplicate_content,
-    "navigation_chrome": strip_navigation_chrome,
+CLEANUP_FLAG_TYPES = {
+    "duplicate_section_removal": strip_section_between_headings,
+    "navigation_chrome": strip_lines_with_repeated_pattern,
 }
 
 
-def apply_cleanup_flags(pages: list[list[dict]], flags: list[str]) -> list[list[dict]]:
-    # CLEANUP_FLAGS[flag] deliberately uses [], not .get(...) -- an
-    # unrecognised flag name (a typo in the manifest, most likely) should
-    # raise loudly rather than silently doing nothing, the same reasoning
-    # pipeline.py already applies to an unrecognised chunking_strategy.
+def apply_cleanup_flags(pages: list[list[dict]], flags: list[dict]) -> list[list[dict]]:
+    # Each flag is a manifest-supplied object like
+    # {"type": "navigation_chrome", "pattern": "Annex \\d", "minimum_matches": 4}
+    # -- "type" selects the function via CLEANUP_FLAG_TYPES, and every other
+    # key is passed straight through as that function's keyword arguments
+    # (dict(flag) copies the flag first so .pop("type") below doesn't mutate
+    # the manifest entry the caller passed in). If a flag's remaining keys
+    # don't match its function's parameter names -- a typo'd manifest field,
+    # e.g. "min_matches" instead of "minimum_matches" -- Python's own
+    # keyword-argument matching raises a TypeError for us; nothing extra to
+    # write for that.
     for flag in flags:
-        pages = CLEANUP_FLAGS[flag](pages)
+        flag = dict(flag)
+        # CLEANUP_FLAG_TYPES[...] deliberately uses [], not .get(...) -- an
+        # unrecognised flag type (a typo in the manifest, most likely)
+        # should raise loudly rather than silently doing nothing, the same
+        # reasoning pipeline.py already applies to an unrecognised
+        # chunking_strategy.
+        cleanup_function = CLEANUP_FLAG_TYPES[flag.pop("type")]
+        pages = cleanup_function(pages, **flag)
     return pages
