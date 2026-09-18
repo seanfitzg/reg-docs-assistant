@@ -12,7 +12,7 @@ Every interaction here is stored as an immutable, append-only **Event** - query,
 
 ## Why dual-stack
 
-Same architecture and event schema, built once in .NET and once in Python, both validated against one shared [`/schema`](./schema) contract - proof the design isn't tied to one language. My background is 25+ years in .NET; Python and its AI ecosystem are new ground I'm deliberately building here. Full plan in [`ai-integration-portfolio-plan.md`](./ai-integration-portfolio-plan.md).
+Same architecture and event schema, built once in .NET and once in Python, both validated against one shared [`/schema`](./schema) contract - proof the design isn't tied to one language. My background is 25+ years in .NET; Python and its AI ecosystem are new ground I'm deliberately building here.
 
 ## Current status
 
