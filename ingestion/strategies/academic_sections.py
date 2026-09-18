@@ -152,7 +152,12 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path) -> list[dict]:
+def chunk_document(pdf_path: Path, cleanup_flags: list[str] | None = None) -> list[dict]:
+    # cleanup_flags (ADR-0016, issue #9) is accepted here purely for the
+    # uniform chunk_document(pdf_path, cleanup_flags) shape every strategy
+    # exposes (see clause_numbered.chunk_document) -- no manifest entry
+    # using academic_sections declares any cleanup_flags yet, so this
+    # strategy doesn't act on it.
     raw_pages = extract_pages_with_headings(pdf_path)
     cleaned_pages = strip_headers_footers_and_page_numbers_from_layout(raw_pages)
     return chunk(cleaned_pages)

@@ -1,14 +1,16 @@
 # Orchestrates the ingestion pipeline: manifest entry -> extract -> clean ->
 # chunk -> validate -> write. Issue #5 wired up clause_numbered end to end;
 # #6 added heading_sections; #7 added academic_sections; #8 adds per-document
-# failure isolation (ADR-0019). Each strategy module owns its own extraction
-# and cleaning (clause_numbered works from plain per-page text;
-# heading_sections and academic_sections both need the bold/font-aware
-# layout extraction instead), exposed uniformly as a
-# chunk_document(pdf_path) -> list[dict] function -- so this file only needs
-# to know a strategy's *name*, never which extraction shape it needs
-# internally. Registering a new strategy in CHUNKING_STRATEGIES below is the
-# only change a future strategy requires here.
+# failure isolation (ADR-0019); #9 adds manifest-flagged cleanup (ADR-0016).
+# Each strategy module owns its own extraction and cleaning (clause_numbered
+# works from plain per-page text; heading_sections and academic_sections
+# both need the bold/font-aware layout extraction instead), exposed
+# uniformly as a chunk_document(pdf_path, cleanup_flags) -> list[dict]
+# function -- so this file only needs to know a strategy's *name*, never
+# which extraction shape it needs internally, or which cleanup flags (if
+# any) it actually acts on. Registering a new strategy in
+# CHUNKING_STRATEGIES below is the only change a future strategy requires
+# here.
 
 import json
 import logging
@@ -32,7 +34,8 @@ logger = logging.getLogger(__name__)
 # values that can be stored in a dict/passed around like any other object
 # (comparable to storing C# method references in a
 # Dictionary<string, Func<...>>). Each strategy's chunk_document has the
-# same shape: (pdf_path: Path) -> list[dict] of {"locator", "text"}.
+# same shape: (pdf_path: Path, cleanup_flags: list[str] | None) ->
+# list[dict] of {"locator", "text"}.
 CHUNKING_STRATEGIES = {
     "clause_numbered": clause_numbered.chunk_document,
     "heading_sections": heading_sections.chunk_document,
@@ -63,7 +66,13 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     # entry can't take down the rest of the batch.
     strategy_name = entry["chunking_strategy"]
     strategy_chunk_document = CHUNKING_STRATEGIES[strategy_name]
-    raw_chunks = strategy_chunk_document(pdf_path)
+    # entry.get("cleanup_flags", []) -- most manifest entries never set this
+    # (ADR-0016, issue #9), so it defaults to an empty list rather than
+    # raising, unlike "chunking_strategy" above, which has no sensible
+    # default. Passed uniformly to every strategy regardless of whether that
+    # strategy acts on it (see clause_numbered.chunk_document).
+    cleanup_flags = entry.get("cleanup_flags", [])
+    raw_chunks = strategy_chunk_document(pdf_path, cleanup_flags)
 
     # A declared strategy that matches nothing in the extracted text (e.g.
     # zero clause numbers found on a document declared clause_numbered) is

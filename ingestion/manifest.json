@@ -25,5 +25,25 @@
     "source_url": "https://www.centralbank.ie/docs/default-source/publications/research-technical-papers/07rt19-money-market-funds-and-unconventional-monetary-policy-(bua-dunne-and-sorbo).pdf",
     "supersedes": null,
     "chunking_strategy": "academic_sections"
+  },
+  {
+    "filename": "11-dp7-digitalisation-and-consumer-protection-code.pdf",
+    "title": "Discussion Paper 7 Digitalisation and Consumer Protection Code",
+    "publisher": "Central Bank of Ireland",
+    "published_date": "2017-06-01",
+    "source_url": "https://www.centralbank.ie/docs/default-source/publications/discussion-papers/discussion-paper-7/discussion-paper-7-digitalisation-and-consumer-protection-code.pdf?sfvrsn=e13aa41d_2",
+    "supersedes": null,
+    "chunking_strategy": "heading_sections",
+    "cleanup_flags": ["navigation_chrome"]
+  },
+  {
+    "filename": "17-fsr-2026-i-financial-stability-review.pdf",
+    "title": "Financial Stability Review 2026: I",
+    "publisher": "Central Bank of Ireland",
+    "published_date": "2026-05-26",
+    "source_url": "https://www.centralbank.ie/docs/default-source/publications/financial-stability-review/financial-stability/financial-stability-review-2026-i.pdf?sfvrsn=797f701a_4",
+    "supersedes": null,
+    "chunking_strategy": "heading_sections",
+    "cleanup_flags": ["bilingual_duplicate_content"]
   }
 ]
