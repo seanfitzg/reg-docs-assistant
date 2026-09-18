@@ -1,12 +1,13 @@
 # Automatic text cleanup (ADR-0016): stripping repeated headers/footers and
-# page-number lines. This is deliberately the *only* cleanup this pipeline
-# does without a human declaring it in the manifest -- both rules here are
-# safe, mechanical pattern-matches with no real judgment call involved,
-# unlike document-specific quirks (bilingual duplication, navigation
-# chrome), which stay manifest-flagged (a later ticket).
+# page-number lines. This is deliberately the *only* cleanup applied without
+# a human declaring it in the manifest -- both rules here are safe,
+# mechanical pattern-matches with no real judgment call involved. Further
+# down, the "Manifest-flagged cleanup" section covers the opposite case:
+# document-specific quirks (bilingual duplication, navigation chrome) that
+# only apply when a manifest entry names them explicitly (issue #9).
 #
-# Two public functions share the same underlying rules but work on
-# different shapes: strip_headers_footers_and_page_numbers() takes plain
+# Two public functions share the same underlying automatic rules but work
+# on different shapes: strip_headers_footers_and_page_numbers() takes plain
 # per-page text (what extract_pages() returns, used by clause_numbered);
 # strip_headers_footers_and_page_numbers_from_layout() takes the
 # list[list[dict]] shape extract_pages_with_headings() returns, and
@@ -142,3 +143,93 @@ def strip_headers_footers_and_page_numbers_from_layout(
         cleaned_pages.append(kept_lines)
 
     return cleaned_pages
+
+
+# ---- Manifest-flagged cleanup (ADR-0016) ----
+#
+# Everything above is safe and automatic because it's mechanical, with no
+# real judgment call. What follows is the opposite: document-specific noise
+# that only a human reading the document would recognise as noise, so it's
+# never applied automatically -- only when a manifest entry names it
+# explicitly via "cleanup_flags" (pipeline.py passes that list straight
+# through to apply_cleanup_flags() below). Both functions here work on the
+# same list[list[dict]] layout shape as the _from_layout variant above,
+# since both documents these were built for (issue #9) use heading_sections.
+
+# The Financial Stability Review prints its Preface/Overview a second time
+# in Irish immediately afterwards -- "Réamhrá"/"Forbhreathnú" are the Irish
+# for "Preface"/"Overview" -- before the document's real content resumes at
+# "Global risk assessment" (confirmed by directly inspecting the real PDF
+# while building this). This can't be caught by the automatic rule above:
+# it's a *translation*, different text expressing the same content, not a
+# verbatim-repeated line.
+BILINGUAL_DUPLICATE_SECTION_START = "Réamhrá"
+BILINGUAL_DUPLICATE_SECTION_END = "Global risk assessment"
+
+
+def strip_bilingual_duplicate_content(pages: list[list[dict]]) -> list[list[dict]]:
+    cleaned_pages = []
+    # Tracks whether the walk is currently inside the Irish-language
+    # duplicate span. Only a heading line whose text is *exactly* one of the
+    # two markers above toggles this -- every other line, heading or not, is
+    # left alone. That matters because some of this document's body
+    # paragraphs are themselves bold (get_text("dict") marks the whole
+    # Réamhrá/Forbhreathnú body as "is_heading", not just the section
+    # titles) -- a simpler "any heading line exits the zone" rule would
+    # wrongly exit on the very first bold body line of the Irish section,
+    # instead of at its real end.
+    in_duplicate_section = False
+    for page_lines in pages:
+        kept_lines = []
+        for line in page_lines:
+            if line["is_heading"] and line["text"] == BILINGUAL_DUPLICATE_SECTION_START:
+                in_duplicate_section = True
+            elif line["is_heading"] and line["text"] == BILINGUAL_DUPLICATE_SECTION_END:
+                in_duplicate_section = False
+            if not in_duplicate_section:
+                kept_lines.append(line)
+        cleaned_pages.append(kept_lines)
+    return cleaned_pages
+
+
+# DP7's Annex pages carry a nav-breadcrumb footer naming all four Annexes so
+# a reader can jump between them, e.g. "Annex 1 page 1 of 3 >  | Annex 2  |
+# Annex 3  | Annex 4" -- but because the "page X of Y" part changes on every
+# occurrence, the line never repeats verbatim, so it evades the automatic
+# rule above the same way a running "Page N" footer did before that got its
+# own rule. A line naming all four Annexes is specific enough to this
+# document's chrome that real prose won't plausibly produce a false
+# positive.
+ANNEX_MENTION_PATTERN = re.compile(r"Annex \d", re.IGNORECASE)
+NAVIGATION_CHROME_ANNEX_MENTIONS_THRESHOLD = 4
+
+
+def _is_navigation_chrome(text: str) -> bool:
+    return len(ANNEX_MENTION_PATTERN.findall(text)) >= NAVIGATION_CHROME_ANNEX_MENTIONS_THRESHOLD
+
+
+def strip_navigation_chrome(pages: list[list[dict]]) -> list[list[dict]]:
+    return [
+        [line for line in page_lines if not _is_navigation_chrome(line["text"])]
+        for page_lines in pages
+    ]
+
+
+# A dict from a manifest's "cleanup_flags" entry (a string) to the function
+# that implements it -- the same lookup-table-of-functions idea pipeline.py
+# uses for CHUNKING_STRATEGIES, so a new flag only needs registering here,
+# never a change to whichever strategy module applies it.
+CLEANUP_FLAGS = {
+    "bilingual_duplicate_content": strip_bilingual_duplicate_content,
+    "navigation_chrome": strip_navigation_chrome,
+}
+
+
+def apply_cleanup_flags(pages: list[list[dict]], flags: list[str]) -> list[list[dict]]:
+    # CLEANUP_FLAGS[flag] deliberately uses [], not .get(...) -- an
+    # unrecognised flag name (a typo in the manifest, most likely) should
+    # raise loudly rather than silently doing nothing, the same reasoning
+    # pipeline.py already applies to an unrecognised chunking_strategy.
+    for flag in flags:
+        pages = CLEANUP_FLAGS[flag](pages)
+    return pages

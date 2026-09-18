@@ -66,13 +66,20 @@ def chunk(text: str) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path) -> list[dict]:
-    # Every strategy module exposes this same chunk_document(pdf_path)
-    # shape (see heading_sections.chunk_document for the other one so far),
-    # so pipeline.py can call whichever strategy a manifest entry names
-    # without needing to know that strategy's own extraction/cleaning
-    # needs -- clause_numbered works from plain per-page text, but nothing
-    # outside this module has to care.
+def chunk_document(pdf_path: Path, cleanup_flags: list[str] | None = None) -> list[dict]:
+    # Every strategy module exposes this same chunk_document(pdf_path,
+    # cleanup_flags) shape (see heading_sections.chunk_document for the
+    # other one so far), so pipeline.py can call whichever strategy a
+    # manifest entry names without needing to know that strategy's own
+    # extraction/cleaning needs -- clause_numbered works from plain per-page
+    # text, but nothing outside this module has to care.
+    #
+    # cleanup_flags (ADR-0016, issue #9) is accepted here purely for that
+    # uniform shape -- no manifest entry using clause_numbered declares any
+    # cleanup_flags yet, and this strategy doesn't act on it even if one
+    # did; clean.py's manifest-flagged functions only understand the
+    # list[list[dict]] layout shape extract_pages_with_headings() produces,
+    # not the plain per-page text this strategy works from.
     raw_pages = extract_pages(pdf_path)
     cleaned_pages = strip_headers_footers_and_page_numbers(raw_pages)
     full_text = "\n".join(cleaned_pages)

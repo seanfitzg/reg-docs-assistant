@@ -1,9 +1,10 @@
 # End-to-end tests for pipeline.py: manifest -> extract -> clean -> chunk ->
 # validate -> write, run against real corpus PDFs -- CP54 for
 # clause_numbered (issue #5), DP8 for heading_sections (issue #6), RTP07/19
-# for academic_sections (issue #7). These are the only tests in this ticket
-# exercising every module together rather than in isolation; everything
-# else here (test_ids.py, test_clean.py, test_clause_numbered.py,
+# for academic_sections (issue #7), DP7 and FSR for manifest-flagged cleanup
+# (ADR-0016, issue #9). These are the only tests in this ticket exercising
+# every module together rather than in isolation; everything else here
+# (test_ids.py, test_clean.py, test_clause_numbered.py,
 # test_heading_sections.py, test_academic_sections.py, test_extract.py) is
 # a focused unit test for one module, following the same shape as
 # schema/tests.
@@ -23,8 +24,10 @@ from validate import load_schema, validate_against_schema
 
 CORPUS_DIR = Path(__file__).parent.parent.parent / "corpus"
 CP54_PDF = CORPUS_DIR / "04-cp54-second-consultation-consumer-protection-code.pdf"
+DP7_PDF = CORPUS_DIR / "11-dp7-digitalisation-and-consumer-protection-code.pdf"
 DP8_PDF = CORPUS_DIR / "12-dp8-outsourcing-findings-and-issues.pdf"
 RTP_PDF = CORPUS_DIR / "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf"
+FSR_PDF = CORPUS_DIR / "17-fsr-2026-i-financial-stability-review.pdf"
 MANIFEST_PATH = Path(__file__).parent.parent / "manifest.json"
 
 # pytest.mark.skipif decorates every test below with a condition: if it's
@@ -35,6 +38,10 @@ requires_cp54 = pytest.mark.skipif(
     not CP54_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
+requires_dp7 = pytest.mark.skipif(
+    not DP7_PDF.exists(),
+    reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
+)
 requires_dp8 = pytest.mark.skipif(
     not DP8_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
@@ -43,8 +50,12 @@ requires_rtp = pytest.mark.skipif(
     not RTP_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
+requires_fsr = pytest.mark.skipif(
+    not FSR_PDF.exists(),
+    reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
+)
 requires_corpus = pytest.mark.skipif(
-    not (CP54_PDF.exists() and DP8_PDF.exists() and RTP_PDF.exists()),
+    not (CP54_PDF.exists() and DP7_PDF.exists() and DP8_PDF.exists() and RTP_PDF.exists() and FSR_PDF.exists()),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
 
@@ -53,10 +64,10 @@ def _entry_for(entries: list[dict], filename: str) -> dict:
     return next(e for e in entries if e["filename"] == filename)
 
 
-def test_load_manifest_reads_all_three_entries():
+def test_load_manifest_reads_all_five_entries():
     entries = load_manifest(MANIFEST_PATH)
 
-    assert len(entries) == 3
+    assert len(entries) == 5
 
     cp54 = _entry_for(entries, "04-cp54-second-consultation-consumer-protection-code.pdf")
     assert cp54["chunking_strategy"] == "clause_numbered"
@@ -66,6 +77,14 @@ def test_load_manifest_reads_all_three_entries():
 
     rtp = _entry_for(entries, "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf")
     assert rtp["chunking_strategy"] == "academic_sections"
+
+    dp7 = _entry_for(entries, "11-dp7-digitalisation-and-consumer-protection-code.pdf")
+    assert dp7["chunking_strategy"] == "heading_sections"
+    assert dp7["cleanup_flags"] == ["navigation_chrome"]
+
+    fsr = _entry_for(entries, "17-fsr-2026-i-financial-stability-review.pdf")
+    assert fsr["chunking_strategy"] == "heading_sections"
+    assert fsr["cleanup_flags"] == ["bilingual_duplicate_content"]
 
 
 CP54_FILENAME = "04-cp54-second-consultation-consumer-protection-code.pdf"
@@ -276,6 +295,95 @@ def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
     assert "certificates of deposits" in normalized_text
 
 
+# ---- manifest-flagged cleanup: DP7 "navigation_chrome" (ADR-0016, issue #9) ----
+
+DP7_FILENAME = "11-dp7-digitalisation-and-consumer-protection-code.pdf"
+FSR_FILENAME = "17-fsr-2026-i-financial-stability-review.pdf"
+
+
+@requires_dp7
+def test_dp7_build_document_and_chunks_produces_schema_valid_output():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+
+    validate_against_schema(document, load_schema("document.schema.json"))
+    chunk_schema = load_schema("chunk.schema.json")
+    assert len(chunks) > 0
+    for one_chunk in chunks:
+        validate_against_schema(one_chunk, chunk_schema)
+
+
+@requires_dp7
+def test_dp7_navigation_chrome_footer_is_stripped_from_every_chunk():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+
+    # The real DP7 PDF's Annex pages carry a nav-breadcrumb footer like
+    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- confirmed
+    # by direct inspection of the extracted text. If the navigation_chrome
+    # flag (declared on this document's manifest entry) is working, no
+    # chunk should ever contain the "page X of Y" fragment that's specific
+    # to that footer, on any Annex.
+    for one_chunk in chunks:
+        for total in (2, 3):
+            for page_number in range(1, total + 1):
+                assert f"page {page_number} of {total}" not in one_chunk["text"]
+
+
+@requires_dp7
+def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
+    # The navigation_chrome flag must be specific to the nav footer, not so
+    # broad it deletes legitimate content that happens to mention an Annex
+    # -- DP7's own Table of Contents lists "Annex 2" as one of its entries,
+    # confirmed by direct inspection of the real PDF.
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+
+    assert any("Annex 2" in one_chunk["text"] for one_chunk in chunks)
+
+
+# ---- manifest-flagged cleanup: FSR "bilingual_duplicate_content" (ADR-0016, issue #9) ----
+
+@requires_fsr
+def test_fsr_build_document_and_chunks_produces_schema_valid_output():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+
+    validate_against_schema(document, load_schema("document.schema.json"))
+    chunk_schema = load_schema("chunk.schema.json")
+    assert len(chunks) > 0
+    for one_chunk in chunks:
+        validate_against_schema(one_chunk, chunk_schema)
+
+
+@requires_fsr
+def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+
+    # "Réamhrá"/"Forbhreathnú" (Irish for "Preface"/"Overview") are the real
+    # section headings the Irish duplicate content sits under in the source
+    # PDF -- confirmed by direct inspection. If the bilingual_duplicate_content
+    # flag is working, neither should survive as a locator of its own.
+    locators = [one_chunk["locator"] for one_chunk in chunks]
+    assert not any(locator.startswith("Réamhrá") for locator in locators)
+    assert not any(locator.startswith("Forbhreathnú") for locator in locators)
+
+
+@requires_fsr
+def test_fsr_english_content_either_side_of_the_irish_section_survives():
+    # The flag must remove only the Irish duplicate span, not the real
+    # English content immediately before it ("Preface") or after it
+    # ("Global risk assessment") -- both real headings confirmed by direct
+    # inspection of the real PDF.
+    entries = load_manifest(MANIFEST_PATH)
+    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+
+    locators = [one_chunk["locator"] for one_chunk in chunks]
+    assert any(locator.startswith("Preface") for locator in locators)
+    assert any(locator.startswith("Global risk assessment") for locator in locators)
+
+
 @requires_corpus
 def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path):
     output_dir = tmp_path / "output"
@@ -289,6 +397,8 @@ def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path)
         "doc-04-cp54-second-consultation-consumer-protection-code",
         "doc-12-dp8-outsourcing-findings-and-issues",
         "doc-19-rtp-07rt19-money-market-funds-unconventional-policy",
+        "doc-11-dp7-digitalisation-and-consumer-protection-code",
+        "doc-17-fsr-2026-i-financial-stability-review",
     ]:
         document_path = output_dir / "documents" / f"{document_id}.json"
         chunks_path = output_dir / "chunks" / f"{document_id}.json"

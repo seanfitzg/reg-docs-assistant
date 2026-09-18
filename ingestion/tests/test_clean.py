@@ -4,9 +4,14 @@
 # number itself changes every page) but are just as mechanical and
 # judgment-free to detect and remove.
 
+import pytest
+
 from clean import (
+    apply_cleanup_flags,
+    strip_bilingual_duplicate_content,
     strip_headers_footers_and_page_numbers,
     strip_headers_footers_and_page_numbers_from_layout,
+    strip_navigation_chrome,
 )
 
 
@@ -173,3 +178,196 @@ def test_layout_variant_strips_page_number_lines():
     cleaned = strip_headers_footers_and_page_numbers_from_layout(pages)
 
     assert cleaned[0] == [{"text": "Content on five.", "is_heading": False}]
+
+
+# ---- Manifest-flagged cleanup (ADR-0016) ----
+#
+# Unlike the automatic rules above, these only ever run when a manifest
+# entry names them explicitly (issue #9) -- so every test here builds its
+# own small fixture rather than relying on anything being auto-detected.
+
+def test_bilingual_duplicate_content_is_removed_between_start_and_end_markers():
+    # Mirrors the real FSR document's shape: an English "Preface" section,
+    # then the Irish-language "Réamhrá" duplicate, then real content resumes
+    # at "Global risk assessment". Only the middle section should go.
+    pages = [
+        [
+            {"text": "Preface", "is_heading": True},
+            {"text": "English preface content.", "is_heading": False},
+        ],
+        [
+            {"text": "Réamhrá", "is_heading": True},
+            {"text": "Irish duplicate content.", "is_heading": False},
+        ],
+        [
+            {"text": "Global risk assessment", "is_heading": True},
+            {"text": "Real content resumes here.", "is_heading": False},
+        ],
+    ]
+
+    cleaned = strip_bilingual_duplicate_content(pages)
+
+    assert cleaned[0] == [
+        {"text": "Preface", "is_heading": True},
+        {"text": "English preface content.", "is_heading": False},
+    ]
+    assert cleaned[1] == []
+    assert cleaned[2] == [
+        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "Real content resumes here.", "is_heading": False},
+    ]
+
+
+def test_bilingual_duplicate_content_spanning_multiple_pages_is_removed():
+    # The real FSR document's Irish section runs across several pages
+    # (Réamhrá on one page, Forbhreathnú starting on the next, with its own
+    # content continuing onto a third) before "Global risk assessment"
+    # finally appears -- the removal has to survive page boundaries, not
+    # just work within a single page.
+    pages = [
+        [{"text": "Réamhrá", "is_heading": True}, {"text": "Irish page one.", "is_heading": False}],
+        [{"text": "Forbhreathnú", "is_heading": True}, {"text": "Irish page two.", "is_heading": False}],
+        [{"text": "Irish page three, no heading here.", "is_heading": False}],
+        [{"text": "Global risk assessment", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
+    ]
+
+    cleaned = strip_bilingual_duplicate_content(pages)
+
+    assert cleaned[0] == []
+    assert cleaned[1] == []
+    assert cleaned[2] == []
+    assert cleaned[3] == [
+        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "Real content.", "is_heading": False},
+    ]
+
+
+def test_bold_body_line_inside_duplicate_section_does_not_end_it_early():
+    # The real Réamhrá/Forbhreathnú sections in FSR come out of
+    # extract_pages_with_headings with their *entire* body marked
+    # is_heading=True, not just the section title -- pymupdf reports that
+    # text as bold, and extract_pages_with_headings has no way to tell "a
+    # real heading" from "a bold paragraph" apart (heading_sections.py's own
+    # module comment documents this same ambiguity for a different case). A
+    # naive "any heading line exits the zone" rule would wrongly stop
+    # removing right after the section title, keeping everything else in
+    # the section. This line's text isn't the end marker, so it must not
+    # end the zone.
+    pages = [
+        [
+            {"text": "Réamhrá", "is_heading": True},
+            {"text": "This whole line is bold too, but isn't the end marker.", "is_heading": True},
+            {"text": "Global risk assessment", "is_heading": True},
+            {"text": "Real content.", "is_heading": False},
+        ],
+    ]
+
+    cleaned = strip_bilingual_duplicate_content(pages)
+
+    assert cleaned[0] == [
+        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "Real content.", "is_heading": False},
+    ]
+
+
+def test_content_with_no_bilingual_markers_is_unaffected():
+    pages = [
+        [{"text": "Purpose", "is_heading": True}, {"text": "Ordinary content.", "is_heading": False}],
+    ]
+
+    cleaned = strip_bilingual_duplicate_content(pages)
+
+    assert cleaned == pages
+
+
+def test_navigation_chrome_line_naming_all_four_annexes_is_stripped():
+    # Modelled on DP7's real Annex nav-breadcrumb footer, e.g.
+    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- the
+    # "page X of Y" part changes every occurrence, so unlike a running
+    # header/footer this line never repeats verbatim (ADR-0016) and needs
+    # its own rule.
+    pages = [
+        [
+            {"text": "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": True},
+            {"text": "Real annex content.", "is_heading": False},
+        ],
+    ]
+
+    cleaned = strip_navigation_chrome(pages)
+
+    assert cleaned[0] == [{"text": "Real annex content.", "is_heading": False}]
+
+
+def test_navigation_chrome_line_naming_fewer_than_four_annexes_is_kept():
+    # DP7's real Table of Contents lists "Annex 1", "Annex 2", "Annex 3" and
+    # "Annex 4" as four *separate* lines, each naming only one Annex -- real
+    # content, not the nav footer, and must survive. A sentence that
+    # legitimately references one Annex (e.g. "in Annex 2.") must too.
+    pages = [
+        [
+            {"text": "Annex 1", "is_heading": False},
+            {"text": "Annex 2", "is_heading": False},
+            {"text": "See the detail in Annex 2.", "is_heading": False},
+        ],
+    ]
+
+    cleaned = strip_navigation_chrome(pages)
+
+    assert cleaned == pages
+
+
+def test_apply_cleanup_flags_runs_the_named_flag():
+    pages = [
+        [{"text": "Annex 1 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": False}],
+    ]
+
+    cleaned = apply_cleanup_flags(pages, ["navigation_chrome"])
+
+    assert cleaned[0] == []
+
+
+def test_apply_cleanup_flags_with_no_flags_is_a_no_op():
+    pages = [[{"text": "Untouched.", "is_heading": False}]]
+
+    cleaned = apply_cleanup_flags(pages, [])
+
+    assert cleaned == pages
+
+
+def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
+    # The manifest supports "one or more" cleanup flags per document
+    # (ADR-0016, issue #9) -- no single real document in this corpus needs
+    # both flags at once, but the mechanism itself must genuinely chain
+    # multiple flags, not just work for a single-flag list. Each flag's
+    # effect is independently verifiable here: the Irish section (matched by
+    # heading text) is gone, and so is the navigation-chrome line (matched
+    # by its own, unrelated pattern) that was sitting right next to it.
+    pages = [
+        [
+            {"text": "Réamhrá", "is_heading": True},
+            {"text": "Irish duplicate content.", "is_heading": False},
+        ],
+        [
+            {"text": "Global risk assessment", "is_heading": True},
+            {"text": "Annex 1 >  | Annex 2  | Annex 3  | Annex 4", "is_heading": False},
+            {"text": "Real content.", "is_heading": False},
+        ],
+    ]
+
+    cleaned = apply_cleanup_flags(pages, ["bilingual_duplicate_content", "navigation_chrome"])
+
+    assert cleaned[0] == []
+    assert cleaned[1] == [
+        {"text": "Global risk assessment", "is_heading": True},
+        {"text": "Real content.", "is_heading": False},
+    ]
+
+
+def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_name():
+    # An unrecognized flag is almost certainly a typo in the manifest, not a
+    # genuinely empty set of cleanup rules -- this should raise loudly
+    # (ADR-0019's "fail loudly" reasoning, applied here the same way an
+    # unrecognized chunking_strategy already raises in pipeline.py), not
+    # silently do nothing.
+    with pytest.raises(KeyError):
+        apply_cleanup_flags([[{"text": "x", "is_heading": False}]], ["not_a_real_flag"])
