@@ -13,6 +13,10 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Epics
+
+A parent issue broken into sub-tickets by `/to-tickets` is labeled `epic` instead of `ready-for-agent`. Epics are never implemented directly — the sub-tickets are the implementable units, linked to the epic via GitHub's native sub-issue relationship and to each other via native issue dependencies (see Wayfinding operations below for the underlying API calls). When asked to implement work tracked under an epic, pick from its sub-issues — specifically the frontier (a sub-issue with no open blockers) — never the epic itself.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_

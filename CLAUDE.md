@@ -34,4 +34,6 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 
 ### Branching & PRs
 
-Every issue gets its own branch and its own PR — never commit straight to `master`. The Matt Pocock `/implement` skill only commits to whatever branch is currently checked out, so create the issue's branch *before* invoking it. Once implementation is done, use `/ship` (or `/ship-no-issue` if there's no linked issue) to push and open the PR.
+Every issue gets its own branch and its own PR — never commit straight to `master`. The Matt Pocock `/implement` skill only commits to whatever branch is currently checked out, so before invoking it: pull `master` up to date first, then create the issue's branch from that updated `master`. Once implementation is done, use `/ship` (or `/ship-no-issue` if there's no linked issue) to push and open the PR.
+
+Issues labeled `epic` are never implemented directly — they're a parent ticket broken into sub-tickets by `/to-tickets`. Implement the sub-tickets (the frontier: whichever has no open blockers) instead. See `docs/agents/issue-tracker.md`.
