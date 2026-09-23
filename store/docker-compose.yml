@@ -1,0 +1,32 @@
+services:
+  postgres:
+    # pgvector/pgvector bundles the pgvector extension on top of the
+    # official postgres image -- same Postgres underneath, just with the
+    # extension available to CREATE EXTENSION. The :pg16 tag pins the
+    # Postgres major version (pgvector publishes one tag per supported
+    # major version, e.g. pg13..pg17).
+    image: pgvector/pgvector:pg16
+    environment:
+      # Local development only -- these are placeholder credentials, not
+      # secrets. No production deployment reads this file.
+      POSTGRES_USER: regdocs
+      POSTGRES_PASSWORD: regdocs_dev_only
+      POSTGRES_DB: regdocs
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres images run every *.sql/*.sh file found here, in filename
+      # order, but only on first container start against an empty data
+      # directory -- if you change init/001_schema.sql after the volume
+      # below already has data in it, re-running `docker-compose up` will
+      # NOT re-apply it. Run `docker-compose down -v` first to reset.
+      - ./init:/docker-entrypoint-initdb.d
+      - regdocs_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U regdocs -d regdocs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  regdocs_data:
