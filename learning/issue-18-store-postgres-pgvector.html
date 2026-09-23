@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #18: /store's Postgres+pgvector schema</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #18 — /store's Postgres+pgvector schema</h1>
+<p class="subtitle">What got built, and the Docker/Postgres concepts behind it. Written for "some Docker experience, not a huge amount."</p>
+
+<h2>Where this fits</h2>
+<p>
+  Ingestion (already built, in <code>/ingestion</code>) turns corpus PDFs into <code>Document</code> and <code>Chunk</code> JSON files, but that output only ever lives on disk — regenerable from the PDFs at any time, never treated as real storage. Issue #18 is about giving those records somewhere durable and queryable to actually live: a Postgres database, defined in a new <code>/store</code> folder.
+</p>
+<p>
+  This ticket is <em>schema only</em> — bring up the database, create the tables, nothing writes real data into it yet. A separate ticket (#19, blocked by this one) builds the Python loader that actually populates it from <code>ingestion/output</code>.
+</p>
+
+<div class="flow">
+  <span class="step">ingestion/output/*.json</span>
+  <span class="arrow">→ (not yet — #19)</span>
+  <span class="step">/store's Postgres</span>
+  <span class="arrow">→ (later)</span>
+  <span class="step">retrieval / RAG</span>
+</div>
+
+<h2>docker-compose.yml, briefly</h2>
+<p>
+  You've used Docker before, so the container concept isn't new — this is about what <code>docker-compose.yml</code> specifically declares, and why it's the right tool here instead of a bare <code>docker run</code>.
+</p>
+<div class="box concept">
+  <span class="label">Concept</span>
+  <p><code>docker-compose.yml</code> is a declarative description of one or more services and how they're configured — image, environment variables, ports, volumes, health checks — checked into the repo so <code>docker compose up</code> reproduces the exact same setup on any machine. Think of it as the Docker equivalent of a <code>.csproj</code>'s package references plus a launch profile: instead of everyone remembering (or mistyping) a long <code>docker run</code> command with a dozen flags, the flags live in a file, in version control, next to the code that needs them.</p>
+</div>
+<pre><code>services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: regdocs
+      POSTGRES_PASSWORD: regdocs_dev_only
+      POSTGRES_DB: regdocs
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+      - regdocs_data:/var/lib/postgresql/data</code></pre>
+
+<h3>The image: pgvector/pgvector</h3>
+<p>
+  <code>pgvector</code> is a Postgres <em>extension</em> — an add-on that gives Postgres a new column type (<code>vector</code>) and new index types for fast similarity search over those vectors. That's the mechanism behind semantic search / RAG retrieval: an embedding model turns a chunk of text into a vector, and pgvector lets you ask "which stored vectors are closest to this query vector?" efficiently.
+</p>
+<p>
+  This ticket doesn't use any of that yet — no <code>vector</code> column exists in the schema, and no embedding model has been chosen. But swapping the underlying Docker image later (from plain <code>postgres</code> to <code>pgvector/pgvector</code>) would be more disruptive than just having it available from day one, so the image is pgvector-enabled now, unused, ready for the follow-up embeddings ticket to add a column and start using it.
+</p>
+
+<h2>Init scripts: how the schema gets created automatically</h2>
+<div class="box concept">
+  <span class="label">Concept</span>
+  <p>The official Postgres Docker image (and pgvector's, which is built on top of it) has a built-in convention: on its <em>very first</em> startup — meaning the data directory is empty — it runs every <code>.sh</code> and <code>.sql</code> file it finds inside <code>/docker-entrypoint-initdb.d</code>, in filename order. Mounting a local folder to that path is how a container "seeds itself" with no manual step. It's the closest Docker analogue to an EF Core seed migration that runs automatically on first launch — except it's just raw SQL, no ORM or migration-history table involved.</p>
+</div>
+<p>
+  <code>docker-compose.yml</code> mounts <code>./init</code> to that path, and <code>init/001_schema.sql</code> is the one file in there. It runs automatically the first time <code>docker compose up</code> starts the container against a fresh volume.
+</p>
+<div class="box bug">
+  <span class="label">The gotcha</span>
+  <p>"First startup" is defined by the data <em>volume</em> being empty, not by the SQL file being new. If you edit <code>001_schema.sql</code> after the container has already initialized once, <code>docker compose up</code> will <strong>not</strong> re-run it — Postgres has no idea the file changed, it just sees an already-initialized data directory and starts normally. I hit exactly this while fixing the bugs below: I had to run <code>docker compose down -v</code> (the <code>-v</code> drops the volume too, not just the container) before <code>docker compose up -d</code> would pick up the corrected SQL.</p>
+</div>
+
+<h2>The schema itself</h2>
+<p>
+  Three tables, one per domain concept this project's glossary (<code>CONTEXT.md</code>) already defines: <strong>Document</strong> (one regulatory PDF), <strong>Chunk</strong> (one retrievable/citable passage from a Document), and <strong>Chunking Generation</strong> (one run of a chunking strategy over a Document — Documents can be re-chunked, and old Generations stick around rather than being overwritten, so past answers can still be replayed against the exact context that produced them).
+</p>
+<table>
+  <tr><th>Table</th><th>Key columns</th><th>Notes</th></tr>
+  <tr><td><code>documents</code></td><td><code>id</code>, <code>title</code>, <code>active_chunking_generation_id</code>, <code>supersedes</code></td><td><code>active_chunking_generation_id</code> says which Generation retrieval currently searches</td></tr>
+  <tr><td><code>chunking_generations</code></td><td><code>id</code>, <code>document_id</code>, <code>chunking_strategy</code></td><td>new to this ticket — earlier design docs never gave this its own table</td></tr>
+  <tr><td><code>chunks</code></td><td><code>id</code>, <code>document_id</code>, <code>chunking_generation_id</code>, <code>locator</code>, <code>text</code></td><td>no <code>embedding</code> column yet</td></tr>
+</table>
+<p>
+  One deliberate choice worth calling out: these are ordinary typed columns (<code>TEXT</code>, <code>DATE</code>, …), not a JSONB blob per row. Elsewhere in this project's plan, a separate "audit event" store <em>does</em> use JSONB, because an event's shape genuinely varies by event type. Documents and Chunks don't have that problem — each has exactly one fixed shape — so typed columns let Postgres itself enforce "this field is required" and "this must point at a real row" instead of pushing that checking into application code.
+</p>
+
+<h2>The tricky part: a circular foreign key</h2>
+<p>
+  A <strong>foreign key</strong> is a constraint that says "this column's value must exist as a primary key in that other table" — Postgres checks it on every insert/update and rejects anything that would leave it pointing at nothing. Straightforward, usually.
+</p>
+<p>
+  Here, though, <code>documents.active_chunking_generation_id</code> needs to point at a row in <code>chunking_generations</code> — but every row in <code>chunking_generations</code> also has a <code>document_id</code> pointing back at <code>documents</code>. Each table needs the other to exist first, which is impossible if you try to declare both foreign keys inline in their respective <code>CREATE TABLE</code> statements — whichever table you create second can reference the first, but not the other way around.
+</p>
+<div class="box did">
+  <span class="label">What we did</span>
+  <p>Create <code>documents</code> first, with <code>active_chunking_generation_id</code> as a plain column and <em>no</em> foreign key yet. Then create <code>chunking_generations</code>, which <em>can</em> reference <code>documents</code> inline since it already exists. Then, as a separate statement, <code>ALTER TABLE documents ADD CONSTRAINT ... FOREIGN KEY (active_chunking_generation_id) REFERENCES chunking_generations (id)</code> — bolting the second half of the relationship on once both tables exist.</p>
+</div>
+<pre><code>CREATE TABLE documents (
+    id TEXT PRIMARY KEY,
+    ...
+    active_chunking_generation_id TEXT   -- no FK yet
+);
+
+CREATE TABLE chunking_generations (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents (id),  -- fine, documents exists
+    ...
+);
+
+ALTER TABLE documents
+    ADD CONSTRAINT fk_documents_active_chunking_generation
+    FOREIGN KEY (active_chunking_generation_id)
+    REFERENCES chunking_generations (id);   -- now this exists too</code></pre>
+
+<h2>What /code-review caught</h2>
+<p>
+  After the schema was up and manually verified, I ran this project's <code>/code-review</code> step (part of the standard implementation workflow here) before committing. It found two real integrity gaps in the foreign-key design above — worth walking through since the bug is genuinely non-obvious.
+</p>
+<div class="box bug">
+  <span class="label">The bug</span>
+  <p>
+    A single-column foreign key on <code>chunking_generation_id</code> only proves the referenced Generation <em>exists somewhere</em> — not that it belongs to the same Document the Chunk itself claims. Nothing stopped a row like:
+  </p>
+  <pre><code>-- doc-A's chunk, pointing at doc-B's generation. Both plain FKs pass individually.
+INSERT INTO chunks (id, document_id, chunking_generation_id, ...)
+VALUES ('c1', 'doc-A', 'gen-belonging-to-doc-B', ...);</code></pre>
+  <p>
+    Same problem on <code>documents.active_chunking_generation_id</code>: it could legally point at a Generation belonging to a completely different Document, which would mean retrieval serves one Document's chunks under another Document's identity.
+  </p>
+</div>
+<div class="box did">
+  <span class="label">The fix: composite foreign keys</span>
+  <p>
+    A foreign key can cover more than one column at once, checked as a pair. First, <code>chunking_generations</code> gets a <code>UNIQUE</code> constraint on <code>(document_id, id)</code> together — giving that pairing something to be referenced against, not just <code>id</code> alone. Then both the risky relationships get upgraded to composite foreign keys against that pair:
+  </p>
+  <pre><code>ALTER TABLE chunking_generations
+    ADD CONSTRAINT uq_chunking_generations_document_id_id
+    UNIQUE (document_id, id);
+
+-- chunks: document_id and chunking_generation_id must belong together
+ALTER TABLE chunks ADD CONSTRAINT fk_chunks_document_chunking_generation
+    FOREIGN KEY (document_id, chunking_generation_id)
+    REFERENCES chunking_generations (document_id, id);
+
+-- documents: the active pointer must belong to *this* document
+ALTER TABLE documents ADD CONSTRAINT fk_documents_active_chunking_generation
+    FOREIGN KEY (id, active_chunking_generation_id)
+    REFERENCES chunking_generations (document_id, id);</code></pre>
+  <p>
+    After this, the bad insert above is rejected by Postgres itself — no application code has to know to check it.
+  </p>
+</div>
+<div class="box bug">
+  <span class="label">The other bug: an unconstrained "closed set"</span>
+  <p>
+    <code>chunking_strategy</code> is one of exactly three known values (<code>clause_numbered</code>, <code>heading_sections</code>, <code>academic_sections</code> — an existing design decision, ADR-0014). The column was plain <code>TEXT</code> with nothing stopping an arbitrary string from being stored. Fixed with a <code>CHECK</code> constraint, the same "let the database enforce it" philosophy as the foreign keys above:
+  </p>
+  <pre><code>chunking_strategy TEXT NOT NULL CHECK (
+    chunking_strategy IN ('clause_numbered', 'heading_sections', 'academic_sections')
+)</code></pre>
+</div>
+
+<h2>How it was verified</h2>
+<p>
+  This ticket has no automated tests (that arrives with #19's loader, tested against a real container). Instead, verification was a manual session against the running container — the kind of thing you'd normally do once in psql and then throw away, recorded here because it's the actual proof the schema works:
+</p>
+<div class="box verified">
+  <span class="label">Verified</span>
+  <ul style="margin: 0.5rem 0 0; padding-left: 1.2rem;">
+    <li><code>\dx</code> — the <code>vector</code> extension is installed</li>
+    <li><code>\d</code> on each table — columns, types, nullability, and every foreign key/check constraint match the design</li>
+    <li>A same-document insert (Document → its own Generation → a Chunk of that Generation) succeeds</li>
+    <li>A cross-document chunk insert is rejected by <code>fk_chunks_document_chunking_generation</code></li>
+    <li>Pointing a Document's <code>active_chunking_generation_id</code> at another Document's Generation is rejected</li>
+    <li>An invalid <code>chunking_strategy</code> value is rejected by the <code>CHECK</code> constraint</li>
+  </ul>
+</div>
+
+<h2>What's next</h2>
+<p>
+  Issue <strong>#19</strong> (blocked by this one, now unblocked) builds the Python loader: reads <code>ingestion/output</code>'s JSON, writes it into these tables by upserting on each row's deterministic id — never wiping the table — so re-running it after ingestion changes is always safe. After that, a further ticket picks an embedding model and finally puts pgvector's <code>vector</code> column to use.
+</p>
+
+<footer>
+  RegDocs Assistant — issue #18, epic #17. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>
