@@ -4,5 +4,6 @@ corpus/*.pdf
 schema/.venv/
 ingestion/.venv/
 ingestion/output/
+store/.venv/
 **/__pycache__/
 .pytest_cache/

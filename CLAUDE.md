@@ -37,3 +37,9 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 Every issue gets its own branch and its own PR — never commit straight to `master`. The Matt Pocock `/implement` skill only commits to whatever branch is currently checked out, so before invoking it: pull `master` up to date first, then create the issue's branch from that updated `master`. Once implementation is done, use `/ship` (or `/ship-no-issue` if there's no linked issue) to push and open the PR.
 
 Issues labeled `epic` are never implemented directly — they're a parent ticket broken into sub-tickets by `/to-tickets`. Implement the sub-tickets (the frontier: whichever has no open blockers) instead. See `docs/agents/issue-tracker.md`.
+
+### `/implement --learn`
+
+When `/implement`'s prompt includes `--learn`, produce a learning writeup once implementation is done: a self-contained HTML file under `/learning`, named `issue-<N>-<slug>.html`, explaining what was built and the concepts behind it (matching the style of existing files there — concept callouts, the actual commands/queries run, any bugs `/code-review` caught and how they were fixed). Commit it to the same branch as the implementation, so it ships in the same PR. Without `--learn`, skip this — don't produce one unasked.
+
+Write (or revise) the doc *after* `/code-review`'s findings are fixed, not before — never describe a pre-review draft. If review changed the design (not just cosmetics), update the doc to match the final code, and fold in what was actually caught: a wrong-but-plausible first approach and why it was wrong is better teaching material than a doc that only shows the polished result.

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #19: /store's loader</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #19 — /store's loader</h1>
+<p class="subtitle">Getting ingestion's JSON output actually into Postgres. A sequel to <a href="issue-18-store-postgres-pgvector.html">issue #18's writeup</a> — that one built the schema; this one populates it.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">ingestion/output/*.json</span>
+  <span class="arrow">→ loader.py (this ticket)</span>
+  <span class="step">/store's Postgres</span>
+  <span class="arrow">→ (later)</span>
+  <span class="step">retrieval / RAG</span>
+</div>
+<p>
+  #18 stood up an empty, correctly-constrained database. This ticket writes <code>store/loader.py</code>: a standalone Python script that reads the <code>Document</code>/<code>Chunk</code> JSON ingestion already produced and writes it into that schema. Run against the real corpus, it loaded <strong>20 Documents, 20 Chunking Generations, 1993 Chunks</strong> — every Document ended up with its <code>active_chunking_generation_id</code> set, and re-running it a second time changed nothing (same row counts, no errors) — the "safe to re-run" requirement, actually proven, not just asserted.
+</p>
+
+<h2>A gap the spec got wrong: where does <code>chunking_strategy</code> come from?</h2>
+<div class="box bug">
+  <span class="label">The problem</span>
+  <p>
+    The ticket assumed the loader could derive every <code>chunking_generations</code> row — including its <code>chunking_strategy</code> column — purely from the Chunk JSON files already sitting in <code>ingestion/output</code>. That's true for <code>id</code> and <code>document_id</code> (every Chunk carries <code>chunking_generation_id</code> and <code>document_id</code>), but <strong>not</strong> for <code>chunking_strategy</code> — it was never written into <code>ingestion/output</code> at all. Checking the actual JSON schemas confirmed it: <code>Chunk</code> only has <code>id</code>, <code>document_id</code>, <code>chunking_generation_id</code>, <code>locator</code>, <code>text</code>. <code>Document</code> doesn't have it either. The strategy name exists in exactly one place: <code>ingestion/manifest.json</code>, keyed by PDF filename — a deliberate earlier design decision (ADR-0014), not an oversight in ingestion.
+  </p>
+</div>
+<div class="box did">
+  <span class="label">The fix</span>
+  <p>
+    <code>loader.py</code> reads <code>manifest.json</code> too, as a second input alongside <code>ingestion/output</code>. To match a manifest entry (keyed by filename, e.g. <code>"01-cp01-funding-of-ifsra.pdf"</code>) up with a Document id (<code>"doc-01-cp01-funding-of-ifsra"</code>), the loader has its own one-line copy of the same rule <code>ingestion/ids.py</code> already uses — duplicated deliberately rather than importing across <code>/ingestion</code> and <code>/store</code>'s independent Python environments, which would couple two folders meant to stay separately runnable (ADR-0020).
+  </p>
+  <p>This isn't a change <em>to</em> ingestion — no code there moved — just an extra file the loader also reads.</p>
+</div>
+
+<h2>The circular reference, again — this time in application code</h2>
+<p>
+  Issue #18's writeup covered a circular foreign key at the <em>schema</em> level: <code>documents.active_chunking_generation_id</code> points at a Chunking Generation, whose own <code>document_id</code> points back at the Document. The exact same shape shows up again here, but now it's the <em>loader</em> that has to respect it when deciding what order to insert rows in — you can't insert a Document with its <code>active_chunking_generation_id</code> already set if that Generation doesn't exist in the database yet, and you can't insert a Generation if its Document doesn't exist yet either.
+</p>
+<div class="box did">
+  <span class="label">The fix: four phases, same idea as the schema's two-step ALTER TABLE</span>
+  <p>The loader writes in this order, all inside one database transaction:</p>
+  <table>
+    <tr><th>Phase</th><th>What</th><th>Why it works</th></tr>
+    <tr><td>1</td><td>Insert/update every <code>document</code> row — <em>except</em> <code>supersedes</code> and <code>active_chunking_generation_id</code>, left <code>NULL</code></td><td>Nothing else needs to exist yet — these are the table's own primary keys</td></tr>
+    <tr><td>2</td><td>Insert/update every <code>chunking_generations</code> row</td><td>Every <code>document_id</code> it references was just created in phase 1</td></tr>
+    <tr><td>3</td><td>Go back and <code>UPDATE</code> each Document's <code>supersedes</code> (only if the Document is new this run) and <code>active_chunking_generation_id</code> (every run)</td><td>Every Document and every Generation now exists, so both circular references can finally be set — see below for why the two fields are treated differently</td></tr>
+    <tr><td>4</td><td>Insert/update every <code>chunk</code> row</td><td>Both its foreign keys (Document, Generation) already exist</td></tr>
+  </table>
+</div>
+
+<h2>Upsert: writing rows that might already exist</h2>
+<div class="box concept">
+  <span class="label">Concept</span>
+  <p>
+    An <strong>upsert</strong> ("update or insert") writes a row if its key doesn't exist yet, or does something else if it does — one statement covering both cases, instead of the application first checking "does this exist?" and branching. Postgres's spelling is <code>INSERT ... ON CONFLICT (key) DO ...</code>. The "something else" is usually <code>DO UPDATE SET ...</code> (overwrite the existing row with the new values), but this loader uses <code>DO NOTHING</code> instead:
+  </p>
+  <pre><code>INSERT INTO chunking_generations (id, document_id, chunking_strategy)
+VALUES (%(id)s, %(document_id)s, %(chunking_strategy)s)
+ON CONFLICT (id) DO NOTHING</code></pre>
+  <p>
+    <code>DO UPDATE SET col = EXCLUDED.col</code> would be the more commonly-reached-for form (<code>EXCLUDED</code> is Postgres's name, inside a <code>DO UPDATE</code> clause, for the row that would have been inserted — the nearest T-SQL equivalent is <code>MERGE</code>). It's <em>not</em> what this loader uses, and that was actually a bug caught on the first pass of <code>/code-review</code>, covered below.
+  </p>
+</div>
+<p>
+  Upsert-by-id is why this loader can be run over and over — after ingestion re-processes a document, after a schema tweak, whenever — without ever needing a "wipe everything and start over" step. That matters specifically because <strong>documents, chunking_generations, and chunks are all immutable once written</strong> (CONTEXT.md, and ADR-0021 for Chunking Generation specifically): a truncate-and-reload loader would be simpler to write, but would destroy every earlier Generation on every run, which breaks Replay (re-running a past query's exact original context) the moment more than one Generation of the same Document exists.
+</p>
+<p>
+  Given that immutability, <code>DO NOTHING</code> is actually the philosophically correct choice, not just a simpler one: if a row's id already exists, nothing about its content is supposed to change — a real correction is meant to arrive as a brand new Document (linked via <code>supersedes</code>), never a silent edit to the old one. <code>created_at</code> on <code>chunking_generations</code> benefits from the same idea a different way: it's left out of the insert's column list entirely, so the column's own <code>DEFAULT now()</code> fills it in once, on the row's actual first insert, and re-running the loader a year later can never silently rewrite when a Generation was really first created.
+</p>
+
+<h2>One transaction, not one statement per row</h2>
+<div class="box concept">
+  <span class="label">Concept</span>
+  <p>
+    <code>with psycopg.connect(db_url) as conn:</code> wraps the entire load — all four phases, every row — in a single database transaction. On a clean exit it commits everything at once; if anything raises partway through, everything rolls back and the exception propagates up as a normal Python traceback. The closest .NET analogy is a <code>using var transaction = connection.BeginTransaction()</code> wrapping the whole unit of work, except psycopg's connection context manager commits/rolls back for you automatically based on whether an exception escaped the block.
+  </p>
+</div>
+<p>
+  This is why "a loader failure surfaces loudly" (an acceptance criterion) needed no special error-handling code at all — an uncaught exception already does exactly that, and the transaction wrapper means it can never leave the database half-updated on the way out.
+</p>
+<p>
+  This is a deliberate contrast with ingestion's own per-document failure isolation (ADR-0019), where one corrupt PDF is expected, ordinary input and shouldn't take down the whole batch. Here, a failure would mean already-validated JSON somehow doesn't fit the schema — a bug worth stopping the whole run over, not skipping past.
+</p>
+
+<h2>What two rounds of /code-review actually caught</h2>
+<p>
+  This ticket went through <code>/code-review</code> twice — the first pass on the initial implementation, a second pass after fixing everything the first one found. Both surfaced real, not-cosmetic bugs, worth walking through rather than glossing over:
+</p>
+<div class="box bug">
+  <span class="label">Round 1: tests could destroy real data</span>
+  <p>
+    The first version of the tests wiped every row in <code>documents</code>/<code>chunking_generations</code>/<code>chunks</code> before and after each test — against the <em>same</em> local database <code>store/README.md</code> tells you to load the real 20-document corpus into. Follow the README top to bottom (bring the container up, load the real corpus, then run the tests) and the test suite would silently delete everything just loaded, with no warning anywhere.
+  </p>
+  <p><strong>Fix:</strong> a second database, <code>regdocs_test</code>, created automatically alongside <code>regdocs</code> (<code>store/init/002_test_database.sql</code> — schema-identical, via psql's <code>\c</code>/<code>\i</code> meta-commands re-running <code>001_schema.sql</code> against the new database). Tests now default to <code>regdocs_test</code>; the real <code>regdocs</code> database is never in their reach at all, not just "cleaned up carefully."</p>
+</div>
+<div class="box bug">
+  <span class="label">Round 2: "upsert" was quietly rewriting immutable history</span>
+  <p>
+    The original <code>chunking_generations</code> upsert used <code>DO UPDATE SET chunking_strategy = EXCLUDED.chunking_strategy</code>. Since <code>chunking_strategy</code> is looked up fresh from <code>manifest.json</code> on every call, re-running the loader after a manifest edit would silently overwrite an already-loaded, supposedly-immutable Generation's recorded strategy — corrupting exactly the kind of historical fact Replay depends on staying accurate. The same shape of bug existed for <code>documents.supersedes</code>: phase 3's <code>UPDATE</code> set it unconditionally on <em>every</em> run, not just a Document's first load.
+  </p>
+  <p>
+    <strong>Fix:</strong> switched every upsert to <code>ON CONFLICT DO NOTHING</code> (covered above), and made phase 3 check which Documents were already loaded <em>before</em> writing anything, so <code>supersedes</code> is only ever set the first time — the same "original row wins" rule the rest of the loader already followed, now applied consistently everywhere.
+  </p>
+</div>
+<p>
+  A handful of smaller findings from both rounds are in the commit history too: clearer errors (a plain Python <code>ValueError</code> naming the actual problem) in place of raw database errors for drift between <code>ingestion/output</code> and <code>manifest.json</code>, a closed-set check on <code>chunking_strategy</code> before it ever reaches the database, and a check that two Chunks can't disagree about which Document their shared Chunking Generation belongs to.
+</p>
+
+<h2>How it was tested</h2>
+<p>
+  Same seam-and-skip-pattern conventions as #18's writeup covered, applied to the loader specifically — six tests total, all against <code>regdocs_test</code>:
+</p>
+<div class="box verified">
+  <span class="label">Verified</span>
+  <ul style="margin: 0.5rem 0 0; padding-left: 1.2rem;">
+    <li>A synthetic fixture — one Document, deliberately re-chunked into <strong>two</strong> Chunking Generations — proves upsert-by-id doesn't collide or overwrite chunks across Generations of the same Document. (The real corpus only has one Generation per Document so far, so this scenario only exists as a fixture.)</li>
+    <li>Running the loader twice against the same fixture leaves row counts unchanged — the actual idempotency check, not just an assertion that it "should" be safe.</li>
+    <li>Two direct regression tests for the round-2 bugs above: re-running with a changed manifest doesn't touch an existing Generation's <code>chunking_strategy</code>, and re-running with a changed <code>supersedes</code> value doesn't touch a Document's original link.</li>
+    <li>An invalid <code>chunking_strategy</code> value raises a clear <code>ValueError</code> naming the bad value, rather than a Postgres error from deep inside a batch insert.</li>
+    <li>A test runs the loader against the real, full <code>ingestion/output</code> (skipped if that folder isn't present locally, since it's not committed to git) and checks the row counts match what's on disk, and that no Document was left with a <code>NULL</code> active Generation.</li>
+    <li>All Postgres-dependent tests are decorated with a reachability check that skips (not fails) if <code>docker compose up</code> hasn't been run — the same convention <code>ingestion/tests</code> uses for missing corpus PDFs.</li>
+  </ul>
+</div>
+
+<h2>What's next</h2>
+<p>
+  With both #18 and #19 done, <code>/store</code> is a real, populated, queryable database of every ingested Document and Chunk. The next piece (a follow-up issue, not yet started) picks an embedding model, adds the deferred <code>vector</code> column via a migration, and actually puts pgvector's similarity search to use — the first step that's genuinely RAG, rather than plumbing.
+</p>
+
+<footer>
+  RegDocs Assistant — issue #19, epic #17. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>
