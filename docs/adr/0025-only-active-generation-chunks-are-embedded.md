@@ -1,0 +1,5 @@
+# Only a Document's active Chunking Generation gets embedded
+
+`embed.py` only computes Chunk Embeddings for Chunks belonging to each Document's current `active_chunking_generation_id`. Chunks sitting in an earlier, superseded Chunking Generation are left unembedded, even though they remain in `chunks` for Replay.
+
+This extends a rule that already exists (CONTEXT.md: "only the active Generation's Chunks are eligible for retrieval") into a pipeline that could otherwise ignore it. Embedding is the expensive, per-Chunk step in this whole flow (a live model call per Chunk, unlike the cheap-to-repeat SQL upserts elsewhere) — spending that cost on Chunks retrieval will never actually query would be pure waste today, and silently compounds every time a Document gets re-chunked in the future. The trade-off being accepted: if an inactive Generation's Chunks are ever needed for a Replay that specifically wants period-accurate embeddings (not just period-accurate chunk text), they won't have any — deferred as a real future question rather than solved speculatively now, since nothing in this project currently depends on it.
