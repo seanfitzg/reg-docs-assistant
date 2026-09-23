@@ -58,3 +58,7 @@ _Avoid_: Passage, segment, window — "window" in particular implies fixed-size 
 **Chunking Generation**:
 The full set of Chunks produced by one run of a chunking strategy over a Document. A Document tracks which Generation is active via `active_chunking_generation_id`; only the active Generation's Chunks are eligible for retrieval, though earlier Generations stay in storage to satisfy Replay.
 _Avoid_: Version — reserved for Document supersession, a different kind of "old vs new"; conflating the two would blur a regulatory amendment with a re-chunking run
+
+**Chunk Embedding**:
+A vector representation of one Chunk's text, produced by a specific embedding model, used to find candidate Chunks for a query via nearest-neighbor similarity search. Keyed by (Chunk, embedding model) — trying a different model produces additional Chunk Embeddings alongside existing ones, never replacing them, the same "old stays, new is additive" shape as Chunking Generation. Only computed for Chunks belonging to a Document's active Chunking Generation, since an inactive Generation's Chunks are never retrieval candidates in the first place.
+_Avoid_: Vector, embedding (bare) — "Chunk Embedding" is this project's term for the persisted, model-keyed form specifically
