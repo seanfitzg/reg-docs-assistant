@@ -168,6 +168,9 @@
 <p>
   Epic #28 exists because <code>/store</code> now has a vector for every active Chunk, but there's no way to tell whether searching those vectors returns the <em>right</em> Chunks. The design was settled in a grilling session and recorded as ADR-0027 to ADR-0030 before any code. This ticket builds only the scaffolding: <code>schema/eval-dataset.schema.json</code>, an empty <code>eval/dataset.json</code>, the checks that keep it honest, and <code>eval/find_locator.py</code>. It's verified by 8 new schema-fixture tests and 20 <code>/eval</code> tests. The full suite passes across all four folders (154 tests).
 </p>
+<p>
+  The PR touches 29 files, but only five hold real logic. The rest are tests, test data and docs. <a href="#tour">A tour of the files</a> goes through every one of them: what it is, why it exists, and how it connects to the others.
+</p>
 
 <h2>The concepts</h2>
 <div class="box concept">
@@ -196,7 +199,214 @@
   <p><code>check_dataset.find_problems</code> compares locators by <strong>exact string equality</strong>. #30's match rule will <em>not</em> be exact: <code>3.12(a)</code> will count as a hit for <code>3.12</code>. That isn't a contradiction. The exact check answers "<em>is this label a typo?</em>", and the match rule answers "<em>would retrieval count this as a hit?</em>". If they were merged, a mistyped label like <code>3.2</code> for <code>3.12</code> would look like a retrieval miss on every run, forever, and the lower score would be blamed on the model.</p>
 </div>
 
-<h2>The schema: JSON Schema's <code>if</code>/<code>then</code>/<code>else</code></h2>
+<h2 id="tour">A tour of the files</h2>
+
+<p>The files fall into three groups, plus a few small doc edits:</p>
+<table>
+  <tr><th>Group</th><th>Files</th><th>Job</th></tr>
+  <tr><td><strong>The contract</strong></td><td><code>schema/eval-dataset.schema.json</code>, its fixtures and test</td><td>Defines what a valid <code>dataset.json</code> <em>looks like</em>.</td></tr>
+  <tr><td><strong>The tools</strong></td><td><code>eval/dataset.json</code>, <code>corpus.py</code>, <code>check_dataset.py</code>, <code>find_locator.py</code></td><td>The dataset itself, plus code that reads the corpus, checks the dataset against it, and searches it.</td></tr>
+  <tr><td><strong>The tests</strong></td><td><code>eval/tests/</code> and its fixtures</td><td>Prove the tools work (against fake data), and check the real dataset (against real data).</td></tr>
+</table>
+
+<h3>How they connect</h3>
+<p>Arrows mean "reads" or "uses". Everything funnels through <code>corpus.py</code>, the only file that knows where the ingested Chunks live on disk.</p>
+<pre><code>                    schema/eval-dataset.schema.json      ← the rules for the file's SHAPE
+                       ▲                     ▲
+          validated by │                     │ validated by
+                       │                     │
+ eval/dataset.json ────┘     schema/fixtures/eval-dataset/*.json
+ (your Eval Cases)                  (tested by schema/tests/test_eval_dataset.py)
+        │
+        │ checked against the corpus by
+        ▼
+ eval/check_dataset.py ──┐
+                         ├──uses──► eval/corpus.py ──reads──► ingestion/output/
+ eval/find_locator.py ───┘                                    documents/*.json
+                                                              chunks/*.json</code></pre>
+
+<h3>The workflow they support</h3>
+<p>The easiest way to see why each file exists is to follow what you'll do in #31, writing one Eval Case:</p>
+<table>
+  <tr><th>Step</th><th>You do</th><th>Files involved</th></tr>
+  <tr><td>1</td><td>Pick a passage, then run <code>python eval/find_locator.py "fitness probity"</code> to get its exact locator</td><td><code>find_locator.py</code> → <code>corpus.py</code> → <code>ingestion/output/</code></td></tr>
+  <tr><td>2</td><td>Write the question, tags, locator and quote into <code>dataset.json</code></td><td><code>dataset.json</code></td></tr>
+  <tr><td>3</td><td>Run <code>python -m pytest eval/tests</code></td><td><code>test_dataset.py</code>, which checks the shape against <code>eval-dataset.schema.json</code>, then the labels against the corpus via <code>check_dataset.py</code> + <code>corpus.py</code></td></tr>
+  <tr><td>4</td><td>Fix anything it reports, e.g. <code>q07: gold locator not found in active Chunks: doc-10-… / 4.2</code></td><td></td></tr>
+</table>
+
+<h3>Group 1: the contract (<code>schema/</code>)</h3>
+
+<div class="box did">
+  <span class="label"><code>schema/eval-dataset.schema.json</code></span>
+  <p>A <strong>JSON Schema</strong>: a JSON file that describes the allowed shape of <em>another</em> JSON file. It plays the same role as an XSD for XML, or the <code>[Required]</code>/<code>[RegularExpression]</code> attributes on a C# DTO: it's the rules, written as data, and any language's validator can enforce them. It lives in <code>/schema</code> next to <code>chunk.schema.json</code> and the rest because it's a shared contract. A later .NET harness can validate the same file against the same rules (ADR-0011).</p>
+  <p>The top level says a dataset is <code>{ "dataset_version": &lt;integer ≥ 1&gt;, "cases": [ &lt;evalCase&gt;, … ] }</code>, with no other keys allowed (<code>"additionalProperties": false</code>). The two reusable shapes are declared once under <code>$defs</code> and referenced with <code>$ref</code>, much like declaring a class once and using it as a property type in several places:</p>
+<pre><code>"$defs": {
+  "goldLocator": { document_id: string, locator: string }           // used by gold_locators AND superseded_locators
+  "evalCase":    { id: "q01"-style, question, phrasing: lexical|paraphrase,
+                   category: single_passage|multi_locator|supersession|unanswerable,
+                   gold_locators: [goldLocator], superseded_locators?: [goldLocator],
+                   answer_quote?: string, notes?: string }
+}                                                                   // (simplified; the real file is JSON Schema syntax)</code></pre>
+  <p>The one tricky part, where required fields change by category, is covered in <a href="#ifthen">the next section</a>.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>schema/fixtures/eval-dataset/*.json</code> (8 files)</span>
+  <p>Example datasets for testing the schema itself. Two are <code>valid-*</code> and must pass: <code>valid-empty-seed.json</code> (the empty starting point) and <code>valid-mixed-categories.json</code> (one case of each awkward shape). Six are <code>invalid-*</code>. Each is a valid dataset with exactly <em>one</em> rule broken, and its filename says which one. This is the same fixture convention <code>/schema</code> already uses for Documents and Chunks.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>schema/tests/test_eval_dataset.py</code></span>
+  <p>Two tests, each run once per fixture file. <code>@pytest.mark.parametrize</code> is the Python equivalent of nUnit's <code>[TestCase(...)]</code>: one test method, many inputs, each reported as its own test.</p>
+<pre><code>@pytest.mark.parametrize("fixture_name", ["valid-mixed-categories.json", "valid-empty-seed.json"])
+def test_valid_dataset_passes_validation(fixture_name):
+    validate(load_json(FIXTURES / fixture_name), load_json(EVAL_DATASET_SCHEMA))
+
+@pytest.mark.parametrize("fixture_name", ["invalid-unanswerable-with-gold-locators.json", ...])
+def test_invalid_dataset_fails_validation(fixture_name):
+    with pytest.raises(jsonschema.exceptions.ValidationError):     # like Assert.Throws&lt;T&gt;
+        validate(load_json(FIXTURES / fixture_name), load_json(EVAL_DATASET_SCHEMA))</code></pre>
+  <p>So this file tests the <em>schema</em>, not your dataset. Your dataset is tested in <code>eval/tests/test_dataset.py</code>.</p>
+</div>
+
+<h3>Group 2: the tools (<code>eval/</code>)</h3>
+
+<div class="box did">
+  <span class="label"><code>eval/dataset.json</code></span>
+  <p>The Eval Cases themselves, and the only file in this PR you'll edit by hand (in #31). It's empty for now:</p>
+<pre><code>{ "dataset_version": 1, "cases": [] }</code></pre>
+  <p>A filled-in case looks like the example in <code>eval/README.md</code>. Bump <code>dataset_version</code> whenever you change the cases, so every future eval run report records which version of the questions it used (ADR-0030).</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/corpus.py</code>: one function, <code>load_active_chunks()</code></span>
+  <p>Reads the ingested corpus from <code>ingestion/output/</code>, the JSON files the ingestion pipeline writes. There are two kinds: <code>documents/*.json</code> (one object per Document, including its <code>active_chunking_generation_id</code>) and <code>chunks/*.json</code> (one array of Chunks per Document, which can include Chunks from older generations). The function returns only the Chunks from each Document's <em>active</em> generation, because those are the only ones retrieval ever searches, so they're the only ones a Gold Locator may point at.</p>
+<pre><code>documents = [json.loads(p.read_text(...)) for p in sorted((output_dir / "documents").glob("*.json"))]
+active_generation = {d["id"]: d["active_chunking_generation_id"] for d in documents}   # doc id → active gen
+
+for path in sorted((output_dir / "chunks").glob("*.json")):
+    for chunk in json.loads(path.read_text(...)):
+        if active_generation.get(chunk["document_id"]) == chunk["chunking_generation_id"]:
+            chunks.append(chunk)                                                          # keep active only</code></pre>
+  <p>In LINQ terms: build a <code>Dictionary</code> from the documents, then a <code>Where</code> over all Chunks that keeps those whose generation equals their Document's active one. It reads files, not Postgres, so writing cases never needs Docker running.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/check_dataset.py</code>: one function, <code>find_problems(dataset, active_chunks)</code></span>
+  <p>The checks a JSON Schema <em>can't</em> express, because they need more than the file's own shape. A schema can check that a locator is a non-empty string. It can't check that the string actually exists in the corpus. It also can't check that ids are unique across all cases.</p>
+<pre><code>existing = {(c["document_id"], c["locator"]) for c in active_chunks}   # a HashSet of (doc, locator) pairs
+
+for case in dataset["cases"]:
+    if case["id"] in seen_ids:  problems.append(f"duplicate case id: {case['id']}")
+    for entry in case["gold_locators"] (and superseded_locators):
+        if (entry["document_id"], entry["locator"]) not in existing:
+            problems.append(f"{case_id}: gold locator not found in active Chunks: {doc} / {locator}")
+return problems                                                           # [] means all good</code></pre>
+  <p>It <em>returns</em> a list of messages rather than raising on the first problem, so one test run shows you every typo at once. It's also a <em>pure function</em>: data in, list out, no file reading. That's why it can be tested with tiny hand-made inputs (see Group 3).</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/find_locator.py</code>: <code>search()</code> plus a command-line <code>main()</code></span>
+  <p>Your lookup tool while writing cases. It has two layers, the same split as <code>check_dataset</code>:</p>
+  <ul>
+    <li><strong><code>search(chunks, terms, document_id=None)</code></strong>, the pure logic. It returns a <code>KeywordMatch(document_id, locator, snippet)</code> for every Chunk containing all the words, ignoring case. <code>KeywordMatch</code> is a <code>@dataclass(frozen=True)</code>, Python's nearest thing to a C# <code>record</code>.</li>
+    <li><strong><code>main(argv)</code></strong>, the thin command-line wrapper. It parses arguments with <code>argparse</code> (like <code>System.CommandLine</code>), rejects blank terms and unknown <code>--doc</code> ids, calls <code>corpus.load_active_chunks()</code> then <code>search()</code>, and prints the results:</li>
+  </ul>
+<pre><code>$ python eval/find_locator.py "fitness probity" --doc doc-10-cp160-fitness-and-probity-regime
+doc-10-cp160-fitness-and-probity-regime  |  Chapter 4: Questions (p. 15)
+    ...the application of fitness and probity standards and other governance related requirements...
+9 match(es)</code></pre>
+  <p>The part before <code>|</code> is what you copy into <code>document_id</code>, and the part after it is the <code>locator</code>. The <code>if __name__ == "__main__":</code> guard at the bottom means <code>main()</code> only runs when you execute the file directly, not when a test imports it. It's the Python equivalent of a <code>Program.Main</code> that tests never trigger.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/requirements.txt</code> and <code>eval/README.md</code></span>
+  <p><code>requirements.txt</code> is this folder's dependency list, roughly a <code>.csproj</code>'s <code>&lt;PackageReference&gt;</code>s: <code>jsonschema[format]</code> and <code>pytest</code>. Like <code>/schema</code>, <code>/ingestion</code> and <code>/store</code>, <code>/eval</code> gets its own virtual environment (<code>eval/.venv</code>, gitignored), so its packages never clash with another folder's. The README covers setup, how to write cases, and how to run the tests.</p>
+</div>
+
+<h3>Group 3: the tests (<code>eval/tests/</code>)</h3>
+<p>Two kinds of test live here, and the difference matters:</p>
+<table>
+  <tr><th></th><th>Unit tests</th><th>Real-data test</th></tr>
+  <tr><td>Files</td><td><code>test_check_dataset.py</code>, <code>test_find_locator.py</code></td><td><code>test_dataset.py</code></td></tr>
+  <tr><td>Input</td><td>small fake corpus + fake dataset in <code>tests/fixtures/</code></td><td>the real <code>eval/dataset.json</code> + real <code>ingestion/output/</code></td></tr>
+  <tr><td>Proves</td><td>the <em>code</em> is correct</td><td>your <em>data</em> is correct</td></tr>
+  <tr><td>Always runs?</td><td>yes</td><td>the corpus check skips if <code>ingestion/output/</code> is missing</td></tr>
+</table>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/conftest.py</code></span>
+  <p>pytest automatically loads a file with this exact name before any test in the folder. Its one job is to add <code>eval/</code> to Python's import path, so tests can write <code>from corpus import load_active_chunks</code>. It's the same trick <code>store/tests/conftest.py</code> uses, and it fills the role of the project reference a .NET test project has to its code project.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/fixtures/ingestion-output/</code> (4 files): a miniature corpus</span>
+  <p>A tiny imitation of the real <code>ingestion/output/</code>, laid out the same way so <code>corpus.py</code> reads it without knowing the difference. It's built to contain exactly the awkward cases the code has to handle:</p>
+  <table>
+    <tr><th>Document</th><th>Generation</th><th>Chunk locators</th><th>Why it's there</th></tr>
+    <tr><td><code>doc-a</code> (clause-numbered)</td><td>gen-1 (inactive)</td><td><code>9.9</code></td><td>proves inactive Chunks are ignored, since <code>9.9</code> must never be found</td></tr>
+    <tr><td><code>doc-a</code></td><td>gen-2 (active)</td><td><code>1.1</code>, <code>3.12</code></td><td><code>1.1</code>'s text has a PDF-style line break mid-sentence</td></tr>
+    <tr><td><code>doc-b</code> (heading sections)</td><td>gen-1 (active)</td><td><code>Introduction (p. 3)</code></td><td>the heading-plus-page locator format; shares the words "regulated entity" with <code>doc-a</code>, to test <code>--doc</code> filtering</td></tr>
+  </table>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/fixtures/valid-dataset.json</code></span>
+  <p>A small valid dataset whose Gold Locators point into that miniature corpus: one <code>single_passage</code> case, one <code>supersession</code> case and one <code>unanswerable</code> case. It's the known-good starting point for <code>test_check_dataset.py</code>.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/test_check_dataset.py</code> (7 tests)</span>
+  <p>Tests <code>corpus.load_active_chunks()</code> (only <code>1.1</code>, <code>3.12</code> and <code>Introduction (p. 3)</code> come back, never <code>9.9</code>) and <code>check_dataset.find_problems()</code>. The <code>find_problems</code> tests all follow one pattern: load the known-good dataset, break exactly one thing, and assert the exact message:</p>
+<pre><code>def test_missing_gold_locator_is_reported_with_case_id_and_locator():
+    dataset = _valid_dataset()
+    dataset["cases"][0]["gold_locators"][0]["locator"] = "3.2"      # a plausible typo for "3.12"
+
+    problems = find_problems(dataset, load_active_chunks(FIXTURE_OUTPUT))
+
+    assert problems == ["q01: gold locator not found in active Chunks: doc-a / 3.2"]</code></pre>
+  <p>The other broken variants are: a duplicate id, a locator that only exists in the inactive generation (<code>9.9</code>), the right locator under the wrong Document, and a bad <code>superseded_locators</code> entry. It's the "valid object, then mutate one field" style you'd use with a test-data builder in C#.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/test_find_locator.py</code> (10 tests)</span>
+  <p>Tests <code>search()</code>:</p>
+  <ul>
+    <li>matching ignores case</li>
+    <li>every word must appear, but not next to each other (so the line break in <code>1.1</code> doesn't matter)</li>
+    <li>inactive Chunks are never returned</li>
+    <li><code>--doc</code> filtering works</li>
+    <li>snippets have their whitespace flattened</li>
+    <li>no match returns an empty list</li>
+    <li>blank terms are rejected</li>
+  </ul>
+  <p>It also tests <code>main()</code>: blank terms exit with argparse's usage-error code 2, and an unknown <code>--doc</code> is reported. <code>main()</code> accepts an <code>--output-dir</code>, so these tests point it at the miniature corpus rather than the real one.</p>
+</div>
+
+<div class="box did">
+  <span class="label"><code>eval/tests/test_dataset.py</code> (3 tests): your safety net</span>
+  <p>The only test that reads <strong>your</strong> <code>eval/dataset.json</code>. It does two things:</p>
+  <ul>
+    <li><code>test_dataset_matches_schema</code> validates the real dataset against <code>eval-dataset.schema.json</code>. It also validates <code>fixtures/valid-dataset.json</code>, so if the schema tightens later, the unit tests can't keep quietly testing a dataset shape the real file could no longer have.</li>
+    <li><code>test_dataset_has_no_duplicate_ids_or_missing_locators</code> runs <code>find_problems()</code> against the real corpus and prints every problem at once if it fails. It carries a <code>@requires_ingestion_output</code> marker, so on a fresh clone where <code>ingestion/output/</code> doesn't exist yet (it's gitignored) it's <em>skipped with a reason</em> rather than failing. That's the same pattern as <code>requires_cp54</code> in <code>/ingestion</code> and <code>requires_postgres</code> in <code>/store</code>.</li>
+  </ul>
+</div>
+
+<h3>The small edits</h3>
+<ul>
+  <li><code>.gitignore</code>: adds <code>eval/.venv/</code>.</li>
+  <li><code>README.md</code> (root): lists <code>/eval</code> in "What's here" and the layout, and bumps the ADR count to 30.</li>
+  <li><code>schema/README.md</code>: adds <code>eval-dataset.schema.json</code> to the list of schemas, noting it describes the eval set rather than a domain record.</li>
+  <li><code>learning/issue-29-eval-dataset-scaffolding.html</code>: this page.</li>
+</ul>
+
+<div class="box concept">
+  <span class="label">Concept: why three small files instead of one script</span>
+  <p>All of <code>/eval</code> could have been one script that reads files, checks, searches and prints. It's split so that the logic (<code>find_problems</code>, <code>search</code>) is <strong>pure</strong>, taking data in and giving data out, while the messy parts sit at the edges: file reading in <code>corpus.py</code>, and argument parsing and printing in <code>main()</code>. This is sometimes called <em>functional core, imperative shell</em>. The payoff is visible in Group 3: the core is tested with a 4-file fake corpus in milliseconds, and only one test touches the real world. It's the same reason you'd keep a C# domain service free of <code>File.ReadAllText</code> and <code>Console.WriteLine</code>. #32's harness will reuse <code>corpus.py</code> and follow the same split.</p>
+</div>
+
+<h2 id="ifthen">The schema: JSON Schema's <code>if</code>/<code>then</code>/<code>else</code></h2>
 <p>Most of the schema is ordinary: required fields, closed enums for <code>phrasing</code> and <code>category</code>, and a <code>q01</code>-style id pattern. The interesting part is that <em>which fields are required depends on the category</em>. JSON Schema expresses that with conditionals, which you can read as a <code>switch</code> over one field with a different shape for each branch:</p>
 <pre><code>"allOf": [
   { "if":   { "properties": { "category": { "const": "unanswerable" } }, "required": ["category"] },
