@@ -20,13 +20,12 @@ from typing import Any
 
 import psycopg
 
-# The connection string /store's docker-compose.yml's local-dev credentials
-# resolve to. Defined once, here, so nothing else needs to repeat the
-# host/user/password by hand -- store/tests/test_loader.py derives its own
-# default (a *different* database, for test isolation -- see
-# store/init/002_test_database.sql) from this same constant, rather than
-# hand-copying the credentials a second time.
-DEFAULT_DB_URL = "postgresql://regdocs:regdocs_dev_only@localhost:5432/regdocs"
+# A bare `from db import ...` (no package prefix) works because /store is
+# the import root: running `python store/loader.py` puts store/ on sys.path,
+# and store/tests/conftest.py adds it for pytest -- the same way the tests
+# already do `from loader import ...`. There's no store/__init__.py, so
+# `db` is a plain top-level module sitting next to this file.
+from db import DEFAULT_DB_URL, upsert_immutable
 
 # Mirrors the closed set store/init/001_schema.sql's CHECK constraint on
 # chunking_generations.chunking_strategy enforces, and ADR-0014's own list.
@@ -167,51 +166,6 @@ def _build_generations(
     return generations
 
 
-def _upsert_immutable(
-    cur: psycopg.Cursor, table: str, columns: list[str], rows: list[dict[str, Any]]
-) -> None:
-    """Insert rows into `table`; silently skip any row whose id already exists.
-
-    documents, chunking_generations, and chunks are each immutable once
-    written (CONTEXT.md), so unlike a typical upsert this never updates an
-    existing row's content -- only inserts genuinely new ones. The two
-    versions of a "conflicting" row are expected to already carry identical
-    content, since every id here is derived deterministically from stable
-    inputs (ingestion/ids.py), not chosen by hand or from row content.
-
-    One consequence worth knowing: if a document's ingested JSON changes
-    under the *same* id (e.g. a manifest typo gets fixed and ingestion is
-    re-run without bumping any id), this loader will NOT apply that fix --
-    the original row wins. That's intentional, not an oversight: per
-    CONTEXT.md, a real correction to an already-loaded Document is supposed
-    to be a *new* Document linked via `supersedes`, not a silent edit to
-    the existing one.
-
-    `table` and `columns` are always fixed literals from the call sites
-    below, never user input -- so building the SQL with an f-string here is
-    safe. Only the *row values* need protecting against SQL injection, and
-    those go through %(name)s placeholders, substituted safely by psycopg,
-    never by string interpolation.
-    """
-    if not rows:
-        return
-    column_list = ", ".join(columns)
-    # %(name)s is psycopg's named-parameter placeholder: each placeholder
-    # names which key of a row dict it binds to, rather than relying on
-    # positional order the way plain "%s, %s, %s" would. cur.executemany
-    # runs the same parameterized statement once per row in `rows` -- one
-    # Python call standing in for a hand-written loop of cur.execute(...)
-    # calls, though it still issues one statement per row over the wire
-    # (fine at this corpus's current size -- ~2000 Chunks load in seconds;
-    # worth revisiting only if that ever becomes a real bottleneck).
-    placeholders = ", ".join(f"%({column})s" for column in columns)
-    cur.executemany(
-        f"INSERT INTO {table} ({column_list}) VALUES ({placeholders}) "
-        "ON CONFLICT (id) DO NOTHING",
-        rows,
-    )
-
-
 def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
     """Load ingestion's Document/Chunk output into /store's Postgres.
 
@@ -220,7 +174,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
     db_url: a psycopg-style connection string, e.g. DEFAULT_DB_URL above.
 
     Safe to call repeatedly against unchanged or extended output -- see
-    _upsert_immutable's docstring for exactly what "safe" means here.
+    upsert_immutable's docstring for exactly what "safe" means here.
     """
     strategy_by_document_id = _load_manifest_strategies(manifest_path)
 
@@ -298,7 +252,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
             # these foreign keys as ordinary, non-deferrable constraints --
             # switching would mean reopening and re-migrating already-merged
             # schema work, out of scope for this loader.
-            _upsert_immutable(
+            upsert_immutable(
                 cur,
                 "documents",
                 ["id", "title", "publisher", "published_date", "source_url"],
@@ -309,7 +263,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
             # here was just inserted in phase 1 (or already existed), and
             # _build_generations already checked each one has a matching
             # Document, so the foreign key holds.
-            _upsert_immutable(
+            upsert_immutable(
                 cur,
                 "chunking_generations",
                 ["id", "document_id", "chunking_strategy"],
@@ -323,7 +277,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
             # it's only ever set the *first* time a Document is loaded --
             # skipped entirely for a document already in
             # already_loaded_document_ids, the same "original row wins"
-            # rule _upsert_immutable applies elsewhere. `active_chunking_
+            # rule upsert_immutable applies elsewhere. `active_chunking_
             # generation_id` is different: which Generation is *active* is
             # expected to change over a Document's lifetime (ADR-0004: it
             # moves when a Document is re-chunked), so it's always
@@ -333,7 +287,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
             #
             # Only 20 documents exist today, so one UPDATE per document
             # (not per Chunk) is a handful of round trips, not thousands --
-            # unlike _upsert_immutable's executemany over Chunks, this
+            # unlike upsert_immutable's executemany over Chunks, this
             # hasn't needed batching.
             for document in documents:
                 if document["id"] not in already_loaded_document_ids:
@@ -367,7 +321,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
 
             # Phase 4: chunks. Both foreign keys they need (documents,
             # chunking_generations) are now fully populated.
-            _upsert_immutable(
+            upsert_immutable(
                 cur,
                 "chunks",
                 ["id", "document_id", "chunking_generation_id", "locator", "text"],

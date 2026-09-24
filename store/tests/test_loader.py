@@ -17,7 +17,8 @@ from typing import Any
 import psycopg
 import pytest
 
-from loader import DEFAULT_DB_URL, load_store
+from db import DEFAULT_DB_URL
+from loader import load_store
 
 # Tests run against a *separate* database (regdocs_test) from the one
 # store/README.md's "Loading data" section tells you to load the real
@@ -234,7 +235,7 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
     # anywhere), a naive upsert would silently rewrite an existing, already
     # immutable Chunking Generation's recorded strategy on the next loader
     # run -- corrupting a fact ADR-0021's Replay guarantee depends on
-    # staying accurate. _upsert_immutable's ON CONFLICT DO NOTHING is what
+    # staying accurate. upsert_immutable's ON CONFLICT DO NOTHING is what
     # prevents this: this test proves it, rather than just asserting the
     # loader "should" be safe.
     output_dir, manifest_path = _write_fixture_corpus(tmp_path)
@@ -336,7 +337,7 @@ def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
     # rewrite an already-loaded Document's supersedes link if the source
     # JSON's value ever changed -- contradicting supersedes' own status as
     # an immutable fact about a Document (CONTEXT.md), the same guarantee
-    # _upsert_immutable already gives title/publisher/etc.
+    # upsert_immutable already gives title/publisher/etc.
     output_dir, manifest_path = _write_two_document_fixture(tmp_path, second_supersedes="doc-original")
     load_store(output_dir, manifest_path, DB_URL)
 
