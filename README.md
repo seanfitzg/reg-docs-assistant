@@ -19,9 +19,11 @@ Same architecture and event schema, built once in .NET and once in Python, both 
 - **[`/schema`](./schema)** - JSON Schema for `Event`, `Document`, `Chunk`, etc., with a Python test harness validating fixtures against them.
 - **[`/ingestion`](./ingestion)** - turns the corpus into `Document`/`Chunk` records: PDF extraction, cleanup, three chunking strategies, deterministic ids, per-document failure isolation, schema validation on write.
 - **[`/corpus`](./corpus)** - 20 public Central Bank of Ireland / CCPC documents, fully ingested (PDFs not committed; see `corpus/SOURCES.md`).
-- **19 ADRs** in [`docs/adr/`](./docs/adr).
+- **[`/store`](./store)** - Postgres + pgvector (via docker-compose) holding every ingested `Document`, `Chunking Generation` and `Chunk`, plus a vector embedding per active-generation Chunk. `loader.py` loads ingestion's output; `embed.py` computes embeddings with a local [Ollama](https://ollama.com) model (`nomic-embed-text`, 768 dimensions) into a `chunk_embeddings` table keyed by Chunk and model. Both are safe to re-run, and both are covered by integration tests against an isolated test database.
+- **[`/learning`](./learning)** - a self-contained HTML writeup per issue explaining what was built and the concepts behind it.
+- **26 ADRs** in [`docs/adr/`](./docs/adr).
 
-Not built yet: retrieval, the agent pipeline (classify -> retrieve -> draft -> verify), the audit-event store, and both application tracks. This section will move as that lands.
+Not built yet: retrieval itself (embedding a question, nearest-neighbour search, a vector-similarity index), the agent pipeline (classify -> retrieve -> draft -> verify), the audit-event store, and both application tracks. This section will move as that lands.
 
 ## How this was built
 
@@ -35,13 +37,15 @@ Not built yet: retrieval, the agent pipeline (classify -> retrieve -> draft -> v
 ```
 /schema      shared JSON Schema contracts (Event, Document, Chunk, ...)
 /ingestion   pipeline turning corpus PDFs into Document/Chunk records
+/store       Postgres + pgvector: loads Documents/Chunks, embeds Chunks
 /corpus      source PDFs (not committed) + manifest
+/learning    per-issue HTML writeups of what was built and why
 /docs/adr    architecture decision records
 /docs/agents Claude Code agent skill configuration
 CONTEXT.md   domain glossary
 ```
 
-Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md) and [`ingestion/README.md`](./ingestion/README.md).
+Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md) and [`store/README.md`](./store/README.md).
 
 ## About me
 
