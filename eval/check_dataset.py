@@ -28,9 +28,12 @@ def find_problems(dataset: dict, active_chunks: list[dict]) -> list[str]:
         seen_ids.add(case_id)
 
         # Both lists are checked the same way; the label differs only so
-        # the message says which list the bad entry is in. superseded_
-        # locators is optional, so .get(..., []) falls back to an empty
-        # list rather than raising KeyError when it's absent.
+        # the message says which list the bad entry is in. Each item of the
+        # tuple-of-tuples is a (field, label) pair, and "for field, label
+        # in ..." unpacks it into two variables per iteration -- like a C#
+        # foreach (var (field, label) in ...) over value tuples.
+        # superseded_locators is optional, so .get(..., []) falls back to an
+        # empty list rather than raising KeyError when it's absent.
         for field, label in (("gold_locators", "gold"), ("superseded_locators", "superseded")):
             for entry in case.get(field, []):
                 if (entry["document_id"], entry["locator"]) not in existing:

@@ -19,12 +19,14 @@ def load_active_chunks(output_dir: Path = DEFAULT_OUTPUT_DIR) -> list[dict]:
     ones embedded, ADR-0025), so they're the only ones a Gold Locator can
     meaningfully point at.
     """
-    # Build a lookup of document_id -> active generation id, one entry per
-    # documents/*.json file. This is a dict comprehension: {key: value for
-    # item in iterable} -- like .ToDictionary(d => d.Id, d => d.ActiveGen).
-    # sorted() makes the file order (and so every result below) stable
-    # across operating systems, since glob order isn't guaranteed.
+    # Every documents/*.json file, parsed. [expr for item in iterable] is a
+    # list comprehension -- like .Select(...).ToList(). sorted() makes the
+    # file order (and so every result below) stable across operating
+    # systems, since glob order isn't guaranteed.
     documents = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((output_dir / "documents").glob("*.json"))]
+    # A lookup of document_id -> active generation id. {key: value for item
+    # in iterable} is a dict comprehension -- like
+    # .ToDictionary(d => d.Id, d => d.ActiveGen).
     active_generation = {d["id"]: d["active_chunking_generation_id"] for d in documents}
 
     chunks = []

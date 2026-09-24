@@ -36,11 +36,11 @@ def _load(path: Path):
         # Also keeps the unit-test fixture honest: if the schema tightens,
         # test_check_dataset.py shouldn't silently keep testing a dataset
         # shape the real file could no longer have.
-        Path(__file__).parent / "fixtures" / "dataset-valid.json",
+        Path(__file__).parent / "fixtures" / "valid-dataset.json",
     ],
     # ids= names each parametrized run in pytest's output, instead of it
     # printing the full path.
-    ids=["eval/dataset.json", "fixtures/dataset-valid.json"],
+    ids=["eval/dataset.json", "fixtures/valid-dataset.json"],
 )
 def test_dataset_matches_schema(dataset_path):
     # Same format-enforcing validation as schema/tests/support.py -- see the
