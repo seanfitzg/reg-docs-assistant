@@ -66,6 +66,8 @@ class OllamaEmbeddingClient:
         # returns `.embeddings`: one vector per input. One input in, so
         # take element [0].
         response = self._client.embed(model=self._model, input=text)
+        # list(...) converts whatever sequence type the library returns into
+        # a plain Python list of floats, matching EmbeddingClient's contract.
         return list(response["embeddings"][0])
 
 
@@ -73,6 +75,8 @@ def _vector_literal(vector: list[float]) -> str:
     # pgvector accepts a vector as text in the form '[0.1,0.2,...]', which
     # Postgres casts to the vector type on insert. Sending it as that string
     # avoids needing pgvector's own Python adapter package for one column.
+    # str(float) gives the shortest text that round-trips the float exactly,
+    # so no precision is lost in the conversion.
     return "[" + ",".join(str(value) for value in vector) + "]"
 
 

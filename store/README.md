@@ -82,7 +82,7 @@ Needs the container from **Setup** running. Tests run against `regdocs_test`, no
 
 - `docker-compose.yml` — the Postgres+pgvector container definition.
 - `init/001_schema.sql` — the schema: `documents`, `chunking_generations`, `chunks`, with foreign keys and indexes. Plain SQL, no migration framework (see ADR-0020/0021/0022).
-- `init/002_test_database.sql` — creates `regdocs_test`, schema-identical to `regdocs`, for test isolation. 
+- `init/002_test_database.sql` — creates `regdocs_test`, schema-identical to `regdocs`, for test isolation.
 - `init/003_chunk_embeddings.sql` — the `chunk_embeddings` table (keyed by chunk + embedding model), applied to both databases.
 - `db.py` — shared Postgres helpers (`DEFAULT_DB_URL`, `upsert_immutable`) used by `loader.py` and `embed.py`.
 - `embed.py` — embeds active-generation Chunks via Ollama into `chunk_embeddings`. Standalone, like `loader.py`.

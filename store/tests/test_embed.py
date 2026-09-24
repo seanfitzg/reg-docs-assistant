@@ -71,8 +71,8 @@ def test_embeds_only_chunks_of_the_active_generation(tmp_path, clean_db):
     ]
     assert len(client.texts) == 2  # the inactive chunk cost no embedding call
     with psycopg.connect(DB_URL) as conn:
-        # Every row is tagged with the model name, so a future second model
-        # can coexist alongside these (ADR-0024).
+        # Every row is tagged with the model name -- the key that lets a
+        # future second model's rows sit alongside these (ADR-0024).
         models = conn.execute("SELECT DISTINCT embedding_model FROM chunk_embeddings").fetchall()
         assert models == [(EMBEDDING_MODEL,)]
 

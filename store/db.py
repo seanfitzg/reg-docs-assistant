@@ -25,17 +25,17 @@ def upsert_immutable(
     rows: list[dict[str, Any]],
     conflict_columns: list[str] | None = None,
 ) -> None:
-    """Insert rows into `table`; silently skip any row whose id already exists.
+    """Insert rows into `table`; silently skip any row whose key already exists.
 
     `conflict_columns` names the unique key a "duplicate" is detected on;
     it defaults to ["id"], which is what documents/chunking_generations/
     chunks use. A table keyed differently -- chunk_embeddings is keyed on
     (chunk_id, embedding_model), with no `id` column at all -- passes its
-    own key here. Like `table`/`columns`, it must only ever be a fixed
-    literal from a call site, never user input.
+    own key here.
 
     documents, chunking_generations, and chunks are each immutable once
-    written (CONTEXT.md), so unlike a typical upsert this never updates an
+    written (CONTEXT.md), and chunk_embeddings follows the same "old stays"
+    rule (ADR-0024), so unlike a typical upsert this never updates an
     existing row's content -- only inserts genuinely new ones. The two
     versions of a "conflicting" row are expected to already carry identical
     content, since every id here is derived deterministically from stable
@@ -49,8 +49,8 @@ def upsert_immutable(
     to be a *new* Document linked via `supersedes`, not a silent edit to
     the existing one.
 
-    `table` and `columns` are always fixed literals from the call sites
-    below, never user input -- so building the SQL with an f-string here is
+    `table`, `columns`, and `conflict_columns` are always fixed literals from
+    the call sites, never user input -- so building the SQL with an f-string here is
     safe. Only the *row values* need protecting against SQL injection, and
     those go through %(name)s placeholders, substituted safely by psycopg,
     never by string interpolation.
