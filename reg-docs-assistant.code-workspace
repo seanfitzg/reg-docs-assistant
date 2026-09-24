@@ -16,6 +16,7 @@
     // Root folder has no Python of its own; stop it running pytest from the
     // repo root (which would try to collect every subproject's tests with
     // whatever interpreter happened to be selected).
-    "python.testing.pytestEnabled": false
+    "python.testing.pytestEnabled": false,
+    "liveServer.settings.multiRootWorkspaceName": "repo root"
   }
 }

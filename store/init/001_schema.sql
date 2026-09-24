@@ -4,10 +4,9 @@
 -- today, numbered so a second migration file would have an obvious place
 -- to slot in later, per ADR-0020/0021/0022).
 
--- pgvector isn't used by any column yet (no embeddings column until a
--- follow-up issue picks an embedding model), but the extension is enabled
--- now so the image never needs to change later -- just a migration to add
--- the column, not a base-image swap.
+-- pgvector was enabled before any column used it, so the image never needed
+-- to change later -- just a migration to add the column, not a base-image
+-- swap. 003_chunk_embeddings.sql is that migration (vector(768)).
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Document (CONTEXT.md): an immutable record of one point-in-time
