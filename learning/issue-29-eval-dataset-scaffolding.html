@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #29: eval dataset scaffolding</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #29 — Scaffolding the retrieval eval set</h1>
+<p class="subtitle">The first piece of <code>/eval</code>: a schema for hand-written Eval Cases, a test that every label points at something real, and a keyword-search helper for writing them. No retrieval yet. This ticket prepares the <em>measuring stick</em>, and the thing it measures comes later. Follows <a href="issue-25-embed-chunks.html">issue #25's writeup</a>.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">#29 schema + checks + helper</span>
+  <span class="arrow">→</span>
+  <span class="step">#31 you write 15–20 cases</span>
+  <span class="arrow">→</span>
+  <span class="step">#32 harness + baseline</span>
+  <span class="arrow">←</span>
+  <span class="step">#30 match rule</span>
+</div>
+<p>
+  Epic #28 exists because <code>/store</code> now has a vector for every active Chunk, but there's no way to tell whether searching those vectors returns the <em>right</em> Chunks. The design was settled in a grilling session and recorded as ADR-0027 to ADR-0030 before any code. This ticket builds only the scaffolding: <code>schema/eval-dataset.schema.json</code>, an empty <code>eval/dataset.json</code>, the checks that keep it honest, and <code>eval/find_locator.py</code>. It's verified by 8 new schema-fixture tests and 20 <code>/eval</code> tests. The full suite passes across all four folders (154 tests).
+</p>
+
+<h2>The concepts</h2>
+<div class="box concept">
+  <span class="label">Concept: a retrieval eval is a labelled test set</span>
+  <p>Each <strong>Eval Case</strong> is a question plus the place its answer lives. Later (#32) the harness runs every question through retrieval and asks: is the right place among the top <em>k</em> results, and how high? Two standard metrics come out of that. <strong>Recall@k</strong> is the fraction of questions whose answer appears in the top k. <strong>MRR</strong> (mean reciprocal rank) averages 1/rank: first place scores 1, third place scores ⅓, a miss scores 0.</p>
+  <p>The closest analogy is a BDD suite for search: <em>Given</em> this question, <em>then</em> this passage comes back. Unlike most "AI evals", nothing here needs a model to grade it. The check is a deterministic comparison, which is why it can run on every change the way unit tests do. Judging the <em>quality of a drafted answer</em> is a different and harder problem (LLM-as-judge), and it comes much later.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why the label is a locator, not a Chunk id (ADR-0027)</span>
+  <p>Chunk ids are regenerated every time a Document is re-chunked (ADR-0003). One of the eval's jobs is to compare chunking strategies, so labels that break on every re-chunk would make that job impossible. A <strong>Gold Locator</strong> is <code>(document_id, locator)</code>, e.g. <code>("doc-04-cp54-…", "3.12")</code>. It names a place in the <em>Document's own structure</em>, which stays the same whatever the chunker does. The cost is that "did retrieval find it?" is no longer a simple equality check. It needs a match rule, and that rule is #30.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: lexical overlap bias, and why every case is tagged (ADR-0029)</span>
+  <p>When you write a question while looking at the passage, you echo its wording. Retrieval then scores well because it's matching <em>words you copied</em>, not because it understood anything. Real users don't know a regulation's vocabulary. So every case carries <code>phrasing: lexical | paraphrase</code>, and recall is reported for each group. The gap between the two numbers is itself a finding: it shows how much the embedding model understands meaning and how much it matches words. This is also why the cases are hand-written and not LLM-drafted, since generated questions echo their source even more strongly.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: keyword search vs. embedding search</span>
+  <p><code>find_locator.py</code> is deliberately plain <em>lexical</em> search. A Chunk matches if every word appears in it, ignoring case. That's what you want when you already know roughly what the passage says and need its exact locator. It's also the opposite of what #32 will do: embed the question and find the nearest vectors, matching on meaning. Running the same question through both is the quickest way to see what "semantic search" actually adds, and where it misses things plain keywords would find.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: two checks that look alike but answer different questions</span>
+  <p><code>check_dataset.find_problems</code> compares locators by <strong>exact string equality</strong>. #30's match rule will <em>not</em> be exact: <code>3.12(a)</code> will count as a hit for <code>3.12</code>. That isn't a contradiction. The exact check answers "<em>is this label a typo?</em>", and the match rule answers "<em>would retrieval count this as a hit?</em>". If they were merged, a mistyped label like <code>3.2</code> for <code>3.12</code> would look like a retrieval miss on every run, forever, and the lower score would be blamed on the model.</p>
+</div>
+
+<h2>The schema: JSON Schema's <code>if</code>/<code>then</code>/<code>else</code></h2>
+<p>Most of the schema is ordinary: required fields, closed enums for <code>phrasing</code> and <code>category</code>, and a <code>q01</code>-style id pattern. The interesting part is that <em>which fields are required depends on the category</em>. JSON Schema expresses that with conditionals, which you can read as a <code>switch</code> over one field with a different shape for each branch:</p>
+<pre><code>"allOf": [
+  { "if":   { "properties": { "category": { "const": "unanswerable" } }, "required": ["category"] },
+    "then": { "properties": { "gold_locators": { "maxItems": 0 } }, "not": { "required": ["answer_quote"] } },
+    "else": { "properties": { "gold_locators": { "minItems": 1 } }, "required": ["answer_quote"] } },
+  { "if":   { "properties": { "category": { "const": "supersession" } }, "required": ["category"] },
+    "then": { "required": ["superseded_locators"] },
+    "else": { "not": { "required": ["superseded_locators"] } } }
+]</code></pre>
+<p>Two details in there are easy to miss. The <code>"required": ["category"]</code> inside each <code>if</code> matters because an <code>if</code> on a <em>missing</em> property passes vacuously, so without it a case with no category would be treated as unanswerable. And <code>"not": { "required": [...] }</code> is how JSON Schema says a field is <em>forbidden</em>. There's no <code>forbidden</code> keyword, so you negate "required".</p>
+
+<div class="box verified">
+  <span class="label">Checked: each invalid fixture fails for its own reason</span>
+  <p>An "invalid" fixture that fails validation for the <em>wrong</em> reason still passes its test, so a <code>pytest.raises</code> test on its own proves very little. I listed every validation error for each invalid fixture and confirmed each has exactly one, the one its filename claims:</p>
+  <table>
+    <tr><th>Fixture</th><th>Only error</th></tr>
+    <tr><td><code>invalid-unanswerable-with-gold-locators</code></td><td>array too long (<code>maxItems: 0</code>)</td></tr>
+    <tr><td><code>invalid-answerable-without-gold-locators</code></td><td><code>[] should be non-empty</code></td></tr>
+    <tr><td><code>invalid-answerable-without-answer-quote</code></td><td><code>'answer_quote' is a required property</code></td></tr>
+    <tr><td><code>invalid-unknown-phrasing</code></td><td><code>'verbatim' is not one of ['lexical', 'paraphrase']</code></td></tr>
+    <tr><td><code>invalid-supersession-without-superseded-locators</code></td><td><code>'superseded_locators' is a required property</code></td></tr>
+    <tr><td><code>invalid-malformed-case-id</code></td><td><code>'question-1' does not match '^q[0-9]{2,}$'</code></td></tr>
+  </table>
+</div>
+
+<h2>What I ran</h2>
+<pre><code># red: fixtures + tests first, schema file not yet written
+schema/.venv/Scripts/python.exe -m pytest schema/tests/test_eval_dataset.py -q   # 8 failed
+# green after writing eval-dataset.schema.json
+schema/.venv/Scripts/python.exe -m pytest schema/tests -q                        # 42 passed
+
+# /eval: own venv, like /schema, /ingestion and /store
+python -m venv eval/.venv
+eval/.venv/Scripts/python.exe -m pip install -r eval/requirements.txt
+eval/.venv/Scripts/python.exe -m pytest eval/tests -q                            # 20 passed
+
+# the helper against the real corpus
+python eval/find_locator.py "standalone key information"
+doc-05-cp71-client-asset-regulations-guidance  |  Client Asset Key Information Document for a Firm (p. 22)
+    ...a simple ‘plain English’ standalone document known as the ‘Client Asset Key Information Document’ (“CAKID”)...
+3 match(es)</code></pre>
+
+<p>The Chunks come from <code>ingestion/output/</code> rather than Postgres, so writing cases needs no Docker. The one wrinkle is that <code>ingestion/output/</code> is gitignored (it's a regenerable projection, ADR-0012). The test that checks the <em>real</em> dataset against the <em>real</em> Chunks therefore uses the same skip-with-a-reason pattern as <code>requires_cp54</code> and <code>requires_postgres</code>. Everything else runs against a small fixture copy in <code>eval/tests/fixtures/</code>. In that copy, one Document has two Chunking Generations, so the tests prove that inactive Chunks are never searched or accepted as labels.</p>
+
+<h2>Caught while building</h2>
+<div class="box bug">
+  <span class="label">Garbled quotes that looked like bad data</span>
+  <p>The first real search printed <code>�</code> where the PDFs have bullets and curly quotes. It looked like broken extraction, but a byte search of <code>ingestion/output</code> found no replacement characters, so the data was fine. The cause: when Python's output on Windows goes to a pipe rather than a live console, it's encoded in the legacy <code>cp1252</code> code page, and the terminal decoded those bytes as UTF-8. This matters more here than it would elsewhere, because <code>answer_quote</code> text gets copied straight out of this tool's output. Fix: <code>sys.stdout.reconfigure(encoding="utf-8")</code> at the start of <code>main()</code>.</p>
+</div>
+
+<h2>What <code>/code-review</code> caught</h2>
+<div class="box bug">
+  <span class="label">Bug: blank search terms crashed — "vacuous truth"</span>
+  <p>The spec reviewer ran <code>find_locator.py "   "</code> and got an <code>IndexError</code>. The chain of events:</p>
+<pre><code>wanted = [t.lower() for t in "   ".split()]   # [] -- split() drops empty strings
+all(term in lowered for term in wanted)        # True! nothing in [] failed the test
+start = lowered.find(wanted[0])                # IndexError: list index out of range</code></pre>
+  <p><code>all()</code> over an empty sequence is <code>True</code>, just as LINQ's <code>new int[0].All(x =&gt; false)</code> is <code>true</code>. Logicians call this <em>vacuous truth</em>. So an empty filter matched every Chunk, and the crash only happened one line later. The fix: <code>search()</code> raises <code>ValueError</code> for blank terms, and <code>main()</code> turns that into a proper argparse usage error (exit code 2) instead of a traceback. The failing test came first and was red with that same <code>IndexError</code>. The general lesson is that any "every item must pass" filter needs a decision about what an <em>empty</em> filter means.</p>
+</div>
+
+<div class="box did">
+  <span class="label">Standards review: fixed</span>
+  <ul>
+    <li><strong>Two comments described the wrong code.</strong> In <code>corpus.py</code>, the "dict comprehension" comment sat above a <em>list</em> comprehension. A test comment claimed a set of locators was built, but the code built <code>(document_id, locator)</code> pairs, and the variable was misleadingly named <code>locators</code>.</li>
+    <li><strong><code>Hit</code> → <code>KeywordMatch</code>.</strong> In <code>CONTEXT.md</code> a "hit" means a retrieved Chunk matching a Gold Locator under ADR-0028's rule. Reusing the word for a keyword result would blur two ideas that #32 will need to keep apart.</li>
+    <li><strong>A mistyped <code>--doc</code></strong> printed "0 match(es)", which reads as "not in this Document". It now says the Document id doesn't exist.</li>
+    <li>Fixture renamed to <code>valid-dataset.json</code> to follow the <code>valid-*</code>/<code>invalid-*</code> convention. A missing <code>encoding="utf-8"</code> was added. Comments were added for the remaining unfamiliar idioms: <code>[match] = …</code> destructuring (which also asserts exactly one result), tuple unpacking in <code>for</code>, <code>file=sys.stderr</code>, the <code>_</code> "private by convention" prefix, and why <code>main(argv=None)</code> is injectable.</li>
+  </ul>
+</div>
+
+<div class="box verified">
+  <span class="label">Judgement calls left as they are</span>
+  <p><code>test_dataset.py</code> repeats one line of <code>schema/tests/support.py</code>'s format-checker setup rather than importing it, because sharing it would link two separate venvs for one line. The <code>(document_id, locator)</code> pair still has no type of its own, which fits better in #30, where the match rule actually operates on it. "Passage" appears in prose even though the glossary tells Chunk not to use it: there it means the source text, not a Chunk, and it's the ADRs' own wording.</p>
+  <p>One decision is open for you: the spec called <code>superseded_locators</code> "optional", but the schema <em>requires</em> it for supersession cases and <em>forbids</em> it elsewhere. Without it, a supersession case would be indistinguishable from a single-passage one.</p>
+</div>
+
+<h2>What's next</h2>
+<p>
+  Two tickets are unblocked. <strong>#31 is yours</strong>: write the 15–20 cases, running <code>find_locator.py</code> to look up locators and <code>python -m pytest eval/tests</code> after every edit. For paraphrase cases, close the passage before you write the question, so its wording can't leak in. <strong>#30</strong> is the match rule, a pure function and a good <code>/tdd</code> exercise. Once both are done, #32 runs the first real measurement of retrieval quality. Also noticed along the way: DP8 has a Chunk located at <code>3% (p. 26)</code>, meaning heading detection took a number from the body text for a heading. That's worth its own issue.
+</p>
+
+<footer>
+  RegDocs Assistant — issue #29, epic #28. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>
