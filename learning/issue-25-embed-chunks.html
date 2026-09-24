@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #25: embedding Chunks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #25 — Embedding Chunks with a local Ollama model</h1>
+<p class="subtitle">The first genuinely AI-specific piece of <code>/store</code>: turning each Chunk's text into a vector, so a later ticket can search by <em>meaning</em>. A sequel to <a href="issue-19-store-loader.html">issue #19's writeup</a>.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">chunks (Postgres)</span>
+  <span class="arrow">→ embed.py (this ticket)</span>
+  <span class="step">chunk_embeddings</span>
+  <span class="arrow">→ (later)</span>
+  <span class="step">nearest-neighbour retrieval</span>
+</div>
+<p>
+  <code>store/embed.py</code> reads every Chunk that belongs to its Document's <em>active</em> Chunking Generation, asks a local model (Ollama running <code>nomic-embed-text</code>) for a 768-number vector per Chunk, and stores it in a new <code>chunk_embeddings</code> table. It does no searching — that's the next ticket. Verified by 4 new integration tests plus the 6 existing loader tests, all green against the real Postgres (10 passed). <strong>One honest gap:</strong> Ollama isn't installed on the machine this was built on, so the real <code>OllamaEmbeddingClient</code> was never run against a live model; only its import and the response shape it indexes were checked. Try <code>python store/embed.py</code> yourself after <code>ollama pull nomic-embed-text</code>.
+</p>
+
+<h2>The concepts</h2>
+<div class="box concept">
+  <span class="label">Concept: what an embedding is</span>
+  <p>An embedding model is a neural network that maps text to a fixed-length list of numbers (here 768 floats). It's trained so that texts with similar <em>meaning</em> get vectors that point in similar directions — "capital requirements for banks" lands near "minimum own funds for credit institutions" even though they share almost no words. Retrieval then embeds the user's question the same way and asks the database for the stored vectors nearest to it. That's semantic search, as opposed to the keyword matching you'd get from SQL <code>LIKE</code> or full-text search.</p>
+  <p>Analogy, with limits: it's a hash function whose "collisions" are deliberate — similar inputs are meant to land close together. Unlike a hash, though, the output isn't comparable across models: vectors from two different models live in unrelated spaces. That's why the model name is part of the table's key (ADR-0024).</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: the asymmetric prefix (ADR-0026)</span>
+  <p><code>nomic-embed-text</code> was trained with two roles in mind: text being <em>stored</em> is embedded as <code>"search_document: " + text</code>, and a <em>query</em> as <code>"search_query: " + text</code>. The model learned to place the two roles so questions land near the passages that answer them. Skip the prefix and nothing errors — retrieval just gets quietly worse, which is the nastiest kind of bug. So there's a test asserting the exact string the client receives, and <code>chunks.text</code> stays raw (the prefix exists only for the instant of the call).</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: pgvector's <code>vector(768)</code></span>
+  <p>A column type from the pgvector extension (enabled back in #18). The <code>768</code> is enforced by Postgres: inserting a vector of any other length fails. Like <code>decimal(18,2)</code>, the size is part of the type, so a model with different dimensions needs a different column — a future decision, deliberately not built now. There's no similarity index (<code>hnsw</code>/<code>ivfflat</code>) yet: those need tuning against real queries, which don't exist until retrieval does.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: an injectable client, and Python's structural typing</span>
+  <p><code>embed_chunks(db_url, client)</code> takes any object with an <code>embed(text) -> list[float]</code> method. The real script passes an Ollama-backed one; tests pass a tiny fake that records what it was asked. In C# you'd write an <code>IEmbeddingClient</code> interface and a mock. Python's <code>typing.Protocol</code> is the same idea but <em>structural</em>: a class counts as an <code>EmbeddingClient</code> just by having the method — it never declares "implements". That's why the test fake needs no shared base class and no mocking library. The payoff is the usual one for a seam: the test suite needs no Ollama, no network, no 270 MB model.</p>
+</div>
+
+<h2>What I ran</h2>
+<pre><code># schema, verified from an empty volume in a throwaway container (your real volume untouched)
+docker run -d --name scratch-pg ... -v ./init:/docker-entrypoint-initdb.d:ro pgvector/pgvector:pg16
+docker exec scratch-pg psql -U regdocs -d regdocs_test -c "\d chunk_embeddings"
+
+# applied to the live container (init scripts only run on an EMPTY volume)
+MSYS_NO_PATHCONV=1 docker compose exec -T postgres psql -U regdocs -d regdocs \
+    -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/003_chunk_embeddings.sql
+
+python -m pytest tests          # 10 passed</code></pre>
+
+<p>The core of <code>embed.py</code> is one query and one loop:</p>
+<pre><code>SELECT chunks.id, chunks.text
+FROM chunks
+JOIN documents
+  ON chunks.document_id = documents.id
+ AND chunks.chunking_generation_id = documents.active_chunking_generation_id   -- ADR-0025
+LEFT JOIN chunk_embeddings
+  ON chunk_embeddings.chunk_id = chunks.id AND chunk_embeddings.embedding_model = %(model)s
+WHERE chunk_embeddings.chunk_id IS NULL                                        -- not embedded yet
+
+for chunk_id, text in pending:
+    vector = client.embed("search_document: " + text)   # no try/except: fail loudly
+    upsert_immutable(cur, "chunk_embeddings", [...], [...], conflict_columns=["chunk_id", "embedding_model"])</code></pre>
+
+<h2>Where the spec needed more than it said</h2>
+<p>Four places where following the ticket literally would have failed or quietly misbehaved. All four were spotted while building, before review:</p>
+
+<div class="box bug">
+  <span class="label">1. "Reuse the shared upsert helper" — but it couldn't</span>
+  <p>The ticket says to reuse <code>db.upsert_immutable</code> "with <code>ON CONFLICT (chunk_id, embedding_model)</code>". The helper (extracted in #24) hard-coded <code>ON CONFLICT (id)</code>, and <code>chunk_embeddings</code> has no <code>id</code> column — the first insert would have been a SQL error. Fix: an optional <code>conflict_columns</code> parameter defaulting to <code>["id"]</code>, so every existing caller is unchanged. This is the payoff of doing #24 first: the change was one parameter in one shared place instead of a second copy of the upsert.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">2. "ON CONFLICT DO NOTHING" does not mean "never recompute"</span>
+  <p>The ticket wants a re-run to never recompute an existing embedding. The upsert alone only prevents <em>overwriting</em>: every re-run would still ask Ollama to embed all ~2000 Chunks, then discard the answers, because the expensive model call happens <em>before</em> the insert. So the SELECT above excludes already-embedded Chunks (a SQL anti-join — <code>LEFT JOIN ... WHERE right.key IS NULL</code>, the set-difference cousin of LINQ's <code>Except</code>), and the upsert stays as a backstop. A test proves a second run makes zero client calls.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">3. One transaction would have thrown away all progress</span>
+  <p><code>loader.py</code> deliberately runs in one transaction: all-or-nothing is right for a fast load. Copying that shape here would be a plausible-looking mistake. Embedding is slow and can crash midway (that's the whole "fail loudly" design), and with one transaction a crash rolls back every embedding already computed — "a re-run resumes" would be false. So <code>embed.py</code> connects with <code>autocommit=True</code> and each Chunk's row is committed as it's produced. The test makes the second call raise, asserts the exception propagates, asserts the first Chunk's row survived, then re-runs and asserts only the missing Chunk is embedded.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">4. Getting the migration into <em>both</em> databases</span>
+  <p>Files in <code>init/</code> run in name order: <code>002</code> creates <code>regdocs_test</code> and copies <code>001</code>'s schema into it, so <code>003</code> runs <em>after</em> that copy and the test database wouldn't get the new table. <code>002</code>'s trick (<code>\i</code> the other file) can't be reused directly, because a file that <code>\i</code>s itself recurses forever. The fix uses a psql <em>variable as a flag</em>: <code>\if :{?applied_to_test}</code> is false the first time, so it sets the flag, runs <code>\c regdocs_test</code>, and <code>\i</code>s the same file; on that second pass the flag is defined and the block is skipped. The DDL is written once and runs twice. Verified from an empty volume in a scratch container, and again by applying it to the live one. Two gotchas along the way: Git Bash rewrites <code>/docker-entrypoint-initdb.d/...</code> into a Windows path (<code>MSYS_NO_PATHCONV=1</code> stops it), and init scripts never re-run on an existing volume, so the README tells existing containers how to apply <code>003</code> by hand.</p>
+</div>
+
+<h2>What <code>/code-review</code> caught</h2>
+<div class="box did">
+  <span class="label">Review results</span>
+  <p><strong>Spec axis:</strong> every acceptance criterion met; the four deviations above were each judged justified by the spec's own stated goals. <strong>Standards axis:</strong> no hard violations, but several <em>stale comments</em>, all fixed in a follow-up commit:</p>
+  <ul>
+    <li><code>001_schema.sql</code> still said pgvector "isn't used by any column yet" — false the moment <code>003</code> landed.</li>
+    <li><code>upsert_immutable</code>'s docstring still said "whose <em>id</em> already exists" and listed only three tables, after I'd generalised it.</li>
+    <li>Two spots where Python behaviour (<code>list(...)</code> on the library's return value, <code>str(float)</code> round-tripping) deserved the line-by-line explanation this repo asks for.</li>
+  </ul>
+  <p>The reviewers found no logic bug; the design corrections above were made while building. The lesson matches #19's: comments describing a shared helper rot silently when the helper changes.</p>
+</div>
+
+<div class="box verified">
+  <span class="label">Judgement calls left as they are</span>
+  <p>The separate <code>chunk_id</code> index is redundant with the primary key's leading column, but the ticket explicitly asks for it. The test module imports its fixtures from <code>test_loader.py</code> rather than a shared <code>conftest.py</code> — a reasonable cleanup, but out of this ticket's scope. <code>EMBEDDING_DIMENSIONS</code> (768) and the SQL's <code>vector(768)</code> must be kept in agreement by hand.</p>
+</div>
+
+<h2>What's next</h2>
+<p>
+  The shared spine is complete: documents, chunks, and their vectors all live in Postgres. Retrieval is next — embed the user's question with the <code>"search_query: "</code> prefix, ask pgvector for the nearest Chunk vectors, and add the similarity index once there's a real query to tune it against.
+</p>
+
+<footer>
+  RegDocs Assistant — issue #25, epic #22. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>
