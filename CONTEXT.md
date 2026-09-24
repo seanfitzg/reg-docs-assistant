@@ -62,3 +62,13 @@ _Avoid_: Version — reserved for Document supersession, a different kind of "ol
 **Chunk Embedding**:
 A vector representation of one Chunk's text, produced by a specific embedding model, used to find candidate Chunks for a query via nearest-neighbor similarity search. Keyed by (Chunk, embedding model) — trying a different model produces additional Chunk Embeddings alongside existing ones, never replacing them, the same "old stays, new is additive" shape as Chunking Generation. Only computed for Chunks belonging to a Document's active Chunking Generation, since an inactive Generation's Chunks are never retrieval candidates in the first place.
 _Avoid_: Vector, embedding (bare) — "Chunk Embedding" is this project's term for the persisted, model-keyed form specifically
+
+### Evaluation
+
+**Eval Case**:
+One hand-written question in the retrieval eval set, with its Gold Locators, a verbatim answer quote for human sanity-checking, and `phrasing` and `category` tags. Measures whether retrieval surfaces the right source; says nothing about the quality of a drafted answer.
+_Avoid_: Test case, sample, Q&A pair — "Eval Case" is the project's term for this labelled retrieval check specifically
+
+**Gold Locator**:
+A `(document_id, locator)` pair naming where the correct answer to an Eval Case lives in the source Document's own structure — deliberately not a Chunk id, so it survives re-chunking. A retrieved Chunk is a hit if its locator matches any of the case's Gold Locators under the eval's deterministic match rule (segment-aware for clause numbers; exact heading and page within ±1 for heading-section Documents).
+_Avoid_: Ground truth, expected chunk — a Gold Locator never names a Chunk

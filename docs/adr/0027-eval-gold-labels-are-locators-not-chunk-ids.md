@@ -1,0 +1,7 @@
+# Eval gold labels are (document_id, locator), not chunk_id
+
+Each Eval Case in the retrieval eval set identifies its correct answer as one or more Gold Locators — `(document_id, locator)` pairs, e.g. `("doc-04-cp54-second-consultation-consumer-protection-code", "3.12")` or `("doc-03-cp47-review-of-consumer-protection-code", "Introduction (p. 3)")` — never as a `chunk_id`. A verbatim answer quote is stored alongside each case purely as a human sanity check; it is not used for matching.
+
+`chunk_id` was the obvious choice (exact, and a hit is a plain set-membership check), but Chunks are immutable and re-chunking produces a fresh set with new ids (ADR-0003), and the chunking strategy is a per-Document manifest field expected to change (ADR-0014). Labelling by `chunk_id` would mean the whole eval set breaks — and has to be re-labelled by hand — on every re-chunk, which makes it unable to do one of the jobs it exists for: comparing two chunking strategies on the same questions. Locators, by contrast, come from the Document's own structure (clause numbers, or heading plus page per ADR-0015), so they survive a change of chunker. Quoted answer spans were also considered and rejected as the match key: most robust to re-chunking, but brittle against text-normalisation differences from extraction and cleanup (ADR-0016).
+
+The cost accepted: a hit is no longer an equality check but needs a match rule between a gold locator and a retrieved Chunk's locator — see ADR-0028.
