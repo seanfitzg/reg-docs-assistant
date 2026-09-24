@@ -19,9 +19,20 @@ DEFAULT_DB_URL = "postgresql://regdocs:regdocs_dev_only@localhost:5432/regdocs"
 
 
 def upsert_immutable(
-    cur: psycopg.Cursor, table: str, columns: list[str], rows: list[dict[str, Any]]
+    cur: psycopg.Cursor,
+    table: str,
+    columns: list[str],
+    rows: list[dict[str, Any]],
+    conflict_columns: list[str] | None = None,
 ) -> None:
     """Insert rows into `table`; silently skip any row whose id already exists.
+
+    `conflict_columns` names the unique key a "duplicate" is detected on;
+    it defaults to ["id"], which is what documents/chunking_generations/
+    chunks use. A table keyed differently -- chunk_embeddings is keyed on
+    (chunk_id, embedding_model), with no `id` column at all -- passes its
+    own key here. Like `table`/`columns`, it must only ever be a fixed
+    literal from a call site, never user input.
 
     documents, chunking_generations, and chunks are each immutable once
     written (CONTEXT.md), so unlike a typical upsert this never updates an
@@ -56,8 +67,9 @@ def upsert_immutable(
     # (fine at this corpus's current size -- ~2000 Chunks load in seconds;
     # worth revisiting only if that ever becomes a real bottleneck).
     placeholders = ", ".join(f"%({column})s" for column in columns)
+    conflict_list = ", ".join(conflict_columns or ["id"])
     cur.executemany(
         f"INSERT INTO {table} ({column_list}) VALUES ({placeholders}) "
-        "ON CONFLICT (id) DO NOTHING",
+        f"ON CONFLICT ({conflict_list}) DO NOTHING",
         rows,
     )

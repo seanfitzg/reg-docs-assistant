@@ -81,6 +81,9 @@ def clean_db():
     def _clear():
         with psycopg.connect(DB_URL) as conn:
             with conn.cursor() as cur:
+                # chunk_embeddings references chunks (003), so it has to go
+                # first or DELETE FROM chunks hits a foreign-key error.
+                cur.execute("DELETE FROM chunk_embeddings")
                 cur.execute("DELETE FROM chunks")
                 cur.execute("UPDATE documents SET active_chunking_generation_id = NULL")
                 cur.execute("DELETE FROM chunking_generations")
