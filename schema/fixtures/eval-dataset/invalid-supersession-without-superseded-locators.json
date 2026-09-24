@@ -1,0 +1,15 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "Why was the consumer rulebook being looked at again?",
+      "phrasing": "paraphrase",
+      "category": "supersession",
+      "gold_locators": [
+        { "document_id": "doc-04-cp54-second-consultation-consumer-protection-code", "locator": "1.1" }
+      ],
+      "answer_quote": "in order to strengthen the existing Consumer Protection Code"
+    }
+  ]
+}

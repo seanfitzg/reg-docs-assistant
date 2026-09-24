@@ -1,0 +1,23 @@
+[
+  {
+    "id": "doc-a-gen-1-chunk-001",
+    "document_id": "doc-a",
+    "chunking_generation_id": "doc-a-gen-1",
+    "locator": "9.9",
+    "text": "An inactive-generation clause about a key information document."
+  },
+  {
+    "id": "doc-a-gen-2-chunk-001",
+    "document_id": "doc-a",
+    "chunking_generation_id": "doc-a-gen-2",
+    "locator": "1.1",
+    "text": "The Central Bank of Ireland is committed to the provision of a comprehensive\nconsumer protection framework which sets out requirements for regulated firms."
+  },
+  {
+    "id": "doc-a-gen-2-chunk-002",
+    "document_id": "doc-a",
+    "chunking_generation_id": "doc-a-gen-2",
+    "locator": "3.12",
+    "text": "A regulated entity must provide a consumer with a key information document\nbefore the consumer enters into a contract."
+  }
+]

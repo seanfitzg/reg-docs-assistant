@@ -1,0 +1,29 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "When must a key information document be given?",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "gold_locators": [{ "document_id": "doc-a", "locator": "3.12" }],
+      "answer_quote": "before the consumer enters into a contract"
+    },
+    {
+      "id": "q02",
+      "question": "What does the paper look at?",
+      "phrasing": "paraphrase",
+      "category": "supersession",
+      "gold_locators": [{ "document_id": "doc-a", "locator": "1.1" }],
+      "superseded_locators": [{ "document_id": "doc-b", "locator": "Introduction (p. 3)" }],
+      "answer_quote": "committed to the provision of a comprehensive"
+    },
+    {
+      "id": "q03",
+      "question": "What are the UK FCA's rules?",
+      "phrasing": "paraphrase",
+      "category": "unanswerable",
+      "gold_locators": []
+    }
+  ]
+}

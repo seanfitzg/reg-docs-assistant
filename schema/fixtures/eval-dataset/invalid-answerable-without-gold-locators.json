@@ -1,0 +1,13 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What is the Central Bank committed to?",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "gold_locators": [],
+      "answer_quote": "committed to the provision of a comprehensive consumer protection framework"
+    }
+  ]
+}

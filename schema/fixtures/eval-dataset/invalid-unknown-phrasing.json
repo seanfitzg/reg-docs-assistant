@@ -1,0 +1,15 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What is the Central Bank committed to?",
+      "phrasing": "verbatim",
+      "category": "single_passage",
+      "gold_locators": [
+        { "document_id": "doc-04-cp54-second-consultation-consumer-protection-code", "locator": "1.1" }
+      ],
+      "answer_quote": "committed to the provision of a comprehensive consumer protection framework"
+    }
+  ]
+}

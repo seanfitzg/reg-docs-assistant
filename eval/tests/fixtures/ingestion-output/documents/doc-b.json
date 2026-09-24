@@ -1,0 +1,9 @@
+{
+  "id": "doc-b",
+  "title": "Fixture heading-section Document",
+  "publisher": "Central Bank of Ireland",
+  "published_date": "2020-01-01",
+  "source_url": "https://example.com/doc-b.pdf",
+  "active_chunking_generation_id": "doc-b-gen-1",
+  "supersedes": null
+}

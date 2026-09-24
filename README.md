@@ -20,8 +20,9 @@ Same architecture and event schema, built once in .NET and once in Python, both 
 - **[`/ingestion`](./ingestion)** - turns the corpus into `Document`/`Chunk` records: PDF extraction, cleanup, three chunking strategies, deterministic ids, per-document failure isolation, schema validation on write.
 - **[`/corpus`](./corpus)** - 20 public Central Bank of Ireland / CCPC documents, fully ingested (PDFs not committed; see `corpus/SOURCES.md`).
 - **[`/store`](./store)** - Postgres + pgvector (via docker-compose) holding every ingested `Document`, `Chunking Generation` and `Chunk`, plus a vector embedding per active-generation Chunk. `loader.py` loads ingestion's output; `embed.py` computes embeddings with a local [Ollama](https://ollama.com) model (`nomic-embed-text`, 768 dimensions) into a `chunk_embeddings` table keyed by Chunk and model. Both are safe to re-run, and both are covered by integration tests against an isolated test database.
+- **[`/eval`](./eval)** - the retrieval eval set: hand-written Eval Cases labelled by Gold Locator (`document_id` + locator), a JSON Schema for them, a test that every label exists in the ingested Chunks, and a keyword-search helper for writing cases. The harness that scores retrieval against it is next.
 - **[`/learning`](./learning)** - a self-contained HTML writeup per issue explaining what was built and the concepts behind it.
-- **26 ADRs** in [`docs/adr/`](./docs/adr).
+- **30 ADRs** in [`docs/adr/`](./docs/adr).
 
 Not built yet: retrieval itself (embedding a question, nearest-neighbour search, a vector-similarity index), the agent pipeline (classify -> retrieve -> draft -> verify), the audit-event store, and both application tracks. This section will move as that lands.
 
@@ -38,6 +39,7 @@ Not built yet: retrieval itself (embedding a question, nearest-neighbour search,
 /schema      shared JSON Schema contracts (Event, Document, Chunk, ...)
 /ingestion   pipeline turning corpus PDFs into Document/Chunk records
 /store       Postgres + pgvector: loads Documents/Chunks, embeds Chunks
+/eval        retrieval eval set (hand-written Eval Cases) + authoring tools
 /corpus      source PDFs (not committed) + manifest
 /learning    per-issue HTML writeups of what was built and why
 /docs/adr    architecture decision records
@@ -45,7 +47,7 @@ Not built yet: retrieval itself (embedding a question, nearest-neighbour search,
 CONTEXT.md   domain glossary
 ```
 
-Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md) and [`store/README.md`](./store/README.md).
+Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md), [`store/README.md`](./store/README.md) and [`eval/README.md`](./eval/README.md).
 
 ## About me
 
