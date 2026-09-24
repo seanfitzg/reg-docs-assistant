@@ -20,6 +20,11 @@ from typing import Any
 
 import psycopg
 
+# A bare `from db import ...` (no package prefix) works because /store is
+# the import root: running `python store/loader.py` puts store/ on sys.path,
+# and store/tests/conftest.py adds it for pytest -- the same way the tests
+# already do `from loader import ...`. There's no store/__init__.py, so
+# `db` is a plain top-level module sitting next to this file.
 from db import DEFAULT_DB_URL, upsert_immutable
 
 # Mirrors the closed set store/init/001_schema.sql's CHECK constraint on
