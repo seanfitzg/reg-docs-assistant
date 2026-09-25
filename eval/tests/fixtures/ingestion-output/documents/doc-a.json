@@ -1,0 +1,9 @@
+{
+  "id": "doc-a",
+  "title": "Fixture clause-numbered Document, re-chunked once",
+  "publisher": "Central Bank of Ireland",
+  "published_date": "2011-06-01",
+  "source_url": "https://example.com/doc-a.pdf",
+  "active_chunking_generation_id": "doc-a-gen-2",
+  "supersedes": null
+}

@@ -1,0 +1,14 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What does the UK FCA require?",
+      "phrasing": "paraphrase",
+      "category": "unanswerable",
+      "gold_locators": [
+        { "document_id": "doc-04-cp54-second-consultation-consumer-protection-code", "locator": "1.1" }
+      ]
+    }
+  ]
+}

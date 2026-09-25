@@ -1,0 +1,36 @@
+{
+  "dataset_version": 1,
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What does paragraph 1.1 say the Central Bank is committed to providing?",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "gold_locators": [
+        { "document_id": "doc-04-cp54-second-consultation-consumer-protection-code", "locator": "1.1" }
+      ],
+      "answer_quote": "The Central Bank of Ireland is committed to the provision of a comprehensive consumer protection framework"
+    },
+    {
+      "id": "q02",
+      "question": "Why was the consumer rulebook being looked at again?",
+      "phrasing": "paraphrase",
+      "category": "supersession",
+      "gold_locators": [
+        { "document_id": "doc-04-cp54-second-consultation-consumer-protection-code", "locator": "1.1" }
+      ],
+      "superseded_locators": [
+        { "document_id": "doc-03-cp47-review-of-consumer-protection-code", "locator": "Introduction (p. 3)" }
+      ],
+      "answer_quote": "setting out proposed new and amended requirements in order to strengthen the existing Consumer Protection Code",
+      "notes": "Fixture only; not a real Eval Case."
+    },
+    {
+      "id": "q03",
+      "question": "What does the UK FCA require for buy-now-pay-later disclosures?",
+      "phrasing": "paraphrase",
+      "category": "unanswerable",
+      "gold_locators": []
+    }
+  ]
+}
