@@ -2,7 +2,7 @@
 
 The retrieval eval set: hand-written **Eval Cases**, each labelled with the **Gold Locators** where its answer lives (`CONTEXT.md`), used to *measure* retrieval quality rather than eyeball it. Design in ADR-0027 to ADR-0030.
 
-So far this folder holds the dataset and the tooling for authoring it (#29). The locator match rule (#30) and the harness that runs retrieval and writes reports (#32) come next.
+So far this folder holds the dataset, the tooling for authoring it (#29), and the match rule that decides whether a retrieved Chunk is a hit (#30). The harness that runs retrieval and writes reports (#32) comes next.
 
 ## Setup
 
@@ -49,12 +49,13 @@ Every word must appear in a Chunk, but not necessarily next to each other, and m
 python -m pytest eval/tests
 ```
 
-`test_dataset.py` is the safety net while writing cases. Run it after every edit. It checks `dataset.json` against the schema, checks that case ids are unique, and checks that every Gold Locator (and superseded locator) exists **exactly** in the ingested active Chunks. That exact check is only there to catch typos. Whether a *retrieved* Chunk counts as a hit is a separate, structure-aware rule (ADR-0028). The locator check skips if `ingestion/output/` isn't present.
+`test_dataset.py` is the safety net while writing cases. Run it after every edit. It checks `dataset.json` against the schema, checks that case ids are unique, and checks that every Gold Locator (and superseded locator) exists **exactly** in the ingested active Chunks. That exact check is only there to catch typos. Whether a *retrieved* Chunk counts as a hit is a separate, structure-aware rule (`match.py`, ADR-0028). The locator check skips if `ingestion/output/` isn't present.
 
 ## Layout
 
 - `dataset.json`: the Eval Cases.
 - `corpus.py`: loads active-generation Chunks from `ingestion/output/`.
 - `check_dataset.py`: `find_problems()`, the relational checks the JSON Schema can't express.
+- `match.py`: `locator_matches()` and `case_hit()`, the Gold Locator match rule (ADR-0028). Anything it can't parse raises instead of scoring a silent miss.
 - `find_locator.py`: the keyword-search authoring helper.
 - `tests/`: unit tests against small fixture copies of ingestion output (`tests/fixtures/`), plus `test_dataset.py` for the real dataset.
