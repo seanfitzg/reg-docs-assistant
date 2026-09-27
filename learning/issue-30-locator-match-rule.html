@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #30: locator match rule</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #30 — The Gold Locator match rule</h1>
+<p class="subtitle">The grader for the retrieval eval: a small, pure function that decides whether a retrieved Chunk counts as a hit for a Gold Locator. No model and no fuzziness, just rules. It was built test-first, and review turned up a comment that explained the core bug backwards and a place where bad data could still hide as a "miss". Follows <a href="issue-29-eval-dataset-scaffolding.html">issue #29's writeup</a>.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">#29 schema + checks + helper</span>
+  <span class="arrow">→</span>
+  <span class="step">#31 you write the cases</span>
+  <span class="arrow">→</span>
+  <span class="step">#32 harness + baseline</span>
+  <span class="arrow">←</span>
+  <span class="step"><strong>#30 match rule</strong></span>
+</div>
+<p>
+  #29 left the eval set with labels: every Eval Case names where its answer lives as a <strong>Gold Locator</strong>, <code>(document_id, locator)</code>. #32 will run retrieval and get back a ranked list of Chunks, each with its own <code>(document_id, locator)</code>. Something has to compare the two and say <em>hit</em> or <em>miss</em>. That's this ticket: <code>eval/match.py</code>, with two public functions, <code>locator_matches()</code> and <code>case_hit()</code>. It's covered by 51 unit tests in <code>eval/tests/test_match.py</code>, and every one of the 1,993 real active locators was checked against it.
+</p>
+
+<h2>The concepts</h2>
+
+<div class="box concept">
+  <span class="label">Concept: the grader must be deterministic (ADR-0028)</span>
+  <p>An eval produces a number such as "Recall@5 = 0.72", and its whole value is that you can compare that number before and after a change. If the <em>grader</em> had its own variance (an LLM judge that says "hit" 9 times out of 10, or a fuzzy string similarity with a threshold), then a score moving from 0.72 to 0.68 could be the retriever getting worse <em>or</em> the grader wobbling. You couldn't tell which. That's the same reason a flaky test is worse than no test.</p>
+  <p>This is why many AI evals put so much effort into their grading method. <strong>LLM-as-judge</strong> is common for grading free-text <em>answers</em>, because there's no exact right string. Here we're grading <em>retrieval</em>, where the right answer is a place in a document, so a hand-written rule can do it exactly and for free. Use the cheapest deterministic grader that works, and save model judges for the problems that really need them.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why not just compare the strings?</span>
+  <p>Exact equality (<code>gold == retrieved</code>) would be correct for <em>today's</em> chunkers, but one of the eval's jobs is comparing chunkers (ADR-0027). Suppose a finer chunker splits clause <code>3.12</code> into <code>3.12(a)</code> and <code>3.12(b)</code>. It retrieves <code>3.12(a)</code>, which is the right text. Exact equality scores that as a miss, so the finer chunker looks worse than it is. So the rule has to understand the <em>structure</em> of a locator:</p>
+  <table>
+    <tr><th>Strategy</th><th>Locator shape</th><th>Rule</th></tr>
+    <tr><td><code>clause_numbered</code></td><td><code>3.12</code>, <code>3.12(a)</code></td><td>The gold's <em>segments</em> must be a prefix of the retrieved's. A child clause is inside its parent.</td></tr>
+    <tr><td><code>heading_sections</code>, <code>academic_sections</code></td><td><code>Introduction (p. 3)</code></td><td>The heading must match exactly, and the page may differ by at most ±1.</td></tr>
+  </table>
+  <p><code>academic_sections</code> shares the heading rule because its chunker builds locators the same way: <code>f"{' '.join(lines)} (p. {page})"</code> in <code>ingestion/strategies/academic_sections.py</code>. That was checked against the code and the data, not assumed (see below).</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: the <code>startswith</code> trap, and segments</span>
+  <p>The obvious way to say "3.12(a) is inside 3.12" is <code>retrieved.startswith(gold)</code>. But <code>"3.12".startswith("3.1")</code> is <code>True</code>, so gold <code>3.1</code> would count <code>3.12</code> as a hit, and <code>3.10</code> through <code>3.19</code> as well. A string prefix is not a <em>clause</em> prefix. The fix is to split each locator into segments first and compare whole segments:</p>
+<pre><code>"3.12(a)"  →  ["3", "12", "(a)"]
+"3.1"      →  ["3", "1"]
+
+gold ["3","12"]  vs retrieved ["3","12","(a)"]   → first 2 equal      → HIT
+gold ["3","1"]   vs retrieved ["3","12"]         → "1" != "12"        → miss
+gold ["3","12","(a)"] vs retrieved ["3","12"]    → retrieved too short → miss</code></pre>
+  <p>It's the difference between comparing file paths as strings (<code>"/src/app".StartsWith("/src/a")</code>) and comparing path <em>segments</em>. Most .NET developers have hit that bug with paths at some point, and it's the same bug here.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: grader error goes both ways (the ±1 page tolerance)</span>
+  <p>A grader can be wrong in two directions. A <strong>false hit</strong> credits retrieval for something it didn't find, which inflates the score. A <strong>false miss</strong> blames retrieval for grader strictness, which deflates it. The ±1 page tolerance trades between them. It forgives a chunker that paginates slightly differently (fewer false misses). The cost is that two different sections with the same heading on neighbouring pages now count as the same place (a few false hits). The real corpus has exactly 4 such pairs. ±1 is ADR-0028's decision, and <code>PAGE_TOLERANCE</code> is a named constant so the decision is visible in the code.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: fail loudly, never score a silent miss</span>
+  <p>The worst thing an eval can produce is a number that is <em>wrong but plausible</em>. Nobody questions a recall of 0.68. So when the rule meets something it doesn't understand (an unknown chunking strategy, or a locator that doesn't fit the expected format), it <strong>raises</strong> an exception instead of returning <code>False</code>. A <code>False</code> would be counted as a retrieval miss, and the bug would disappear into the average. It's the same instinct as preferring an exception over a swallowed <code>catch {}</code> in a batch job: a crash gets looked at, and a quietly wrong total doesn't.</p>
+</div>
+
+<h2>What was built: <code>eval/match.py</code></h2>
+
+<p>Each strategy is a pair of functions: <strong>parse</strong> turns a locator string into something comparable (and raises if it can't), and <strong>covers</strong> compares a parsed gold with a parsed retrieved locator. A dict maps strategy names to those pairs. It's the Python everyday equivalent of a <code>Dictionary&lt;string, (Func, Func)&gt;</code>, or a strategy-pattern lookup:</p>
+<pre><code>RULES = {
+    "clause_numbered":   (_clause_segments, _clause_covers),
+    "heading_sections":  (_parse_heading,   _heading_covers),
+    "academic_sections": (_parse_heading,   _heading_covers),
+}
+
+def locator_matches(gold_locator, retrieved_locator, chunking_strategy) -&gt; bool:
+    parse, covers = _rule(chunking_strategy)            # raises on an unknown strategy
+    return covers(parse(gold_locator), parse(retrieved_locator))</code></pre>
+
+<p>The parsers are two regular expressions, always applied with <code>fullmatch</code>, so the <em>whole</em> string must fit (like <code>\A…\z</code> in .NET). Otherwise <code>"3.12."</code> would slip through on its <code>"3.12"</code> prefix:</p>
+<pre><code>CLAUSE_PATTERN  = r"[0-9]+(?:\.[0-9]+)*(?:\([A-Za-z0-9]+\))*"   # 3, 3.12, 3.12(a), 3.12(a)(i)
+HEADING_PATTERN = r"(.+) \(p\. ([0-9]+)\)"                         # "&lt;heading&gt; (p. &lt;n&gt;)"</code></pre>
+
+<p><code>case_hit()</code> is what the harness will call once per Eval Case. It first checks every retrieved Chunk, then asks whether <em>any</em> gold matches <em>any</em> retrieved Chunk <em>in the same Document</em>:</p>
+<pre><code>def case_hit(gold_locators, retrieved) -&gt; bool:
+    for chunk in retrieved:                                  # every Chunk must be well-formed,
+        parse, _ = _rule(chunk["chunking_strategy"])         # whatever Document it's from
+        parse(chunk["locator"])
+
+    return any(
+        locator_matches(gold["locator"], chunk["locator"], chunk["chunking_strategy"])
+        for gold in gold_locators
+        for chunk in retrieved
+        if gold["document_id"] == chunk["document_id"]      # "1.1" exists in many Documents
+    )</code></pre>
+<p>The same-Document filter matters because <code>1.1</code> appears in lots of Documents, and only the gold's own Document counts. "Any gold" is ADR-0028's rule for <code>multi_locator</code> cases: the answer lives in several places, and finding one is enough. An empty <code>gold_locators</code> (an <code>unanswerable</code> case) is never a hit, because <code>any()</code> over nothing is <code>False</code>. The harness excludes those cases from recall anyway (ADR-0029).</p>
+
+<h3>Examples, as the tests pin them</h3>
+<table>
+  <tr><th>Gold</th><th>Retrieved</th><th>Result</th><th>Why</th></tr>
+  <tr><td><code>3.12</code></td><td><code>3.12(a)</code></td><td>hit</td><td>A child is inside its parent</td></tr>
+  <tr><td><code>3</code></td><td><code>3.12</code></td><td>hit</td><td>A whole-chapter gold covers its clauses</td></tr>
+  <tr><td><code>3.1</code></td><td><code>3.12</code></td><td>miss</td><td>The <code>startswith</code> trap</td></tr>
+  <tr><td><code>1.1</code></td><td><code>1.10</code></td><td>miss</td><td>Real CP54 siblings</td></tr>
+  <tr><td><code>3.12(a)</code></td><td><code>3.12</code></td><td>miss</td><td>3.12 contains more than (a)</td></tr>
+  <tr><td><code>Introduction (p. 3)</code></td><td><code>Introduction (p. 4)</code></td><td>hit</td><td>Within ±1</td></tr>
+  <tr><td><code>Introduction (p. 3)</code></td><td><code>Introduction (p. 5)</code></td><td>miss</td><td>Probably a different "Introduction"</td></tr>
+  <tr><td><code>Introduction (p. 3)</code></td><td><code>introduction (p. 3)</code></td><td>miss</td><td>Exact means case-sensitive too</td></tr>
+  <tr><td><code>Introduction (p. 3)</code></td><td><em>(clause_numbered)</em></td><td>raises</td><td>Wrong format for the strategy</td></tr>
+  <tr><td>anything</td><td><em>strategy <code>fixed_window</code></em></td><td>raises</td><td>Unknown strategy</td></tr>
+</table>
+
+<h2>How it was built: red, green, then review</h2>
+
+<div class="box concept">
+  <span class="label">Concept: TDD against a pure function</span>
+  <p>A pure function (no I/O, same inputs → same output) is the easiest thing to test-drive, which is why the issue asked for this one test-first. All the tests were written before <code>match.py</code> existed. The first run failed with <code>ModuleNotFoundError: No module named 'match'</code>, the red step. That's the Python equivalent of a test project that doesn't compile yet because the class doesn't exist. Then the implementation was written to make them green. During review, each fix again started with a failing test.</p>
+</div>
+
+<h3>Checking the real data first</h3>
+<p>Before writing a rule, it's worth finding out what the locators actually look like, rather than trusting the ADR's examples. A quick script loaded every active Chunk, looked up its Document's strategy in <code>ingestion/manifest.json</code>, and tried each proposed pattern:</p>
+<pre><code>== clause_numbered 602          ← all fit N.N
+== heading_sections 1242        ← all fit "&lt;heading&gt; (p. N)"; some odd ones:
+     'Solvency  II - Implementation (p. 24)'     (a doubled space from PDF extraction)
+     '(4) (p. 33)'                               (a heading that is itself in brackets)
+== academic_sections 149        ← all fit "&lt;heading&gt; (p. N)"</code></pre>
+<p>Those odd locators became test cases. The doubled space is a good example of a decision the tests now pin: <em>exact</em> means exact. Both sides come from the same Document's extraction, so normalising whitespace would only risk merging two headings that really are different. After the implementation, the same script confirmed that every real locator parses and matches itself (<code>1993 real locators hit themselves</code>).</p>
+
+<h3>What <code>/code-review</code> caught</h3>
+<p>Two reviewers ran in parallel, one checking the repo's standards and one checking the spec (issue #30). Their findings, and what changed:</p>
+
+<div class="box bug">
+  <span class="label">Bug: the core comment explained the bug backwards</span>
+  <p>The comment on <code>_clause_covers</code> said the segment rule was the difference from "a naive <code>gold.startswith(retrieved)</code>". That's the wrong way round. <code>"3.1".startswith("3.12")</code> is <code>False</code>, so the version as written wouldn't even show the bug. The trap is <code>retrieved.startswith(gold)</code>. In this repo the comments are teaching material, so a wrong explanation of the central idea is a real defect, not a cosmetic one. It now spells out the example: <code>"3.12".startswith("3.1")</code> is <code>True</code>, so 3.12 would wrongly be scored as a hit for gold 3.1.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">Bug: a true behaviour, credited to the wrong mechanism, "tested" by a case that couldn't fail</span>
+  <p>The first version said the page is always the <em>last</em> <code>(p. N)</code> "because <code>.+</code> is greedy". The behaviour was right, but not for that reason. <code>fullmatch</code> pins <code>(p. N)</code> to the end of the string, so even a lazy <code>.+?</code> would land on the last one. The anchor does the work, not the greediness. The test meant to prove it used <code>(4) (p. 33)</code>, and <code>(4)</code> doesn't look like <code>(p. N)</code> at all, so that case would pass under any reading. It now has a companion that could genuinely fail if the parser picked the first page: <code>Notes (p. 2) (p. 33)</code> vs <code>Notes (p. 2) (p. 34)</code> is a hit. The lesson generalises: before trusting a test as evidence, ask whether it <em>could</em> have failed.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">Bug: bad data could still become a silent miss (a design change)</span>
+  <p>The spec says an unknown strategy or an unparseable locator "raises rather than silently returning <code>False</code>". <code>locator_matches</code> did raise. But <code>case_hit</code> only called it for pairs in the <em>same</em> Document. A retrieved Chunk from another Document with a bogus strategy was never looked at, and the case quietly scored a miss, which is exactly what the fail-loud principle forbids. The spec reviewer found this by trying inputs until one broke it:</p>
+<pre><code>case_hit([{"document_id": "A", "locator": "1.1"}],
+         [{"document_id": "B", "locator": "Intro (p. 3)", "chunking_strategy": "bogus"}])
+# first version: False       now: ValueError: unknown chunking strategy: 'bogus'</code></pre>
+  <p>Fixing it changed the design. Originally each strategy mapped to a single <code>matches(gold, retrieved)</code> function, which parsed and compared in one step. That made it impossible to <em>check</em> a Chunk without comparing it to something. Splitting each rule into <strong>parse</strong> and <strong>covers</strong> lets <code>case_hit</code> parse every retrieved Chunk up front. It's a small example of a test pushing a design toward separate responsibilities.</p>
+  <p>One gap remains, and it's structural: a <em>gold</em> locator is only parsed when a Chunk from its Document is retrieved, because that's where its strategy comes from. That gap is already covered elsewhere. <code>test_dataset.py</code> (#29) checks that every gold exists <em>exactly</em> among the real Chunks, so any gold that passes is parseable by construction. The docstring says so.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">Bug: <code>\d</code> means more than 0–9 in Python</span>
+  <p>In Python 3, <code>\d</code> matches any Unicode decimal digit, and <code>int()</code> converts them. So <code>"X (p. ٣)"</code> (an Arabic-Indic three) parsed as page 3, and <code>"٣.12"</code> passed as a clause. That's harmless with this corpus, but "exact" should mean exact. The patterns now use <code>[0-9]</code>, and two tests pin it. .NET has the same trap: <code>\d</code> is Unicode-aware there too unless you pass <code>RegexOptions.ECMAScript</code>.</p>
+</div>
+
+<div class="box did">
+  <span class="label">Smaller fixes</span>
+  <ul>
+    <li>The regex breakdown comment showed escaped spaces (<code>\ \(p\.\ </code>) that the real pattern doesn't have.</li>
+    <li>The "like <code>^…$</code> in C#" analogy became <code>\A…\z</code>, because .NET's <code>$</code> also matches just before a trailing newline.</li>
+    <li><code>pytest.raises</code> (≈ <code>Assert.Throws&lt;T&gt;</code>), <code>with</code> (≈ <code>using</code>), <code>{x!r}</code> and <code>dict.get()</code> got explanatory comments.</li>
+    <li>The two error messages now both name strategies (<code>clause_numbered</code>, <code>heading_sections/academic_sections</code>).</li>
+    <li>The README's bullet had restated the whole rule, making a third copy next to ADR-0028 and the module header. It now points to the ADR instead.</li>
+  </ul>
+</div>
+
+<div class="box verified">
+  <span class="label">Judgement calls left as they are</span>
+  <p><strong>Plain dicts, not a <code>GoldLocator</code> type.</strong> The standards reviewer flagged <em>Primitive Obsession</em>: <code>document_id</code> + <code>locator</code> travel together as string-keyed dicts. That's fair, but <code>dataset.json</code> loads as dicts and <code>check_dataset.py</code> uses dicts, and #32's SQL rows will decide the natural shape. So the type is deferred to #32 rather than guessed at now.</p>
+  <p><strong><code>case_hit</code> returns a bool, not a rank.</strong> #32 needs "the 1-based rank of the first hit", and the spec asked for a bool here. The harness can call <code>case_hit(gold, [chunk])</code> for each result in rank order and take the first <code>True</code>. If that turns out clumsy, a <code>first_hit_rank()</code> belongs in #32, when there's a real caller to design it against.</p>
+</div>
+
+<h2>Something the data showed: locators aren't always unique</h2>
+<p>While trying to break the rule, the spec reviewer noticed that some locators appear on more than one Chunk <em>in the same Document</em>. That was verified against the data:</p>
+<table>
+  <tr><th>Document</th><th>Repeated locators</th><th>Example</th></tr>
+  <tr><td>CP08 (administrative sanctions)</td><td>38</td><td><code>3.1</code> ×6, <code>3.3</code> ×6, <code>3.4</code> ×5</td></tr>
+  <tr><td>CP131 (recovery planning)</td><td>7</td><td><code>2.1</code> ×2 … <code>4.1</code> ×2</td></tr>
+  <tr><td>Annual Report 2025</td><td>7</td><td><code>Applications (p. 40)</code> ×2</td></tr>
+  <tr><td>CP54, CP01, CP148, DP7</td><td>1–3 each</td><td><code>3.57</code> ×2</td></tr>
+</table>
+<p>This isn't a bug in the match rule. It's a fact about the corpus: CP08 restarts its clause numbering (or quotes other documents' numbering), and the chunker can't tell those apart. For <strong>#31</strong> it means a gold of CP08 <code>3.1</code> is <em>ambiguous</em>: retrieving <em>any</em> of the six <code>3.1</code> Chunks scores a hit, even ones about something else. That would inflate the score. When labelling, prefer passages whose locator is unique in its Document, or add a <code>notes</code> entry when you can't. The ±1 page tolerance adds 4 more near-collisions of the same kind (e.g. DP7's <code>far include: (p. 62)</code> vs <code>(p. 63)</code>). Several of those, like <code>L (p. 13)</code> and <code>351,648 (p. 166)</code>, are heading-detection noise that also showed up in #29.</p>
+
+<h2>Commands run</h2>
+<pre><code>git checkout master &amp;&amp; git pull &amp;&amp; git checkout -b issue-30-locator-match-rule
+
+cd eval
+.venv/Scripts/python -m pytest tests/test_match.py -q      # red: No module named 'match'
+.venv/Scripts/python -m pytest tests/test_match.py -q      # green: 43 passed
+                                                           # after review: 4 new tests red, then 51 passed
+cd ..
+eval/.venv/Scripts/python -m pytest eval/tests -q          # 71 passed
+schema/.venv/Scripts/python -m pytest schema/tests -q      # 42 passed
+ingestion/.venv/Scripts/python -m pytest ingestion/tests -q  # 82 passed
+store/.venv/Scripts/python -m pytest store/tests -q        # 10 skipped (Postgres not running; untouched)</code></pre>
+<p>There's no Python type checker (mypy or pyright) set up in this repo, so the type hints are documentation, not something that's enforced.</p>
+
+<h2>What's next</h2>
+<p>
+  <strong>#31</strong> (writing the cases) and this ticket were the two blockers on <strong>#32</strong>. Once your cases are in, #32 embeds each question, runs a top-10 pgvector search, scores each case with <code>case_hit</code>, and writes the first baseline report. That's the first real number for how good retrieval is. When you write cases, keep the table above in mind: an ambiguous locator makes a case easier than it looks.
+</p>
+
+<footer>
+  RegDocs Assistant — issue #30, epic #28. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>
