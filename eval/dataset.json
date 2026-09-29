@@ -1,4 +1,39 @@
 {
   "dataset_version": 1,
-  "cases": []
+  "cases": [
+    {
+      "id": "q01",
+      "question": "What is a disadvantage related to mortgage incentives?",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "gold_locators": [
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Mortgage Incentives (p. 44)"
+        }
+      ],
+      "answer_quote": "One clear drawback regarding mortgage incentives is that they make price comparison more difficult. Instead of simply comparing rates, customers also have to analyse and compare the terms of the incentive. Early disclosure of the total cost of credit may mitigate the risk of consumer confusion when presented with cashback/incentive information, and therefore empower consumers to make the most suitable choice for their circumstances."
+    },
+    {
+      "id": "q02",
+      "question": "What econonomic risks could affect investment in AI?",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "gold_locators": [
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "financing (p. 27)"
+        }
+      ],
+      "answer_quote": " A stagflationary outcome or even a global economic slowdown arising from current tensions could curb equity and debt investment in AI, with wider market spillovers. The sector is also sensitive to energy prices, as AI infrastructure is highly energy-intensive, as well as trade disruption for critical inputs and to wider geopolitical issues among key countries. Interlinkages with private credit markets mean that any shock to markets arising from AI will spill over across public and private equity and debt markets."
+    },
+    {
+      "id": "q03",
+      "question": "What is the requirement for a firm when it receives funds where it is not clear which client owns such funds or there is insufficient documentation to identify the client who owns such funds?",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "gold_locators": [{ "document_id": "doc-05-cp71-client-asset-regulations-guidance", "locator": "Identification of client funds (p. 10)" }],
+      "answer_quote": "Regulation 2.(8) requires a firm when it receives funds where it is not clear which client owns such funds or there is insufficient documentation to identify the client who owns such funds, within two business days, to either identify the client concerned or return the funds."
+    }
+  ]
 }
