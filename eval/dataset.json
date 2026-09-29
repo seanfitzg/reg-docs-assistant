@@ -42,7 +42,7 @@
     },
     {
       "id": "q04",
-      "question": "TODO",
+      "question": "How often does an investment firm have to check that the money it's holding for customers adds up to what it owes them?",
       "phrasing": "paraphrase",
       "category": "single_passage",
       "gold_locators": [
@@ -51,8 +51,7 @@
           "locator": "4. Daily Calculation (p. 8)"
         }
       ],
-      "answer_quote": "Each business day a firm should ensure that the aggregate balance on its client asset bank accounts (client money resource) as at the close of business on the previous business day is equal to the amount it should be holding on behalf of its clients (its client money requirement).",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "Each business day a firm should ensure that the aggregate balance on its client asset bank accounts (client money resource) as at the close of business on the previous business day is equal to the amount it should be holding on behalf of its clients (its client money requirement)."
     },
     {
       "id": "q05",
@@ -65,12 +64,11 @@
           "locator": "Chart 16.1 (p. 31)"
         }
       ],
-      "answer_quote": "Since 2004 the amount of the levy payable by each credit union has been capped at a rate of .01% of its total assets as at September the previous year.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "Since 2004 the amount of the levy payable by each credit union has been capped at a rate of .01% of its total assets as at September the previous year."
     },
     {
       "id": "q06",
-      "question": "TODO",
+      "question": "Do insurers that only cover risks for their own corporate parent get lighter treatment when preparing for a financial crisis?",
       "phrasing": "paraphrase",
       "category": "single_passage",
       "gold_locators": [
@@ -79,8 +77,7 @@
           "locator": "3.3"
         }
       ],
-      "answer_quote": "Pre-emptive recovery planning is relevant to a captive insurer however, given that its principle relationship is to the group of which it is a part of, a more simplified strategic analysis is likely to be appropriate.",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "Pre-emptive recovery planning is relevant to a captive insurer however, given that its principle relationship is to the group of which it is a part of, a more simplified strategic analysis is likely to be appropriate."
     },
     {
       "id": "q07",
@@ -93,12 +90,11 @@
           "locator": "3.2.2 Exempt services (p. 10)"
         }
       ],
-      "answer_quote": "The provision of exempt services by credit unions does not require an approval (for additional services) from the Central Bank under the 1997 Act but provision of the service is subject to compliance with the relevant conditions, as set out in the Exempt Services Schedule.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "The provision of exempt services by credit unions does not require an approval (for additional services) from the Central Bank under the 1997 Act but provision of the service is subject to compliance with the relevant conditions, as set out in the Exempt Services Schedule."
     },
     {
       "id": "q08",
-      "question": "TODO",
+      "question": "When the regulator vets someone for a senior role, does it look at whether they'll actually have enough hours to do the job?",
       "phrasing": "paraphrase",
       "category": "single_passage",
       "gold_locators": [
@@ -107,8 +103,7 @@
           "locator": "Time commitments (p. 9)"
         }
       ],
-      "answer_quote": "All F&P assessments must include an assessment of the amount of time that an applicant is proposing to give, or can give, to fully discharge the responsibilities of the role.",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "All F&P assessments must include an assessment of the amount of time that an applicant is proposing to give, or can give, to fully discharge the responsibilities of the role."
     },
     {
       "id": "q09",
@@ -121,12 +116,11 @@
           "locator": "Chatbots (p. 20)"
         }
       ],
-      "answer_quote": "Automated bots or “chatbots” allow consumers to engage with their financial service provider via text message, instant messaging or voice activation services in natural-style conversations",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "Automated bots or “chatbots” allow consumers to engage with their financial service provider via text message, instant messaging or voice activation services in natural-style conversations"
     },
     {
       "id": "q10",
-      "question": "TODO",
+      "question": "Roughly how many jobs have Irish financial firms handed over to outside providers, and how many of those really matter?",
       "phrasing": "paraphrase",
       "category": "single_passage",
       "gold_locators": [
@@ -135,8 +129,7 @@
           "locator": "3.2 Services most likely to be outsourced (p. 15)"
         }
       ],
-      "answer_quote": "The total number of outsourcing arrangements reported by survey respondents is c. 7,700 of which c. 3,600 were deemed to be critical or important by the survey respondents.",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "The total number of outsourcing arrangements reported by survey respondents is c. 7,700 of which c. 3,600 were deemed to be critical or important by the survey respondents."
     },
     {
       "id": "q11",
@@ -149,19 +142,17 @@
           "locator": "Efficiency (p. 9)"
         }
       ],
-      "answer_quote": "It can collapse the two-step model of trading and settlement into a single process by embedding transaction records directly into a shared ledger and remove or reduce the need for various reconciliations in payments.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "It can collapse the two-step model of trading and settlement into a single process by embedding transaction records directly into a shared ledger and remove or reduce the need for various reconciliations in payments."
     },
     {
       "id": "q12",
-      "question": "TODO",
+      "question": "What happens if a firm is slow paying its annual bill for being regulated?",
       "phrasing": "paraphrase",
       "category": "single_passage",
       "gold_locators": [
         { "document_id": "doc-01-cp01-funding-of-ifsra", "locator": "3.29" }
       ],
-      "answer_quote": "Prompt payment will be encouraged by the imposition of additional charges where levies are paid more than 35 (or more than 65 days) after the due date.",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "Prompt payment will be encouraged by the imposition of additional charges where levies are paid more than 35 (or more than 65 days) after the due date."
     },
     {
       "id": "q13",
@@ -174,8 +165,7 @@
           "locator": "LTV at origination (p. 12)"
         }
       ],
-      "answer_quote": "Figure 4 shows the rise in the share of new ‘Household Main Residence’ (HMR) mortgages with an LTV of 90 per cent or higher in the boom-bust group in the run-up to the GFC: at the peak, such mortgages account for just over 50 per cent of new lending.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "Figure 4 shows the rise in the share of new ‘Household Main Residence’ (HMR) mortgages with an LTV of 90 per cent or higher in the boom-bust group in the run-up to the GFC: at the peak, such mortgages account for just over 50 per cent of new lending."
     },
     {
       "id": "q14",
@@ -196,12 +186,11 @@
           "locator": "Leverage is the other potential vulnerability of investment funds. (p. 19)"
         }
       ],
-      "answer_quote": "for investment funds: liquidity mismatch and leverage.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "for investment funds: liquidity mismatch and leverage."
     },
     {
       "id": "q15",
-      "question": "TODO",
+      "question": "How badly did people's mood about the economy drop when the pandemic lockdown hit, and did it pick up again?",
       "phrasing": "paraphrase",
       "category": "multi_locator",
       "gold_locators": [
@@ -214,12 +203,11 @@
           "locator": "D. Manufacturing PMI (p. 4)"
         }
       ],
-      "answer_quote": "In April 2020, consumer sentiment fell by 45 per cent reaching a near all-time low",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "In April 2020, consumer sentiment fell by 45 per cent reaching a near all-time low"
     },
     {
       "id": "q16",
-      "question": "TODO",
+      "question": "Why is it risky for the Irish state to depend so much on a handful of large foreign companies paying tax?",
       "phrasing": "paraphrase",
       "category": "multi_locator",
       "gold_locators": [
@@ -232,8 +220,7 @@
           "locator": "CT is increasingly dominating the revenue base (p. 15)"
         }
       ],
-      "answer_quote": "These arise from its concentration among a small number of MNEs and its vulnerability to changes in US economic or tax policy",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "These arise from its concentration among a small number of MNEs and its vulnerability to changes in US economic or tax policy"
     },
     {
       "id": "q17",
@@ -252,12 +239,11 @@
           "locator": "REBATES AND CLAIMS PROCESSING (p. 63)"
         }
       ],
-      "answer_quote": "A regulated entity must issue a premium rebate to a consumer within five business days of the rebate becoming due.",
-      "notes": "Passage, locators, answer_quote and question written by Claude (lexical case, at the owner's request) -- see #31."
+      "answer_quote": "A regulated entity must issue a premium rebate to a consumer within five business days of the rebate becoming due."
     },
     {
       "id": "q18",
-      "question": "TODO",
+      "question": "Can my bank ring me out of the blue to sell me something just because I'm already a customer?",
       "phrasing": "paraphrase",
       "category": "supersession",
       "gold_locators": [
@@ -276,8 +262,7 @@
           "locator": "UNSOLICITED CONTACT (COLDCALLING) (p. 35)"
         }
       ],
-      "answer_quote": "A regulated entity must not, for sales or marketing purposes, make an unsolicited personal visit or telephone call, at any time, to a personal consumer who is an existing consumer unless that personal consumer has given informed consent in writing to being contacted by the regulated entity by means of a personal visit or telephone call.",
-      "notes": "Passage, locators and answer_quote picked by Claude (owner writes only the question) -- see #31."
+      "answer_quote": "A regulated entity must not, for sales or marketing purposes, make an unsolicited personal visit or telephone call, at any time, to a personal consumer who is an existing consumer unless that personal consumer has given informed consent in writing to being contacted by the regulated entity by means of a personal visit or telephone call."
     },
     {
       "id": "q19",
