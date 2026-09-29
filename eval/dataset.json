@@ -266,14 +266,14 @@
     },
     {
       "id": "q19",
-      "question": "TODO",
+      "question": "What is the deposit insurance limit per depositor under the US FDIC scheme?",
       "phrasing": "lexical",
       "category": "unanswerable",
       "gold_locators": []
     },
     {
       "id": "q20",
-      "question": "TODO",
+      "question": "If my employer doesn't offer a pension, will the government automatically sign me up for one?",
       "phrasing": "paraphrase",
       "category": "unanswerable",
       "gold_locators": []
