@@ -96,7 +96,9 @@ def test_cli_rejects_blank_terms_with_a_usage_error():
 def test_cli_reports_an_unknown_document_id(capsys):
     # capsys is a built-in pytest fixture: naming it as a parameter makes
     # pytest inject it, and it captures what the code under test printed.
-    exit_code = main(["consumer", "--doc", "doc-typo", "--output-dir", str(FIXTURE_OUTPUT)])
+    exit_code = main(
+        ["consumer", "--doc", "doc-typo", "--output-dir", str(FIXTURE_OUTPUT)]
+    )
 
     assert exit_code == 1
     assert "No Document with id 'doc-typo'" in capsys.readouterr().err

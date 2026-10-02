@@ -40,7 +40,11 @@ def test_only_active_generation_chunks_are_loaded():
 
     # doc-a's "9.9" only exists in its inactive gen-1, so it must not be
     # here: retrieval never sees it, so a Gold Locator can't point at it.
-    assert pairs == {("doc-a", "1.1"), ("doc-a", "3.12"), ("doc-b", "Introduction (p. 3)")}
+    assert pairs == {
+        ("doc-a", "1.1"),
+        ("doc-a", "3.12"),
+        ("doc-b", "Introduction (p. 3)"),
+    }
 
 
 # ---- find_problems ----

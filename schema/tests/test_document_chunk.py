@@ -140,10 +140,16 @@ def test_document_active_generation_points_at_the_correct_chunk_generation():
     # generations — proving more than one generation genuinely exists here.
     assert generation_one["document_id"] == document["id"]
     assert generation_two["document_id"] == document["id"]
-    assert generation_one["chunking_generation_id"] != generation_two["chunking_generation_id"]
+    assert (
+        generation_one["chunking_generation_id"]
+        != generation_two["chunking_generation_id"]
+    )
 
     # The Document's active pointer matches generation_two specifically —
     # combined with the inequality above, that already establishes
     # generation_one is not the active one too, so a third assertion here
     # would just restate what these two already guarantee.
-    assert document["active_chunking_generation_id"] == generation_two["chunking_generation_id"]
+    assert (
+        document["active_chunking_generation_id"]
+        == generation_two["chunking_generation_id"]
+    )

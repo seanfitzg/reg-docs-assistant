@@ -64,7 +64,10 @@ requires_fsr = pytest.mark.skipif(
 # means this stays correct even if the corpus directory ever has stray
 # extra PDFs sitting in it that aren't in the manifest.
 requires_full_corpus = pytest.mark.skipif(
-    not all((CORPUS_DIR / entry["filename"]).exists() for entry in load_manifest(MANIFEST_PATH)),
+    not all(
+        (CORPUS_DIR / entry["filename"]).exists()
+        for entry in load_manifest(MANIFEST_PATH)
+    ),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
 
@@ -78,7 +81,9 @@ def test_load_manifest_reads_all_twenty_entries():
 
     assert len(entries) == 20
 
-    cp54 = _entry_for(entries, "04-cp54-second-consultation-consumer-protection-code.pdf")
+    cp54 = _entry_for(
+        entries, "04-cp54-second-consultation-consumer-protection-code.pdf"
+    )
     assert cp54["chunking_strategy"] == "clause_numbered"
     # CP54 is the Central Bank's second consultation on the same Code review
     # CP47 opened -- its manifest entry should link back to CP47 (ADR-0002),
@@ -111,7 +116,9 @@ def test_load_manifest_reads_all_twenty_entries():
     dp8 = _entry_for(entries, "12-dp8-outsourcing-findings-and-issues.pdf")
     assert dp8["chunking_strategy"] == "heading_sections"
 
-    rtp = _entry_for(entries, "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf")
+    rtp = _entry_for(
+        entries, "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf"
+    )
     assert rtp["chunking_strategy"] == "academic_sections"
 
     dp7 = _entry_for(entries, "11-dp7-digitalisation-and-consumer-protection-code.pdf")
@@ -139,7 +146,9 @@ RTP_FILENAME = "19-rtp-07rt19-money-market-funds-unconventional-policy.pdf"
 @requires_cp54
 def test_build_document_and_chunks_produces_a_schema_valid_document():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, CP54_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, CP54_FILENAME), CORPUS_DIR
+    )
 
     document_schema = load_schema("document.schema.json")
     validate_against_schema(document, document_schema)
@@ -148,7 +157,9 @@ def test_build_document_and_chunks_produces_a_schema_valid_document():
 @requires_cp54
 def test_build_document_and_chunks_produces_schema_valid_chunks():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, CP54_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, CP54_FILENAME), CORPUS_DIR
+    )
 
     chunk_schema = load_schema("chunk.schema.json")
     assert len(chunks) > 0
@@ -159,21 +170,28 @@ def test_build_document_and_chunks_produces_schema_valid_chunks():
 @requires_cp54
 def test_document_id_is_derived_and_generation_is_active():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, CP54_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, CP54_FILENAME), CORPUS_DIR
+    )
 
     assert document["id"] == "doc-04-cp54-second-consultation-consumer-protection-code"
     # Every chunk belongs to the generation the Document points at as active
     # (ADR-0004) -- proving the pointer was actually wired up, not just
     # present with some other value.
     for one_chunk in chunks:
-        assert one_chunk["chunking_generation_id"] == document["active_chunking_generation_id"]
+        assert (
+            one_chunk["chunking_generation_id"]
+            == document["active_chunking_generation_id"]
+        )
         assert one_chunk["document_id"] == document["id"]
 
 
 @requires_cp54
 def test_chunk_locators_are_bare_clause_numbers_not_page_decorated():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, CP54_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, CP54_FILENAME), CORPUS_DIR
+    )
 
     # A bare clause number like "1.8" -- not "1.8 (p. 7)". heading_sections/
     # academic_sections documents get page-decorated locators (ADR-0015);
@@ -194,7 +212,9 @@ def test_chunk_locators_are_bare_clause_numbers_not_page_decorated():
 @requires_cp54
 def test_repeated_header_is_stripped_from_every_chunk():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, CP54_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, CP54_FILENAME), CORPUS_DIR
+    )
 
     # "Consultation Paper CP 54" is part of the running header repeated on
     # every page -- if header stripping (ADR-0016) is working, it should
@@ -209,7 +229,9 @@ def test_repeated_header_is_stripped_from_every_chunk():
 @requires_dp8
 def test_dp8_build_document_and_chunks_produces_schema_valid_output():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP8_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP8_FILENAME), CORPUS_DIR
+    )
 
     validate_against_schema(document, load_schema("document.schema.json"))
     chunk_schema = load_schema("chunk.schema.json")
@@ -221,18 +243,25 @@ def test_dp8_build_document_and_chunks_produces_schema_valid_output():
 @requires_dp8
 def test_dp8_document_id_is_derived_and_generation_is_active():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP8_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP8_FILENAME), CORPUS_DIR
+    )
 
     assert document["id"] == "doc-12-dp8-outsourcing-findings-and-issues"
     for one_chunk in chunks:
-        assert one_chunk["chunking_generation_id"] == document["active_chunking_generation_id"]
+        assert (
+            one_chunk["chunking_generation_id"]
+            == document["active_chunking_generation_id"]
+        )
         assert one_chunk["document_id"] == document["id"]
 
 
 @requires_dp8
 def test_dp8_chunk_locators_pair_a_real_heading_with_a_page_number():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP8_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP8_FILENAME), CORPUS_DIR
+    )
 
     # "Purpose" is a real heading confirmed by direct inspection of the PDF
     # (page 5 of the extracted text) -- proving the strategy found a real
@@ -245,7 +274,9 @@ def test_dp8_chunk_locators_pair_a_real_heading_with_a_page_number():
 @requires_dp8
 def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP8_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP8_FILENAME), CORPUS_DIR
+    )
 
     # Note: checking whole *lines*, not substrings -- "Central Bank of
     # Ireland" and "Outsourcing" are also, unsurprisingly, words that show
@@ -263,7 +294,9 @@ def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
         # the "Page "-prefixed page-number rule (added for this ticket)
         # actually fires on this real document, not just the synthetic test
         # in test_clean.py.
-        assert not any(line.startswith("Page ") and line[5:].isdigit() for line in chunk_lines)
+        assert not any(
+            line.startswith("Page ") and line[5:].isdigit() for line in chunk_lines
+        )
 
 
 # ---- academic_sections: RTP07/19 (issue #7) ----
@@ -272,7 +305,9 @@ def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
 @requires_rtp
 def test_rtp_build_document_and_chunks_produces_schema_valid_output():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, RTP_FILENAME), CORPUS_DIR
+    )
 
     validate_against_schema(document, load_schema("document.schema.json"))
     chunk_schema = load_schema("chunk.schema.json")
@@ -284,30 +319,43 @@ def test_rtp_build_document_and_chunks_produces_schema_valid_output():
 @requires_rtp
 def test_rtp_document_id_is_derived_and_generation_is_active():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, RTP_FILENAME), CORPUS_DIR
+    )
 
-    assert document["id"] == "doc-19-rtp-07rt19-money-market-funds-unconventional-policy"
+    assert (
+        document["id"] == "doc-19-rtp-07rt19-money-market-funds-unconventional-policy"
+    )
     for one_chunk in chunks:
-        assert one_chunk["chunking_generation_id"] == document["active_chunking_generation_id"]
+        assert (
+            one_chunk["chunking_generation_id"]
+            == document["active_chunking_generation_id"]
+        )
         assert one_chunk["document_id"] == document["id"]
 
 
 @requires_rtp
 def test_rtp_chunk_locators_pair_a_real_heading_with_a_page_number():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, RTP_FILENAME), CORPUS_DIR
+    )
 
     # "Introduction" is a real, single-line heading confirmed by direct
     # inspection of the PDF (page 4) -- proving the strategy found a real
     # bold heading and decorated it with a page number (ADR-0015).
-    introduction_chunk = next(c for c in chunks if c["locator"] == "Introduction (p. 4)")
+    introduction_chunk = next(
+        c for c in chunks if c["locator"] == "Introduction (p. 4)"
+    )
     assert introduction_chunk["text"]
 
 
 @requires_rtp
 def test_rtp_a_heading_wrapped_across_two_bold_lines_is_joined_in_the_real_pdf():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, RTP_FILENAME), CORPUS_DIR
+    )
 
     # Appendix A's heading is genuinely two consecutive bold lines in this
     # PDF ("A Sources and Construction of Variables Used in Panel" /
@@ -334,7 +382,9 @@ def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
     # recoverable Unicode -- not corrupted -- confirming the fix holds
     # inside the real pipeline, not just the earlier scratch check.
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, RTP_FILENAME), CORPUS_DIR
+    )
 
     abstract_chunk = next(c for c in chunks if c["locator"] == "Abstract (p. 2)")
     normalized_text = unicodedata.normalize("NFKC", abstract_chunk["text"])
@@ -351,7 +401,9 @@ FSR_FILENAME = "17-fsr-2026-i-financial-stability-review.pdf"
 @requires_dp7
 def test_dp7_build_document_and_chunks_produces_schema_valid_output():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP7_FILENAME), CORPUS_DIR
+    )
 
     validate_against_schema(document, load_schema("document.schema.json"))
     chunk_schema = load_schema("chunk.schema.json")
@@ -363,7 +415,9 @@ def test_dp7_build_document_and_chunks_produces_schema_valid_output():
 @requires_dp7
 def test_dp7_navigation_chrome_footer_is_stripped_from_every_chunk():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP7_FILENAME), CORPUS_DIR
+    )
 
     # The real DP7 PDF's Annex pages carry a nav-breadcrumb footer like
     # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- confirmed
@@ -384,7 +438,9 @@ def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
     # -- DP7's own Table of Contents lists "Annex 2" as one of its entries,
     # confirmed by direct inspection of the real PDF.
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, DP7_FILENAME), CORPUS_DIR
+    )
 
     assert any("Annex 2" in one_chunk["text"] for one_chunk in chunks)
 
@@ -396,7 +452,9 @@ def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
 @requires_fsr
 def test_fsr_build_document_and_chunks_produces_schema_valid_output():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, FSR_FILENAME), CORPUS_DIR
+    )
 
     validate_against_schema(document, load_schema("document.schema.json"))
     chunk_schema = load_schema("chunk.schema.json")
@@ -408,7 +466,9 @@ def test_fsr_build_document_and_chunks_produces_schema_valid_output():
 @requires_fsr
 def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, FSR_FILENAME), CORPUS_DIR
+    )
 
     # "Réamhrá"/"Forbhreathnú" (Irish for "Preface"/"Overview") are the real
     # section headings the Irish duplicate content sits under in the source
@@ -427,7 +487,9 @@ def test_fsr_english_content_either_side_of_the_irish_section_survives():
     # ("Global risk assessment") -- both real headings confirmed by direct
     # inspection of the real PDF.
     entries = load_manifest(MANIFEST_PATH)
-    document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
+    document, chunks = build_document_and_chunks(
+        _entry_for(entries, FSR_FILENAME), CORPUS_DIR
+    )
 
     locators = [one_chunk["locator"] for one_chunk in chunks]
     assert any(locator.startswith("Preface") for locator in locators)
@@ -479,7 +541,9 @@ def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path)
 
 
 @requires_full_corpus
-def test_run_pipeline_surfaces_no_silent_failures_across_the_full_corpus(tmp_path, caplog):
+def test_run_pipeline_surfaces_no_silent_failures_across_the_full_corpus(
+    tmp_path, caplog
+):
     # ADR-0019/issue #8's per-document failure isolation exists precisely so
     # one bad document can't take down the batch -- but issue #10's own
     # acceptance criterion runs the other direction: against the *real*
@@ -504,10 +568,14 @@ def test_run_pipeline_writes_the_supersedes_link_for_cp54(tmp_path):
     run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
 
     cp54_path = (
-        output_dir / "documents" / "doc-04-cp54-second-consultation-consumer-protection-code.json"
+        output_dir
+        / "documents"
+        / "doc-04-cp54-second-consultation-consumer-protection-code.json"
     )
     cp54_document = json.loads(cp54_path.read_text(encoding="utf-8"))
-    assert cp54_document["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
+    assert (
+        cp54_document["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
+    )
 
 
 @requires_full_corpus

@@ -127,7 +127,9 @@ def test_no_chunks_retrieved_requires_the_retrieve_step_too():
     # should fail: the flag requires exactly classify+retrieve, not just an
     # upper bound of at most 2 steps.
     schema = load_json(EVENT_SCHEMA)
-    payload = load_json(EVENT_FIXTURES / "invalid-no-chunks-retrieved-missing-retrieve-step.json")
+    payload = load_json(
+        EVENT_FIXTURES / "invalid-no-chunks-retrieved-missing-retrieve-step.json"
+    )
 
     with pytest.raises(jsonschema.exceptions.ValidationError):
         validate(payload, schema)
@@ -190,7 +192,9 @@ def test_event_flagged_passes_validation():
 
 def test_event_flagged_references_an_existing_event_by_id():
     flagged = load_json(EVENT_FLAGGED_FIXTURES / "valid.json")
-    referenced_event = load_json(EVENT_FIXTURES / "valid-full-run-with-annotate-only-flag.json")
+    referenced_event = load_json(
+        EVENT_FIXTURES / "valid-full-run-with-annotate-only-flag.json"
+    )
 
     assert flagged["original_event_id"] == referenced_event["id"]
 

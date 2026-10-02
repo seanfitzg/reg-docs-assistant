@@ -150,7 +150,9 @@ def _write_fixture_corpus(base: Path) -> tuple[Path, Path]:
             "text": "Second generation, second chunk.",
         },
     ]
-    (output_dir / "chunks" / f"{document_id}.json").write_text(json.dumps(chunks), encoding="utf-8")
+    (output_dir / "chunks" / f"{document_id}.json").write_text(
+        json.dumps(chunks), encoding="utf-8"
+    )
 
     manifest_path = base / "manifest.json"
     manifest_path.write_text(
@@ -264,7 +266,9 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
 
     with psycopg.connect(DB_URL) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, chunking_strategy FROM chunking_generations ORDER BY id")
+            cur.execute(
+                "SELECT id, chunking_strategy FROM chunking_generations ORDER BY id"
+            )
             # Both existing Generations must still show "clause_numbered" --
             # the strategy they were *actually* created with, unaffected by
             # manifest.json's later drift.
@@ -274,7 +278,9 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
             ]
 
 
-def _write_two_document_fixture(base: Path, second_supersedes: str | None) -> tuple[Path, Path]:
+def _write_two_document_fixture(
+    base: Path, second_supersedes: str | None
+) -> tuple[Path, Path]:
     # A second, smaller fixture: two Documents, where the second document's
     # `supersedes` can be varied between calls (that's the whole point --
     # proving a second load_store call with a *different* supersedes value
@@ -283,7 +289,10 @@ def _write_two_document_fixture(base: Path, second_supersedes: str | None) -> tu
     (output_dir / "documents").mkdir(parents=True, exist_ok=True)
     (output_dir / "chunks").mkdir(parents=True, exist_ok=True)
 
-    for doc_id, supersedes in (("doc-original", None), ("doc-successor", second_supersedes)):
+    for doc_id, supersedes in (
+        ("doc-original", None),
+        ("doc-successor", second_supersedes),
+    ):
         document: dict[str, Any] = {
             "id": doc_id,
             "title": f"Fixture {doc_id}",
@@ -344,7 +353,9 @@ def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
 
     # Re-run with doc-successor's supersedes changed to point at nothing
     # (None) -- simulating drift in a regenerated Document JSON.
-    output_dir, manifest_path = _write_two_document_fixture(tmp_path, second_supersedes=None)
+    output_dir, manifest_path = _write_two_document_fixture(
+        tmp_path, second_supersedes=None
+    )
     load_store(output_dir, manifest_path, DB_URL)
 
     with psycopg.connect(DB_URL) as conn:

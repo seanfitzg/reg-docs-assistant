@@ -88,7 +88,8 @@ def _read_json_files(directory: Path) -> list[dict[str, Any]]:
     # though it has no effect on correctness since every write below is
     # either an upsert or an idempotent UPDATE.
     return [
-        json.loads(path.read_text(encoding="utf-8")) for path in sorted(directory.glob("*.json"))
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(directory.glob("*.json"))
     ]
 
 
@@ -189,7 +190,9 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
     for chunks_in_one_file in _read_json_files(output_dir / "chunks"):
         chunks.extend(chunks_in_one_file)
 
-    generations = _build_generations(chunks, document_ids, strategy_by_document_id, output_dir)
+    generations = _build_generations(
+        chunks, document_ids, strategy_by_document_id, output_dir
+    )
 
     for document in documents:
         active_id = document.get("active_chunking_generation_id")
@@ -293,7 +296,10 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
                 if document["id"] not in already_loaded_document_ids:
                     cur.execute(
                         "UPDATE documents SET supersedes = %(supersedes)s WHERE id = %(id)s",
-                        {"id": document["id"], "supersedes": document.get("supersedes")},
+                        {
+                            "id": document["id"],
+                            "supersedes": document.get("supersedes"),
+                        },
                     )
                 cur.execute(
                     """

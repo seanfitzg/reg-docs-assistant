@@ -75,7 +75,8 @@ def print_matrix(vectors: list[list[float]]) -> None:
     for i, row_vector in enumerate(vectors):
         # A list comprehension building one formatted cell per column.
         cells = "".join(
-            f"  {cosine_similarity(row_vector, column_vector):.2f}" for column_vector in vectors
+            f"  {cosine_similarity(row_vector, column_vector):.2f}"
+            for column_vector in vectors
         )
         print(f"  #{i + 1:<3} {cells}")
     print()
@@ -83,7 +84,9 @@ def print_matrix(vectors: list[list[float]]) -> None:
         print(f"  #{i + 1} = {sentence}")
 
 
-def print_ranking(question_vector: list[float], document_vectors: list[list[float]]) -> None:
+def print_ranking(
+    question_vector: list[float], document_vectors: list[list[float]]
+) -> None:
     # Scores every sentence against the question, then prints best-first.
     # This is the whole of "retrieval" in miniature: embed the question,
     # measure closeness to each stored vector, sort. pgvector will do the

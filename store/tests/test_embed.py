@@ -22,7 +22,10 @@ from loader import load_store
 # module namespace*, so importing it is what makes it available.
 from test_loader import DB_URL, _write_fixture_corpus, clean_db, requires_postgres  # noqa: F401
 
-ACTIVE_CHUNK_TEXTS = ["Second generation, first chunk.", "Second generation, second chunk."]
+ACTIVE_CHUNK_TEXTS = [
+    "Second generation, first chunk.",
+    "Second generation, second chunk.",
+]
 
 
 class RecordingClient:
@@ -51,7 +54,9 @@ def _load_fixture(tmp_path):
 
 def _embedded_chunk_ids() -> list[str]:
     with psycopg.connect(DB_URL) as conn:
-        rows = conn.execute("SELECT chunk_id FROM chunk_embeddings ORDER BY chunk_id").fetchall()
+        rows = conn.execute(
+            "SELECT chunk_id FROM chunk_embeddings ORDER BY chunk_id"
+        ).fetchall()
     return [row[0] for row in rows]
 
 
@@ -71,7 +76,9 @@ def test_embeds_only_chunks_of_the_active_generation(tmp_path, clean_db):
     with psycopg.connect(DB_URL) as conn:
         # Every row is tagged with the model name -- the key that lets a
         # future second model's rows sit alongside these (ADR-0024).
-        models = conn.execute("SELECT DISTINCT embedding_model FROM chunk_embeddings").fetchall()
+        models = conn.execute(
+            "SELECT DISTINCT embedding_model FROM chunk_embeddings"
+        ).fetchall()
         assert models == [(EMBEDDING_MODEL,)]
 
 

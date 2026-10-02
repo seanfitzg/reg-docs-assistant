@@ -182,7 +182,10 @@ def test_layout_variant_strips_page_number_lines():
             {"text": "Page 5", "is_heading": False},
             {"text": "Content on five.", "is_heading": False},
         ],
-        [{"text": "Page 6", "is_heading": False}, {"text": "Content on six.", "is_heading": False}],
+        [
+            {"text": "Page 6", "is_heading": False},
+            {"text": "Content on six.", "is_heading": False},
+        ],
     ]
 
     cleaned = strip_headers_footers_and_page_numbers_from_layout(pages)
@@ -241,16 +244,24 @@ def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
     # Global risk assessment) -- the removal has to survive page
     # boundaries, not just work within a single page.
     pages = [
-        [{"text": "Start", "is_heading": True}, {"text": "Page one.", "is_heading": False}],
+        [
+            {"text": "Start", "is_heading": True},
+            {"text": "Page one.", "is_heading": False},
+        ],
         [
             {"text": "Middle Heading", "is_heading": True},
             {"text": "Page two.", "is_heading": False},
         ],
         [{"text": "Page three, no heading here.", "is_heading": False}],
-        [{"text": "End", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
+        [
+            {"text": "End", "is_heading": True},
+            {"text": "Real content.", "is_heading": False},
+        ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned[0] == []
     assert cleaned[1] == []
@@ -275,13 +286,18 @@ def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span
     pages = [
         [
             {"text": "Start", "is_heading": True},
-            {"text": "This whole line is bold too, but isn't the end marker.", "is_heading": True},
+            {
+                "text": "This whole line is bold too, but isn't the end marker.",
+                "is_heading": True,
+            },
             {"text": "End", "is_heading": True},
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned[0] == [
         {"text": "End", "is_heading": True},
@@ -297,7 +313,9 @@ def test_strip_section_between_headings_with_no_matching_markers_is_unaffected()
         ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned == pages
 
@@ -311,12 +329,17 @@ def test_strip_lines_with_repeated_pattern_removes_a_line_meeting_the_threshold(
     # prove the function itself carries no real document's wording.
     pages = [
         [
-            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": True},
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": True,
+            },
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"Widget \d", minimum_matches=4
+    )
 
     assert cleaned[0] == [{"text": "Real content.", "is_heading": False}]
 
@@ -334,7 +357,9 @@ def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
         ],
     ]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"Widget \d", minimum_matches=4
+    )
 
     assert cleaned == pages
 
@@ -342,18 +367,26 @@ def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
 def test_strip_lines_with_repeated_pattern_is_case_insensitive():
     pages = [[{"text": "widget 1  widget 2  WIDGET 3  Widget 4", "is_heading": False}]]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"widget \d", minimum_matches=4
+    )
 
     assert cleaned[0] == []
 
 
 def test_apply_cleanup_flags_runs_the_named_flag_type_with_its_parameters():
     pages = [
-        [{"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False}],
+        [
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": False,
+            }
+        ],
     ]
 
     cleaned = apply_cleanup_flags(
-        pages, [{"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4}]
+        pages,
+        [{"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4}],
     )
 
     assert cleaned[0] == []
@@ -383,7 +416,10 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
         ],
         [
             {"text": "End", "is_heading": True},
-            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False},
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": False,
+            },
             {"text": "Real content.", "is_heading": False},
         ],
     ]
@@ -391,8 +427,16 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
     cleaned = apply_cleanup_flags(
         pages,
         [
-            {"type": "duplicate_section_removal", "start_heading": "Start", "end_heading": "End"},
-            {"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4},
+            {
+                "type": "duplicate_section_removal",
+                "start_heading": "Start",
+                "end_heading": "End",
+            },
+            {
+                "type": "navigation_chrome",
+                "pattern": r"Widget \d",
+                "minimum_matches": 4,
+            },
         ],
     )
 

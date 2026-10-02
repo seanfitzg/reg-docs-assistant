@@ -51,13 +51,17 @@ def test_trailing_period_after_the_clause_number_is_not_part_of_the_locator():
     chunks = chunk(text)
 
     assert chunks[0]["locator"] == "1.9"
-    assert chunks[0]["text"] == "Responses Sought\nWhile we are providing an opportunity."
+    assert (
+        chunks[0]["text"] == "Responses Sought\nWhile we are providing an opportunity."
+    )
 
 
 def test_clause_number_directly_followed_by_body_text_on_the_same_line():
     # Real example from CP54: "1.11  In relation to other matters..." --
     # no separate heading line, body starts right after the number.
-    text = "1.11  In relation to other matters raised, we have reached a final position."
+    text = (
+        "1.11  In relation to other matters raised, we have reached a final position."
+    )
 
     chunks = chunk(text)
 
@@ -82,9 +86,7 @@ def test_two_digit_second_component_is_not_mistaken_for_two_clauses():
 def test_text_before_the_first_clause_number_is_discarded():
     # Front matter/preamble (cover page, table of contents) doesn't belong
     # to any clause and isn't a citable unit -- it's simply not chunked.
-    text = (
-        "Second Consultation on Review of Consumer Protection Code\n1.1\nPurpose\nThe purpose is X."
-    )
+    text = "Second Consultation on Review of Consumer Protection Code\n1.1\nPurpose\nThe purpose is X."
 
     chunks = chunk(text)
 

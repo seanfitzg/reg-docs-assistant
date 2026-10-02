@@ -50,7 +50,10 @@ def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
             {"text": "Introduction", "is_heading": True},
             {"text": "Intro text.", "is_heading": False},
         ],
-        [{"text": "Results", "is_heading": True}, {"text": "Results text.", "is_heading": False}],
+        [
+            {"text": "Results", "is_heading": True},
+            {"text": "Results text.", "is_heading": False},
+        ],
     ]
 
     chunks = chunk(pages)
@@ -61,7 +64,10 @@ def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
 
 def test_a_section_can_continue_across_a_page_boundary_with_no_new_heading():
     pages = [
-        [{"text": "Results", "is_heading": True}, {"text": "First part.", "is_heading": False}],
+        [
+            {"text": "Results", "is_heading": True},
+            {"text": "First part.", "is_heading": False},
+        ],
         [{"text": "Second part, still under Results.", "is_heading": False}],
     ]
 
@@ -105,9 +111,15 @@ def test_a_heading_that_wraps_across_two_bold_lines_is_joined_into_one_locator()
     # followed by a real heading), this strategy joins them.
     pages = [
         [
-            {"text": "A Sources and Construction of Variables Used in Panel", "is_heading": True},
+            {
+                "text": "A Sources and Construction of Variables Used in Panel",
+                "is_heading": True,
+            },
             {"text": "Regressions", "is_heading": True},
-            {"text": "For the policy rates we use a 3-month rate.", "is_heading": False},
+            {
+                "text": "For the policy rates we use a 3-month rate.",
+                "is_heading": False,
+            },
         ],
     ]
 

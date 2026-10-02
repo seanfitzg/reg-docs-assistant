@@ -218,7 +218,10 @@ def run_pipeline(
             # alongside the message -- visible in logs for diagnosis --
             # without re-raising, which is what would halt the batch here.
             logger.error(
-                "Skipping %s: %s", entry.get("filename", "<unknown>"), error, exc_info=True
+                "Skipping %s: %s",
+                entry.get("filename", "<unknown>"),
+                error,
+                exc_info=True,
             )
 
     return results

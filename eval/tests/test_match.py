@@ -58,13 +58,29 @@ def test_clause_does_not_match_a_different_clause(gold, retrieved):
             True,
         ),  # +1: a chunker that paginates differently
         ("Introduction (p. 3)", "Introduction (p. 2)", True),  # -1
-        ("Introduction (p. 3)", "Introduction (p. 5)", False),  # +2: a different "Introduction"
+        (
+            "Introduction (p. 3)",
+            "Introduction (p. 5)",
+            False,
+        ),  # +2: a different "Introduction"
         ("Introduction (p. 3)", "Introduction (p. 1)", False),  # -2
-        ("Introduction (p. 3)", "Background (p. 3)", False),  # same page, different section
-        ("Introduction (p. 3)", "introduction (p. 3)", False),  # exact means case-sensitive too
+        (
+            "Introduction (p. 3)",
+            "Background (p. 3)",
+            False,
+        ),  # same page, different section
+        (
+            "Introduction (p. 3)",
+            "introduction (p. 3)",
+            False,
+        ),  # exact means case-sensitive too
         # Real academic_sections locator, whose heading contains a number and
         # a colon -- only the trailing "(p. N)" is the page.
-        ("Figure 1: Overview of soft data (p. 4)", "Figure 1: Overview of soft data (p. 4)", True),
+        (
+            "Figure 1: Overview of soft data (p. 4)",
+            "Figure 1: Overview of soft data (p. 4)",
+            True,
+        ),
         # Real heading_sections locator whose heading is itself in brackets:
         # "(4)" must be kept as the heading, not mistaken for locator syntax.
         ("(4) (p. 33)", "(4) (p. 34)", True),
@@ -75,7 +91,9 @@ def test_clause_does_not_match_a_different_clause(gold, retrieved):
         ("Notes (p. 2) (p. 33)", "Notes (p. 2) (p. 36)", False),
     ],
 )
-def test_heading_must_match_exactly_and_page_within_one(strategy, gold, retrieved, expected):
+def test_heading_must_match_exactly_and_page_within_one(
+    strategy, gold, retrieved, expected
+):
     assert locator_matches(gold, retrieved, strategy) is expected
 
 
@@ -85,7 +103,9 @@ def test_heading_whitespace_from_pdf_extraction_is_part_of_the_heading():
     # this pins that the rule doesn't quietly normalise it away.
     gold = "Solvency  II - Implementation (p. 24)"
     assert locator_matches(gold, gold, "heading_sections")
-    assert not locator_matches(gold, "Solvency II - Implementation (p. 24)", "heading_sections")
+    assert not locator_matches(
+        gold, "Solvency II - Implementation (p. 24)", "heading_sections"
+    )
 
 
 # ---- errors: fail loudly rather than score a silent miss ----
@@ -103,7 +123,10 @@ def test_unknown_strategy_raises():
 @pytest.mark.parametrize(
     ("locator", "strategy"),
     [
-        ("Introduction (p. 3)", "clause_numbered"),  # a heading locator under the clause rule
+        (
+            "Introduction (p. 3)",
+            "clause_numbered",
+        ),  # a heading locator under the clause rule
         ("3.12.", "clause_numbered"),
         ("", "clause_numbered"),
         ("3.12", "heading_sections"),  # a clause locator under the heading rule
@@ -135,7 +158,11 @@ CP47 = "doc-03-cp47-review-of-consumer-protection-code"
 
 def _retrieved(document_id, locator, chunking_strategy):
     # The shape #32's retrieval query returns per Chunk (similarity aside).
-    return {"document_id": document_id, "locator": locator, "chunking_strategy": chunking_strategy}
+    return {
+        "document_id": document_id,
+        "locator": locator,
+        "chunking_strategy": chunking_strategy,
+    }
 
 
 def test_case_is_a_hit_when_any_gold_locator_matches_any_retrieved_chunk():

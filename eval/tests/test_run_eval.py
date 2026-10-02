@@ -216,7 +216,9 @@ def test_inactive_generation_chunks_are_never_retrieved(fixture_run):
     missed = _case_result(report, "q03")
     assert missed["hit_rank"] is None
     assert missed["hit_similarity"] is None
-    retrieved_ids = {(chunk["document_id"], chunk["locator"]) for chunk in missed["retrieved"]}
+    retrieved_ids = {
+        (chunk["document_id"], chunk["locator"]) for chunk in missed["retrieved"]
+    }
     assert (CLAUSE_DOC, "2.1") not in retrieved_ids
 
 
@@ -273,7 +275,9 @@ def test_report_pins_its_configuration(fixture_run):
 
 
 @requires_postgres
-def test_an_unembedded_store_fails_loudly_instead_of_scoring_every_case_a_miss(clean_db):
+def test_an_unembedded_store_fails_loudly_instead_of_scoring_every_case_a_miss(
+    clean_db,
+):
     # clean_db leaves regdocs_test empty: no Chunks, no embeddings. Every
     # search would return nothing, and without a guard every case would
     # quietly score a miss -- a plausible-looking recall of 0.0 caused by
@@ -292,7 +296,9 @@ def test_a_dataset_with_no_answerable_cases_is_rejected(fixture_run):
         run_eval(DB_URL, FakeClient(QUERY_VECTORS), only_unanswerable)
 
 
-def test_write_report_names_the_file_by_timestamp_and_model_and_never_overwrites(tmp_path):
+def test_write_report_names_the_file_by_timestamp_and_model_and_never_overwrites(
+    tmp_path,
+):
     # No database needed: this only exercises the file-writing half.
     report_dict = {
         "created_at": "2026-09-29T10:15:30Z",

@@ -68,7 +68,11 @@ def _write_manifest(manifest_path, entries):
 
 
 def _entry(filename, chunking_strategy):
-    return {"filename": filename, "chunking_strategy": chunking_strategy, **MANIFEST_ENTRY_DEFAULTS}
+    return {
+        "filename": filename,
+        "chunking_strategy": chunking_strategy,
+        **MANIFEST_ENTRY_DEFAULTS,
+    }
 
 
 def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_continues(
@@ -111,7 +115,9 @@ def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_contin
     assert "clause_numbered" in caplog.text
 
 
-def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(tmp_path, caplog):
+def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(
+    tmp_path, caplog
+):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "good.pdf", with_clauses=True)
@@ -186,7 +192,9 @@ def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(
     assert "good.pdf" in caplog.text
 
 
-def test_all_documents_in_a_batch_failing_produces_no_results_and_no_output_files(tmp_path, caplog):
+def test_all_documents_in_a_batch_failing_produces_no_results_and_no_output_files(
+    tmp_path, caplog
+):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "empty.pdf", with_clauses=False)

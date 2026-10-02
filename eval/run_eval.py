@@ -100,7 +100,8 @@ RETRIEVAL_SQL = """
 
 def _retrieve(cur: psycopg.Cursor, query_vector: list[float]) -> list[dict]:
     cur.execute(
-        RETRIEVAL_SQL, {"query": vector_literal(query_vector), "model": EMBEDDING_MODEL, "k": K}
+        RETRIEVAL_SQL,
+        {"query": vector_literal(query_vector), "model": EMBEDDING_MODEL, "k": K},
     )
     rows = cur.fetchall()
     if not rows:
@@ -227,7 +228,9 @@ def _summarise(case_results: list[dict]) -> dict:
         # Every metric is an average over answerable cases; with none there
         # is nothing to average (and _metrics would divide by zero). A
         # dataset like that is a mistake, so say so plainly.
-        raise ValueError("the dataset has no answerable cases, so recall and MRR are undefined")
+        raise ValueError(
+            "the dataset has no answerable cases, so recall and MRR are undefined"
+        )
 
     def grouped(field: str) -> dict:
         # defaultdict(list) creates an empty list the first time a key is
@@ -258,7 +261,9 @@ def run_eval(db_url: str, client: EmbeddingClient, dataset: dict) -> dict:
     # Embed every question first, before touching the database. A systemic
     # Ollama problem then fails on the first question, and the database
     # transaction below isn't held open across slow model calls.
-    query_vectors = [client.embed(QUERY_PREFIX + case["question"]) for case in dataset["cases"]]
+    query_vectors = [
+        client.embed(QUERY_PREFIX + case["question"]) for case in dataset["cases"]
+    ]
 
     with psycopg.connect(db_url) as conn:
         # REPEATABLE READ: every query in this transaction sees one frozen
@@ -361,7 +366,9 @@ if __name__ == "__main__":
     dataset = json.loads(DEFAULT_DATASET.read_text(encoding="utf-8"))
     report = run_eval(
         db_url=os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL),
-        client=OllamaEmbeddingClient(host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)),
+        client=OllamaEmbeddingClient(
+            host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)
+        ),
         dataset=dataset,
     )
     path = write_report(report)

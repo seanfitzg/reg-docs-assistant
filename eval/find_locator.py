@@ -35,7 +35,9 @@ class KeywordMatch:
     snippet: str
 
 
-def search(chunks: list[dict], terms: str, document_id: str | None = None) -> list[KeywordMatch]:
+def search(
+    chunks: list[dict], terms: str, document_id: str | None = None
+) -> list[KeywordMatch]:
     """Chunks containing every whitespace-separated term, case-insensitively.
 
     Terms are ANDed rather than matched as one phrase, because PDF
@@ -76,9 +78,13 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
             # max(0, ...) stops a negative start wrapping round to the end,
             # since negative indices count from the end in Python.
             snippet = text[
-                max(0, start - SNIPPET_CONTEXT) : start + len(wanted[0]) + SNIPPET_CONTEXT
+                max(0, start - SNIPPET_CONTEXT) : start
+                + len(wanted[0])
+                + SNIPPET_CONTEXT
             ]
-            matches.append(KeywordMatch(chunk["document_id"], chunk["locator"], snippet))
+            matches.append(
+                KeywordMatch(chunk["document_id"], chunk["locator"], snippet)
+            )
     return matches
 
 
@@ -90,11 +96,16 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
 def main(argv: list[str] | None = None) -> int:
     # argparse builds a command-line parser from declarations, and prints
     # --help and usage errors for free -- similar to System.CommandLine.
-    parser = argparse.ArgumentParser(description="Find (document_id, locator) pairs by keyword.")
+    parser = argparse.ArgumentParser(
+        description="Find (document_id, locator) pairs by keyword."
+    )
     parser.add_argument("terms", help="words that must all appear in the Chunk text")
     parser.add_argument("--doc", help="only search this document_id")
     parser.add_argument(
-        "--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="ingestion output to search"
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="ingestion output to search",
     )
     args = parser.parse_args(argv)
 
@@ -126,7 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     # any(...) is LINQ's .Any().
     document_exists = any(c["document_id"] == args.doc for c in chunks)
     if args.doc is not None and not document_exists:
-        print(f"No Document with id {args.doc!r} in {args.output_dir}.", file=sys.stderr)
+        print(
+            f"No Document with id {args.doc!r} in {args.output_dir}.", file=sys.stderr
+        )
         return 1
 
     matches = search(chunks, args.terms, args.doc)

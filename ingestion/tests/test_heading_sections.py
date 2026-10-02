@@ -52,7 +52,10 @@ def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
             {"text": "Introduction", "is_heading": True},
             {"text": "Intro text.", "is_heading": False},
         ],
-        [{"text": "Findings", "is_heading": True}, {"text": "Findings text.", "is_heading": False}],
+        [
+            {"text": "Findings", "is_heading": True},
+            {"text": "Findings text.", "is_heading": False},
+        ],
     ]
 
     chunks = chunk(pages)
@@ -67,7 +70,10 @@ def test_a_section_can_continue_across_a_page_boundary_with_no_new_heading():
     # not silently truncated at the page break, and not treated as a
     # second, headingless chunk.
     pages = [
-        [{"text": "Overview", "is_heading": True}, {"text": "First part.", "is_heading": False}],
+        [
+            {"text": "Overview", "is_heading": True},
+            {"text": "First part.", "is_heading": False},
+        ],
         [{"text": "Second part, still under Overview.", "is_heading": False}],
     ]
 

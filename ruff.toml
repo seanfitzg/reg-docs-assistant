@@ -14,10 +14,10 @@
 # same way. Plain for loops and if/else statements are left exactly as
 # written, which is why CLAUDE.md prefers them while Python is new territory.
 
-# Black's default is 88. 100 is a common, slightly roomier choice that matches
-# the line lengths already used across this codebase, so adopting the
-# formatter doesn't rewrap most of it.
-line-length = 100
+# 88 is Ruff's and Black's default, the de facto standard across the Python
+# ecosystem. Stated explicitly so the choice is visible; removing this line
+# would change nothing.
+line-length = 88
 
 # The Python version every venv here runs (3.14), so Ruff only emits syntax
 # that version understands.

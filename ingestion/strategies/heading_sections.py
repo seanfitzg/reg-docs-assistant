@@ -20,7 +20,10 @@
 
 from pathlib import Path
 
-from clean import apply_cleanup_flags, strip_headers_footers_and_page_numbers_from_layout
+from clean import (
+    apply_cleanup_flags,
+    strip_headers_footers_and_page_numbers_from_layout,
+)
 from extract import extract_pages_with_headings
 
 
@@ -70,7 +73,9 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
     return chunks
 
 
-def chunk_document(pdf_path: Path, cleanup_flags: list[dict] | None = None) -> list[dict]:
+def chunk_document(
+    pdf_path: Path, cleanup_flags: list[dict] | None = None
+) -> list[dict]:
     # cleanup_flags comes straight from a manifest entry's "cleanup_flags"
     # (ADR-0016, issue #9; parameterised in issue #13) -- a list of objects
     # like {"type": "navigation_chrome", "pattern": "Annex \\d",

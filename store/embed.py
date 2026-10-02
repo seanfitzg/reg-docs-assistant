@@ -152,6 +152,8 @@ def embed_chunks(db_url: str, client: EmbeddingClient) -> None:
 if __name__ == "__main__":
     embed_chunks(
         db_url=os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL),
-        client=OllamaEmbeddingClient(host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)),
+        client=OllamaEmbeddingClient(
+            host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)
+        ),
     )
     print("Embedded active-generation Chunks into /store")

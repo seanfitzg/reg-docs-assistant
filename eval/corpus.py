@@ -39,6 +39,9 @@ def load_active_chunks(output_dir: Path = DEFAULT_OUTPUT_DIR) -> list[dict]:
             # .get() returns None instead of raising KeyError for a missing
             # key -- so a Chunk whose Document file is somehow absent is
             # treated as inactive (skipped) rather than crashing.
-            if active_generation.get(chunk["document_id"]) == chunk["chunking_generation_id"]:
+            if (
+                active_generation.get(chunk["document_id"])
+                == chunk["chunking_generation_id"]
+            ):
                 chunks.append(chunk)
     return chunks
