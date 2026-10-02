@@ -30,7 +30,11 @@ def test_splits_on_each_clause_number():
 
     chunks = chunk(text)
 
-    assert [c["locator"] for c in chunks] == ["1.1", "1.2"]
+    locators = [
+        c["locator"]
+        for c in chunks
+    ]
+    assert locators == ["1.1", "1.2"]
 
 
 def test_chunk_text_is_everything_up_to_the_next_clause_number():
@@ -71,7 +75,11 @@ def test_two_digit_second_component_is_not_mistaken_for_two_clauses():
 
     chunks = chunk(text)
 
-    assert [c["locator"] for c in chunks] == ["1.1", "1.10"]
+    locators = [
+        c["locator"]
+        for c in chunks
+    ]
+    assert locators == ["1.1", "1.10"]
 
 
 def test_text_before_the_first_clause_number_is_discarded():
@@ -100,5 +108,11 @@ def test_chunk_document_extracts_cleans_and_chunks_the_real_pdf_end_to_end():
     # actually works together against the real corpus, not just in theory.
     chunks = chunk_document(CP54_PDF)
 
-    assert any(c["locator"] == "1.8" for c in chunks)
-    assert all("Consultation Paper CP 54" not in c["text"] for c in chunks)
+    assert any(
+        c["locator"] == "1.8"
+        for c in chunks
+    )
+    assert all(
+        "Consultation Paper CP 54" not in c["text"]
+        for c in chunks
+    )

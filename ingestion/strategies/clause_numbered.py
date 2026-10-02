@@ -54,7 +54,10 @@ def chunk(text: str) -> list[dict]:
         # This clause's text runs up to wherever the *next* clause number
         # starts (match.start() of the next match), or to the end of the
         # text if this is the last clause.
-        chunk_end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        if index + 1 < len(matches):
+            chunk_end = matches[index + 1].start()
+        else:
+            chunk_end = len(text)
 
         chunk_text = text[chunk_start:chunk_end].strip()
 

@@ -24,7 +24,11 @@ def test_splits_on_each_heading():
 
     chunks = chunk(pages)
 
-    assert [c["locator"] for c in chunks] == ["Introduction (p. 1)", "Literature Review (p. 1)"]
+    locators = [
+        c["locator"]
+        for c in chunks
+    ]
+    assert locators == ["Introduction (p. 1)", "Literature Review (p. 1)"]
 
 
 def test_chunk_text_is_everything_up_to_the_next_heading():

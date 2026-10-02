@@ -66,7 +66,10 @@ def upsert_immutable(
     # calls, though it still issues one statement per row over the wire
     # (fine at this corpus's current size -- ~2000 Chunks load in seconds;
     # worth revisiting only if that ever becomes a real bottleneck).
-    placeholders = ", ".join(f"%({column})s" for column in columns)
+    placeholders = ", ".join(
+        f"%({column})s"
+        for column in columns
+    )
     conflict_list = ", ".join(conflict_columns or ["id"])
     cur.executemany(
         f"INSERT INTO {table} ({column_list}) VALUES ({placeholders}) "

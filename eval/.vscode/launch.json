@@ -1,0 +1,31 @@
+{
+  // Debug configurations for the eval/ workspace folder (uses eval/.venv via
+  // settings.json). Needs Postgres up (docker compose up -d in store/) and
+  // Ollama running with nomic-embed-text pulled -- see eval/README.md.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // The real eval: every Eval Case against the real `regdocs` store.
+      // Note each run writes a new report into eval/runs/ -- delete any you
+      // don't want to keep (only the baseline is committed).
+      "name": "Run eval harness (real store)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run_eval.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      // The keyword-search authoring helper; edit "args" to change the search.
+      "name": "Find locator",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/find_locator.py",
+      "args": ["premium rebate"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

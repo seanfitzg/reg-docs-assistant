@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #32: eval harness</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #32 — The retrieval eval harness and the first baseline</h1>
+<p class="subtitle">The harness that turns the eval set into numbers. It embeds every question, runs a nearest-neighbour search in pgvector, grades what comes back with the #30 match rule, and writes an immutable run report. It was built test-first against hand-made vectors, then run for real. The first result: <strong>Recall@10 = 0.89 and MRR = 0.75</strong>, with a clear gap between lexical and paraphrase questions. Follows <a href="issue-30-locator-match-rule.html">issue #30's writeup</a>.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">#29 schema + checks</span>
+  <span class="arrow">→</span>
+  <span class="step">#30 match rule</span>
+  <span class="arrow">→</span>
+  <span class="step">#31 the 20 cases</span>
+  <span class="arrow">→</span>
+  <span class="step"><strong>#32 harness + baseline</strong></span>
+  <span class="arrow">→</span>
+  <span class="step">.NET retriever must match it</span>
+</div>
+<p>
+  Everything before this ticket was preparation. The store holds 1,993 Chunks, each with an embedding from <code>nomic-embed-text</code> (#25). The eval set holds 20 questions labelled with where their answers live (#31), and the match rule can grade a retrieved Chunk against a label (#30). This ticket joins them up: <code>eval/run_eval.py</code> asks the store every question and turns the answers into a score. That score is the <strong>baseline</strong>, the number every later change gets compared with, starting with the Week-2 .NET retriever.
+</p>
+
+<h2>The concepts</h2>
+
+<div class="box concept">
+  <span class="label">Concept: nearest-neighbour search, and cosine similarity</span>
+  <p>An embedding is a list of 768 numbers, which you can think of as a <em>direction</em> in a 768-dimensional space. The model was trained so that texts with similar meaning point in similar directions. Retrieval is then pure geometry: embed the question, and find the stored Chunk vectors that point most nearly the same way. That's <strong>nearest-neighbour search</strong>.</p>
+  <p>"Most nearly the same way" is measured with <strong>cosine similarity</strong>, the cosine of the angle between two vectors. Pointing the same way gives 1, at right angles (unrelated) gives 0, and opposite gives −1. It ignores vector <em>length</em> and looks only at direction, which is where these models encode meaning. pgvector's <code>&lt;=&gt;</code> operator returns cosine <em>distance</em>, which is <code>1 − similarity</code>, so the query sorts by distance and reports <code>1 − distance</code>:</p>
+<pre><code>ORDER BY chunk_embeddings.embedding &lt;=&gt; %(query)s::vector   -- smallest distance first
+LIMIT 10                                                     -- the "top-k", k = 10</code></pre>
+  <p>In .NET terms it's <code>chunks.OrderBy(c =&gt; Distance(c.Vector, q)).Take(10)</code>. The database does the <code>OrderBy</code>, because computing 1,993 distances is its job and not something to drag into application code.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: exact search vs. an approximate index</span>
+  <p>With no index, Postgres computes the distance to <em>every</em> row and sorts them, which is an <strong>exact</strong> search. At ~2,000 rows that takes milliseconds. Vector indexes (<code>ivfflat</code>, <code>hnsw</code>) get their speed by searching only <em>part</em> of the space, so they can miss a true nearest neighbour. That's why they're called <strong>approximate</strong> nearest-neighbour (ANN) indexes. For a measurement that's a problem: a missed case might be the embedding model's fault or the index's, and you couldn't tell which. So the issue deliberately says no index. Add one when the corpus is big enough to need it, and <em>measure</em> the recall it costs by running this harness with and without it.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: the query half of the asymmetric prefix (ADR-0026)</span>
+  <p><code>nomic-embed-text</code> was trained to embed <em>stored documents</em> and <em>search queries</em> slightly differently, and it's told which is which by a text prefix. #25 embedded every Chunk as <code>"search_document: &lt;text&gt;"</code>. This harness sends every question as <code>"search_query: &lt;question&gt;"</code>. Leave the prefix off and nothing breaks: vectors still come back and results still look sensible. The scores just quietly get worse. That's the worst kind of bug, and it's why the test asserts the <em>exact</em> string sent to the model, and why the report pins the prefix. If the .NET retriever later scores lower on the same embeddings, a missing prefix is the first thing to check.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: Recall@k and MRR, the two scores</span>
+  <p>For each answerable question, the harness records the <strong>rank</strong> of the first retrieved Chunk that's a hit (1 = top result), or "miss" if none of the 10 is.</p>
+  <p><strong>Recall@k</strong> is the fraction of questions whose first hit is within the top k. Recall@3 = 0.83 means "for 83% of questions, a right Chunk was in the top 3". It's easy to read, but it can't see where inside those k results the hit landed.</p>
+  <p><strong>MRR</strong> (Mean Reciprocal Rank) averages <code>1/rank</code>, with a miss counting as 0. Rank 1 scores 1.0, rank 2 scores 0.5, rank 4 scores 0.25. It rewards putting the right Chunk <em>first</em>, which matters because the LLM that eventually answers is given only the top few Chunks, and reads the first one most carefully. A worked example, from the fixture test:</p>
+<pre><code>ranks:     q01 = 1      q02 = 3      q03 = miss
+
+Recall@1  = 1/3               (only q01 is in the top 1)
+Recall@3  = 2/3               (q01 and q02)
+MRR       = (1/1 + 1/3 + 0) / 3 = 4/9 ≈ 0.44</code></pre>
+  <p>These are the retrieval equivalents of the coverage numbers from a test suite: aggregate numbers that are only meaningful when compared with a previous run.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: unanswerable questions have no recall, only a confidence</span>
+  <p>Vector search <em>always</em> returns its 10 nearest neighbours. There's no "0 results", because something is always nearest. So an unanswerable question can't hit or miss. Counting it as a miss would drag recall down for the wrong reason, which is why ADR-0029 excludes these cases from every metric. What the harness records instead is the <strong>top-1 similarity</strong>: how confident the best <em>wrong</em> match looked. That number is the raw material for a future <strong>similarity threshold</strong> ("below 0.7, say the corpus doesn't cover it"). The baseline shows why picking that threshold is harder than it sounds (see below).</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: a run report is an immutable event (ADR-0030)</span>
+  <p>A score only means something next to the configuration that produced it. So every report <strong>pins</strong> everything that could change the number: the embedding model, the query prefix, k, the <code>dataset_version</code>, and <em>every Document's active Chunking Generation</em>. It's then written once, to <code>eval/runs/&lt;UTC timestamp&gt;-&lt;model&gt;.json</code>, and <strong>never overwritten</strong>. A later run is a new file beside it.</p>
+  <p>That's your event-sourcing instinct applied to experiments. Each run is an appended event carrying its own context, history is never edited, and "how has retrieval changed?" becomes a fold over the files in <code>runs/</code>. The exclusive-create file mode <code>open(path, "x")</code> is the append-only guarantee. It fails atomically if the file exists, with no check-then-write race, much like an optimistic-concurrency check on an event stream's expected version.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: one snapshot for the whole run</span>
+  <p>The report claims "these searches ran against these generations". To make that claim true even if someone reloads the store halfway through a run, all the queries run in a single <code>REPEATABLE READ</code>, <code>read_only</code> transaction. Every statement then sees one frozen snapshot of the database. It's the same reason you'd read an aggregate's version and its events in one transaction. The questions are embedded <em>before</em> the transaction opens, so slow model calls never hold it open.</p>
+</div>
+
+<h2>What was built</h2>
+
+<h3>The whole flow of <code>eval/run_eval.py</code></h3>
+<p>One run, from <code>python eval/run_eval.py</code> to the printed table. Line numbers point into the file.</p>
+<pre><code>python eval/run_eval.py
+        │
+        ▼
+┌──────────────────────────────────────────┐
+│ __main__  (line 384)                     │
+│ Load eval/dataset.json  (20 Eval Cases)  │
+│ Create OllamaEmbeddingClient             │
+└──────────────────┬───────────────────────┘
+                   ▼
+╔══════════════════════════════════════════════════════════════════╗
+║ run_eval(db_url, client, dataset)   (line 266)                   ║
+║                                                                  ║
+║  ① EMBED every question (no DB yet)                              ║
+║     for each case:                                               ║
+║       "search_query: " + question ──► Ollama ──► 768 numbers     ║
+║     → query_vectors  (20 vectors)                                ║
+║                         │                                        ║
+║                         ▼                                        ║
+║  ② OPEN Postgres: one REPEATABLE READ, read-only transaction     ║
+║                         │                                        ║
+║                         ▼                                        ║
+║  ③ _active_generations()                                         ║
+║     SELECT each Document's active chunking generation            ║
+║     → pinned into the report later                               ║
+║                         │                                        ║
+║                         ▼                                        ║
+║  ④ FOR EACH (case, query_vector) ───────────────────────┐        ║
+║     │                                                   │        ║
+║     ▼                                                   │        ║
+║   _retrieve(cur, query_vector)  (line 101)              │        ║
+║     RETRIEVAL_SQL: top 10 chunks by cosine distance,    │        ║
+║     active generation only                              │        ║
+║     │                                                   │        ║
+║     ├── 0 rows? ──► ✖ RuntimeError                      │        ║
+║     │               "run store/embed.py first"          │        ║
+║     ▼                                                   │        ║
+║   10 × {document_id, locator, strategy, similarity}     │        ║
+║     │                                                   │        ║
+║     ▼                                                   │        ║
+║   _score_case(case, retrieved)  (line 139)              │        ║
+║     for rank 1..10:  case_hit(gold, [chunk])  ◄── match.py (#30)  ║
+║       (also raises on an unparseable locator)           │        ║
+║     hit_rank = first hit's rank, or None (miss)         │        ║
+║     │                                                   │        ║
+║     ├── unanswerable? ──► record top1_similarity        │        ║
+║     └── answerable?   ──► record hit_similarity         │        ║
+║     │                                                   │        ║
+║     └──────────── next case ◄───────────────────────────┘        ║
+║                         │                                        ║
+║                         ▼                                        ║
+║  ⑤ _summarise(case_results)     (line 226)                       ║
+║     drop unanswerable cases                                      ║
+║     ├── none left? ──► ✖ ValueError                              ║
+║     ▼                                                            ║
+║     _metrics(ranks) for: overall                                 ║
+║                          by_phrasing (lexical / paraphrase)      ║
+║                          by_category (single / multi / …)        ║
+║       Recall@1,3,5,10 = fraction with rank ≤ k                   ║
+║       MRR             = average of 1/rank  (miss = 0)            ║
+║                         │                                        ║
+║                         ▼                                        ║
+║  ⑥ RETURN report dict                                            ║
+║     { created_at, config (pinned), summary, cases }              ║
+╚══════════════════╤═══════════════════════════════════════════════╝
+                   ▼
+┌──────────────────────────────────────────────────────┐
+│ write_report(report)          (line 315)             │
+│ eval/runs/&lt;UTC timestamp&gt;-nomic-embed-text.json      │
+│ open(path, "x") → file exists? ✖ FileExistsError     │
+│                   (reports are never overwritten)    │
+└──────────────────┬───────────────────────────────────┘
+                   ▼
+┌──────────────────────────────────────────────────────┐
+│ format_summary(report)        (line 339)             │
+│ print the Recall / MRR table and the unanswerable    │
+│ top-1 scores to the console                          │
+└──────────────────────────────────────────────────────┘</code></pre>
+<ul>
+  <li><strong>The double-bordered box is <code>run_eval()</code></strong>, the single seam the integration test drives: data in, report out, with no files written. The two boxes below it are the only side effects, writing the file and printing.</li>
+  <li><strong>The ✖ branches are the deliberate fail-loud points.</strong> There are three here (empty retrieval, no answerable cases, existing file), plus <code>match.py</code> raising on an unparseable locator. Each stops a mistake from quietly turning into a believable but wrong score.</li>
+  <li><strong>Step ① comes before ②</strong>, so slow calls to the embedding model never hold the database transaction open.</li>
+</ul>
+
+<h3>The retriever is one SQL statement</h3>
+<pre><code>SELECT chunks.document_id,
+       chunks.locator,
+       chunking_generations.chunking_strategy,
+       1 - (chunk_embeddings.embedding &lt;=&gt; %(query)s::vector) AS similarity
+FROM chunk_embeddings
+JOIN chunks               ON chunks.id = chunk_embeddings.chunk_id
+JOIN documents            ON documents.id = chunks.document_id
+                         AND documents.active_chunking_generation_id = chunks.chunking_generation_id
+JOIN chunking_generations ON chunking_generations.id = chunks.chunking_generation_id
+WHERE chunk_embeddings.embedding_model = %(model)s
+ORDER BY chunk_embeddings.embedding &lt;=&gt; %(query)s::vector, chunks.id
+LIMIT %(k)s</code></pre>
+<ul>
+  <li>The <code>documents</code> join restricts the search to each Document's <strong>active generation</strong> (ADR-0025). Chunks from an old chunking run stay in the database but are never candidates.</li>
+  <li>The <code>chunking_generations</code> join supplies each Chunk's <strong>chunking strategy</strong>, which the match rule needs to parse its locator. The spec said "joined to <code>chunks</code>/<code>documents</code>", but the strategy only lives on the generation, so this extra join is required.</li>
+  <li><code>chunks.id</code> is a <strong>tie-breaker</strong>, so equal distances always come back in the same order and a re-run can't reshuffle ranks.</li>
+  <li>The question vector is sent as pgvector's text form <code>'[0.1,0.2,…]'</code> and cast with <code>::vector</code>, using <code>store/embed.py</code>'s helper. That helper was renamed from <code>_vector_literal</code> to <code>vector_literal</code>, because the leading underscore is Python's "private" convention and it now has a second caller.</li>
+</ul>
+
+<h3>Scoring a case, and the report</h3>
+<p>For each case, every retrieved Chunk is graded on its own with <code>case_hit(gold, [chunk])</code>, in rank order. The first hit's rank is what counts:</p>
+<pre><code>hit_ranks = []
+for rank, chunk in enumerate(retrieved, start=1):
+    if case_hit(gold, [chunk]):        # is *this* Chunk a gold hit?
+        hit_ranks.append(rank)
+
+if hit_ranks:                          # an empty list is falsy in Python
+    hit_rank = hit_ranks[0]
+else:
+    hit_rank = None</code></pre>
+<p>Each entry in the report keeps the rank, the similarity at the hit (or, for unanswerable cases, the top-1 similarity), and the whole top-10 with scores. The spec only asked for the rank and similarity. Keeping the list means a miss can be investigated later without re-running anything, and gives the .NET retriever something to compare against result by result.</p>
+
+<h3>The test: hand-built vectors make ranking predictable</h3>
+<div class="box concept">
+  <span class="label">Concept: test a vector search with vectors you designed</span>
+  <p>Real embeddings are opaque, so you can't predict where a real question will land. The integration test therefore doesn't use them. It inserts fixture Chunks whose embeddings are <strong>basis vectors</strong>: a 1 in one of the 768 slots and 0 everywhere else. Basis vectors are at right angles to each other, so cosine similarity becomes plain arithmetic:</p>
+<pre><code>chunk 1.1       = basis(0)          query "rank one"   = basis(0)
+chunk 1.2       = basis(1)            → 1.1 at similarity 1.0, everything else 0.0
+heading chunk   = basis(2)
+old-gen 2.1     = basis(3)          query "rank three" = 3·basis(0) + 2·basis(1) + 1·basis(2)
+                                      → order 1.1, 1.2, heading (3 &gt; 2 &gt; 1)
+                                      → heading's similarity = 1/√14</code></pre>
+  <p>The embedding client is a fake that looks up the prepared vector for each (prefixed) question and records what it was sent. It's the same dependency-injection idea as handing an <code>IEmbeddingClient</code> stub to a .NET class under test. Python's <code>Protocol</code> just means the fake needs no shared base type. The test runs against the real Postgres in the isolated <code>regdocs_test</code> database, reusing <code>store/tests</code>' fixtures, so the SQL itself is what's being tested, including pgvector's actual <code>&lt;=&gt;</code>.</p>
+</div>
+<p>The fixture covers each behaviour the spec listed, plus two it cares about implicitly:</p>
+<table>
+  <tr><th>Case</th><th>Set up so that…</th><th>Proves</th></tr>
+  <tr><td>q01</td><td>query = the gold Chunk's vector</td><td>hit at rank 1, similarity 1.0</td></tr>
+  <tr><td>q02</td><td>gold is the 3rd-nearest, and a <em>heading</em> Chunk</td><td>rank 3; each Chunk's own strategy is returned (a clause parse of <code>Introduction (p. 2)</code> would raise)</td></tr>
+  <tr><td>q03</td><td>gold only exists in an <em>inactive</em> generation, and the query points straight at it</td><td>a miss; the old generation is never searched (ADR-0025)</td></tr>
+  <tr><td>q04</td><td>unanswerable</td><td>no rank; top-1 similarity recorded; excluded from recall</td></tr>
+  <tr><td>—</td><td>the three answerable ranks 1, 3, miss</td><td>Recall@1 = 1/3, @3 = 2/3, MRR = 4/9, overall and per group</td></tr>
+</table>
+
+<h2>The baseline</h2>
+<pre><code>group                        n    R@1    R@3    R@5   R@10    MRR
+-----------------------------------------------------------------
+overall                     18   0.67   0.83   0.89   0.89   0.75
+phrasing=lexical             9   0.89   1.00   1.00   1.00   0.93
+phrasing=paraphrase          9   0.44   0.67   0.78   0.78   0.56
+category=multi_locator       3   0.67   1.00   1.00   1.00   0.78
+category=single_passage     13   0.62   0.77   0.85   0.85   0.70
+category=supersession        2   1.00   1.00   1.00   1.00   1.00
+
+unanswerable (top-1 similarity -- no threshold applied):
+  q19: 0.727
+  q20: 0.705</code></pre>
+<p>Report: <code>eval/runs/20260929T111257Z-nomic-embed-text.json</code>. Running it twice gave identical numbers, because the same model and the same text produce the same vectors, and the tie-breaker fixes the order. That's what makes a baseline usable: any later difference comes from a change, not from noise.</p>
+
+<h3>What the numbers say</h3>
+
+<div class="box did">
+  <span class="label">Finding 1: the lexical/paraphrase gap is the headline</span>
+  <p>Every lexical question found its passage within the top 3, and 8 of 9 at rank 1. Paraphrase questions put the right Chunk first less than half the time, and 2 of 9 missed the top 10 entirely. Embeddings are supposed to be the tool that handles rewording, and they do help: some paraphrases hit at rank 1 with no shared key terms, such as q10 on outsourcing and q18 "ring me out of the blue". But this model still leans on shared words far more than on meaning. Exposing that is exactly why ADR-0029 reports the two separately.</p>
+  <p>One caveat: most paraphrase questions were written by Claude <em>after</em> reading the passage. If anything that makes them easier than questions from someone who hadn't seen it, so the real gap is probably at least this wide.</p>
+</div>
+
+<div class="box did">
+  <span class="label">Finding 2: the misses are about vocabulary</span>
+  <table>
+    <tr><th>Case</th><th>Question (paraphrase)</th><th>What came back instead</th></tr>
+    <tr><td>q06</td><td>insurers "that only cover risks for their own corporate parent"</td><td>The right document (CP131), but the wrong clauses. The passage's key word is <em>captive</em>, and the question never says it.</td></tr>
+    <tr><td>q08</td><td>whether candidates "have enough hours to do the job"</td><td>CP160's "Levels of experience". Close in meaning, but the gold says <em>time commitments</em>.</td></tr>
+    <tr><td>q12</td><td>"slow paying its annual bill for being regulated"</td><td>Rank 4. The top 3 were CP54 consumer clauses about charges, and "levy" is the missing word.</td></tr>
+  </table>
+  <p>In each case, the domain term a compliance analyst would use (<em>captive</em>, <em>time commitment</em>, <em>levy</em>) was the bridge the model couldn't cross from everyday language. That points at the usual next experiments: <strong>hybrid search</strong> (merging keyword and vector results) and <strong>query rewriting</strong> (having an LLM restate the question in the corpus's vocabulary before searching).</p>
+</div>
+
+<div class="box did">
+  <span class="label">Finding 3: a similarity threshold can't separate "not covered" from "covered"</span>
+  <p>The two unanswerable questions scored a top-1 similarity of <strong>0.727</strong> and <strong>0.705</strong>. Several <em>correct</em> hits scored lower: q18 was right at 0.652, q12 at 0.698, and q06's best (wrong) result was 0.696. Any cut-off that rejects both unanswerable questions would also reject answers that were correct. Similarity scores from one model aren't calibrated probabilities. They depend on topic and phrasing as much as on relevance. That's why "unanswerable" handling in real RAG systems usually happens later in the pipeline: the LLM is told to say "the documents don't cover this" when the Chunks it's given don't contain the answer. The harness records the scores (and deliberately applies no threshold, per the issue's Out of Scope) so that decision can be made with data.</p>
+</div>
+
+<div class="box did">
+  <span class="label">Finding 4: supersession passed, but only just</span>
+  <p>Both supersession cases hit at rank 1, with the current CP54 clause first. In q17 (premium rebates), though, the <em>superseded</em> CP47 passage came second at 0.853, just behind CP54's 0.881. The old and new versions say almost the same thing, so they embed almost identically. Similarity alone has no idea which one is current. Only a small scoring margin put the right one first. The harness doesn't score where the superseded passage lands (not asked for, and ADR-0030's report fields don't include it). It's visible in the report's top-10 list, and it's a good candidate for a future metric, or for a retrieval rule that filters out superseded Documents altogether.</p>
+</div>
+
+<h2>What <code>/code-review</code> caught</h2>
+<p>Two reviewers ran in parallel, one against the repo's standards (CLAUDE.md, ADRs, sibling code) and one against the spec (issue #32). The spec reviewer found no defects. Every acceptance criterion was met, apart from committing the baseline, which is waiting on you. Both flagged the same latent crash, and the standards reviewer found the rest.</p>
+
+<div class="box bug">
+  <span class="label">Bug: an unembedded store would have scored a perfect-looking 0.0</span>
+  <p>Both reviewers noticed that an empty result list was handled "gracefully": <code>top1_similarity</code> became <code>None</code> and the case became a miss. Follow that through. If you ran the harness before <code>store/embed.py</code>, every search would return nothing, every case would miss, and you'd get a clean report saying <strong>Recall@10 = 0.00</strong>, pinned, timestamped and immutable. It would be a plausible-looking number caused by a setup mistake, which is exactly the silent failure ADR-0028 forbids. (The console table would actually have crashed on formatting <code>None</code>, but only <em>after</em> the report was already written.)</p>
+  <p>The fix changed the design from "tolerate empty" to "empty is impossible". <code>_retrieve</code> now raises <code>RuntimeError: no nomic-embed-text Chunk Embeddings to search -- load the store and run store/embed.py first</code>, so every later line can rely on at least one result. A new test runs the harness against an empty database and expects that error. It was red first.</p>
+</div>
+
+<div class="box bug">
+  <span class="label">Bug: a dataset of only unanswerable cases divided by zero</span>
+  <p><code>_metrics</code> divides by the number of answerable cases. Unanswerable cases are filtered out before grouping, so no <em>group</em> can be empty, but <code>overall</code> can: a dataset of only unanswerable questions crashed with <code>ZeroDivisionError</code>. That can't happen with today's 20 cases, but the right response to "there's nothing to average" is a clear message, not a stack trace from arithmetic. It now raises <code>ValueError: the dataset has no answerable cases, so recall and MRR are undefined</code>. A test pins it, and it was also red first.</p>
+</div>
+
+<div class="box did">
+  <span class="label">Smaller fixes</span>
+  <ul>
+    <li><strong>Every locator was parsed twice.</strong> The first version called <code>case_hit</code> on the whole list (to validate every locator), then again chunk by chunk (to find the rank). One pass now does both: grading every Chunk individually also validates it.</li>
+    <li><strong>Speculative Generality: a <code>k</code> parameter nobody passed.</strong> <code>run_eval(…, k=K)</code> invited callers to vary something ADR-0030 wants pinned, and neither the tests nor the CLI used it. It's gone. <code>K = 10</code> is the one source, and the report records it.</li>
+    <li><strong>Comments for the densest Python.</strong> CLAUDE.md asks for line-by-line comments where the syntax is unfamiliar, and the review found gaps. There are now comments for f-string format specs (<code>:&lt;26</code>, <code>:&gt;7.2f</code> ≈ C#'s <code>{x,-26}</code>, <code>{x,7:F2}</code>), a nested f-string, <code>dict(cur.fetchall())</code> (≈ <code>ToDictionary</code>), <code>ensure_ascii=False</code>, the chained comparison <code>a == b == 10</code> (no C# equivalent), and <code>next(…)</code> (≈ <code>First(predicate)</code>).</li>
+    <li><strong>A misleading fixture name.</strong> The fixture <code>report</code> returned a <code>(report, client)</code> tuple, while its comment claimed it "stashed the client on the report". It's now <code>fixture_run</code>, with an accurate comment.</li>
+    <li>A comment in <code>store/embed.py</code> had been reflowed badly by the rename.</li>
+  </ul>
+</div>
+
+<div class="box verified">
+  <span class="label">Judgement calls left as they are</span>
+  <p><strong>Dicts, not a <code>RetrievedChunk</code> dataclass.</strong> This was flagged as possible <em>Primitive Obsession</em>, since <code>find_locator.py</code> uses a <code>@dataclass</code>. But <code>case_hit</code> (#30) takes dicts, and the report is JSON. A type here would be converted back to a dict on both sides.</p>
+  <p><strong>The <code>sys.path</code> edit appears twice</strong>, in <code>run_eval.py</code> (so the script runs) and in the test <code>conftest.py</code> (so the tests import <code>store/tests</code>' fixtures). That's the repo's existing pattern for sharing code between folders with separate virtualenvs. Making <code>/store</code> an installable package would remove both, but that's a bigger decision than this ticket.</p>
+  <p><strong>The superseded passage's rank isn't scored</strong> (see Finding 4). That's out of the spec's scope, deliberately, but now there's evidence it's worth adding.</p>
+</div>
+
+<h2>Commands run</h2>
+<pre><code>git checkout master &amp;&amp; git pull &amp;&amp; git checkout -b issue-32-eval-harness
+
+cd store &amp;&amp; docker compose up -d                  # Postgres was stopped
+docker compose exec -T postgres psql -U regdocs -d regdocs -tAc \
+  "select count(*) from chunks; select count(*) from chunk_embeddings;"   # 1993 / 1993
+curl http://localhost:11434/api/tags             # Ollama up, nomic-embed-text pulled
+
+eval/.venv/Scripts/python -m pip install -r eval/requirements.txt       # + psycopg, ollama
+eval/.venv/Scripts/python -m pytest eval/tests/test_run_eval.py -q      # red: cannot import 'vector_literal'
+eval/.venv/Scripts/python -m pytest eval/tests/test_run_eval.py -q      # green: 7 passed
+                                                                        # after review: 2 new tests red, then 9 passed
+eval/.venv/Scripts/python -m pytest eval/tests -q                       # 80 passed
+store/.venv/Scripts/python -m pytest store/tests -q                     # 10 passed (embed.py rename)
+
+eval/.venv/Scripts/python eval/run_eval.py                              # the baseline (run twice, identical)</code></pre>
+<p>There's still no Python type checker set up, so the type hints are documentation only.</p>
+
+<h2>What's next</h2>
+<p>
+  The baseline report goes in with this PR. From here, the harness is a regression suite for retrieval quality. The Week-2 <strong>.NET retriever</strong> has to reproduce these exact numbers on the same embeddings. If it scores lower, check the <code>search_query: </code> prefix, the distance operator (<code>&lt;=&gt;</code> is cosine, <code>&lt;-&gt;</code> would be Euclidean) and the active-generation join. After that, the findings above suggest the experiments worth running, each measured by a new report in <code>eval/runs/</code>: hybrid keyword + vector search (for the paraphrase gap), filtering out superseded Documents, and eventually a second embedding model side by side. <code>chunk_embeddings</code> is keyed by model for exactly that purpose (ADR-0024).
+</p>
+
+<footer>
+  RegDocs Assistant — issue #32, epic #28. Generated as part of implementing this ticket.
+</footer>
+
+</main>
+</body>
+</html>

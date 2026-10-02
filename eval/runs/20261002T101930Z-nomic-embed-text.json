@@ -1,0 +1,1267 @@
+{
+  "created_at": "2026-10-02T10:19:30Z",
+  "config": {
+    "embedding_model": "nomic-embed-text",
+    "query_prefix": "search_query: ",
+    "k": 10,
+    "dataset_version": 1,
+    "active_chunking_generations": {
+      "doc-01-cp01-funding-of-ifsra": "doc-01-cp01-funding-of-ifsra-gen-1",
+      "doc-02-cp08-administrative-sanctions-procedure": "doc-02-cp08-administrative-sanctions-procedure-gen-1",
+      "doc-03-cp47-review-of-consumer-protection-code": "doc-03-cp47-review-of-consumer-protection-code-gen-1",
+      "doc-04-cp54-second-consultation-consumer-protection-code": "doc-04-cp54-second-consultation-consumer-protection-code-gen-1",
+      "doc-05-cp71-client-asset-regulations-guidance": "doc-05-cp71-client-asset-regulations-guidance-gen-1",
+      "doc-06-cp95-funding-cost-of-financial-regulation": "doc-06-cp95-funding-cost-of-financial-regulation-gen-1",
+      "doc-07-cp131-recovery-planning-for-reinsurers": "doc-07-cp131-recovery-planning-for-reinsurers-gen-1",
+      "doc-08-cp148-credit-union-exempt-services": "doc-08-cp148-credit-union-exempt-services-gen-1",
+      "doc-09-cp158-consumer-protection-code": "doc-09-cp158-consumer-protection-code-gen-1",
+      "doc-10-cp160-fitness-and-probity-regime": "doc-10-cp160-fitness-and-probity-regime-gen-1",
+      "doc-11-dp7-digitalisation-and-consumer-protection-code": "doc-11-dp7-digitalisation-and-consumer-protection-code-gen-1",
+      "doc-12-dp8-outsourcing-findings-and-issues": "doc-12-dp8-outsourcing-findings-and-issues-gen-1",
+      "doc-13-dp11-macroprudential-policy-investment-funds": "doc-13-dp11-macroprudential-policy-investment-funds-gen-1",
+      "doc-14-dp12-dlt-tokenisation-financial-services": "doc-14-dp12-dlt-tokenisation-financial-services-gen-1",
+      "doc-15-economic-letter-vol2020no7-covid19-activity": "doc-15-economic-letter-vol2020no7-covid19-activity-gen-1",
+      "doc-16-qb-signed-article-fiscal-risks-medium-term": "doc-16-qb-signed-article-fiscal-risks-medium-term-gen-1",
+      "doc-17-fsr-2026-i-financial-stability-review": "doc-17-fsr-2026-i-financial-stability-review-gen-1",
+      "doc-18-annual-report-2025-performance-statement": "doc-18-annual-report-2025-performance-statement-gen-1",
+      "doc-19-rtp-07rt19-money-market-funds-unconventional-policy": "doc-19-rtp-07rt19-money-market-funds-unconventional-policy-gen-1",
+      "doc-20-rtp-12rt18-pockets-of-risk-european-housing": "doc-20-rtp-12rt18-pockets-of-risk-european-housing-gen-1"
+    }
+  },
+  "summary": {
+    "overall": {
+      "cases": 18,
+      "recall@1": 0.6666666666666666,
+      "recall@3": 0.8333333333333334,
+      "recall@5": 0.8888888888888888,
+      "recall@10": 0.8888888888888888,
+      "mrr": 0.7453703703703703
+    },
+    "by_phrasing": {
+      "lexical": {
+        "cases": 9,
+        "recall@1": 0.8888888888888888,
+        "recall@3": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.925925925925926
+      },
+      "paraphrase": {
+        "cases": 9,
+        "recall@1": 0.4444444444444444,
+        "recall@3": 0.6666666666666666,
+        "recall@5": 0.7777777777777778,
+        "recall@10": 0.7777777777777778,
+        "mrr": 0.5648148148148148
+      }
+    },
+    "by_category": {
+      "multi_locator": {
+        "cases": 3,
+        "recall@1": 0.6666666666666666,
+        "recall@3": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 0.7777777777777778
+      },
+      "single_passage": {
+        "cases": 13,
+        "recall@1": 0.6153846153846154,
+        "recall@3": 0.7692307692307693,
+        "recall@5": 0.8461538461538461,
+        "recall@10": 0.8461538461538461,
+        "mrr": 0.6987179487179488
+      },
+      "supersession": {
+        "cases": 2,
+        "recall@1": 1.0,
+        "recall@3": 1.0,
+        "recall@5": 1.0,
+        "recall@10": 1.0,
+        "mrr": 1.0
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "q01",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Mortgage Incentives (p. 44)",
+          "similarity": 0.7841631384187714
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "4.42",
+          "similarity": 0.7005982577444771
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "4 Borrower Composition (p. 23)",
+          "similarity": 0.6892109553595216
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "5 Credit Constraints (p. 30)",
+          "similarity": 0.6863125971742337
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.30",
+          "similarity": 0.6837477903065626
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "6 Conclusion (p. 35)",
+          "similarity": 0.6830747215552734
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Lifetime Mortgages and Home Reversion Agreements (p. 47)",
+          "similarity": 0.6759392039667245
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "Warning: The cost of your monthly repayments may increase – If (p. 71)",
+          "similarity": 0.6756959799270582
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.32",
+          "similarity": 0.6730534228023551
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.29",
+          "similarity": 0.6725082993507815
+        }
+      ],
+      "hit_similarity": 0.7841631384187714
+    },
+    {
+      "id": "q02",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "financing (p. 27)",
+          "similarity": 0.8520960652542056
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "Transmission channels of an AI-related financial market shock (p. 29)",
+          "similarity": 0.8090168833732663
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "rapidly over the past year and a half (p. 28)",
+          "similarity": 0.7668707370758111
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "fast (p. 29)",
+          "similarity": 0.7637384674705002
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "Financial market developments and financing of AI (p. 27)",
+          "similarity": 0.7532635261511368
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "capable of performing complicated tasks in short (p. 16)",
+          "similarity": 0.7391590061310034
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "financial intermediaries. (p. 5)",
+          "similarity": 0.7314311034329968
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Risk Landscape (p. 31)",
+          "similarity": 0.7212655475773194
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "Global risk assessment (p. 11)",
+          "similarity": 0.7103907638555322
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "Domestic risk assessment (p. 17)",
+          "similarity": 0.6973057597072726
+        }
+      ],
+      "hit_similarity": 0.8520960652542056
+    },
+    {
+      "id": "q03",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Identification of client funds (p. 10)",
+          "similarity": 0.8238589062606652
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client Money Requirement and Client Money Resource for Investment Firms (p. 17)",
+          "similarity": 0.7975749018699104
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Funds and Financial Instruments Facilities Letter (p. 13)",
+          "similarity": 0.7744337551127006
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "2. Designation and Registration (p. 8)",
+          "similarity": 0.7621197275137536
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Prior written consent from a client of an investment firm (p. 20)",
+          "similarity": 0.75985736488021
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client’s Margin (p. 11)",
+          "similarity": 0.757901594513751
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client Asset Key Information Document for a Firm (p. 22)",
+          "similarity": 0.7544100127679207
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "5. Client Disclosure and Client Consent (p. 8)",
+          "similarity": 0.7521977271680248
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "over a firm’s Client Money Requirement (p. 18)",
+          "similarity": 0.7516968990275898
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client Money Requirement and Client Money Resource for Fund Service Provider (‘FSP’) (p. 17)",
+          "similarity": 0.7513440106344589
+        }
+      ],
+      "hit_similarity": 0.8238589062606652
+    },
+    {
+      "id": "q04",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": 2,
+      "retrieved": [
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Reconciliation of client asset accounts which hold client financial instruments (p. 15)",
+          "similarity": 0.7702640617208609
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "4. Daily Calculation (p. 8)",
+          "similarity": 0.7651438360893288
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client Money Requirement and Client Money Resource for Investment Firms (p. 17)",
+          "similarity": 0.7449163198471281
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Handling of Errors and Complaints (p. 74)",
+          "similarity": 0.7415240119071467
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Reconciliation of client asset accounts which hold client funds (p. 15)",
+          "similarity": 0.7371037414979177
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "in less liquid assets, while allowing their investors the opportunity (p. 18)",
+          "similarity": 0.7214554940144601
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "cover its Client Money Requirement? (p. 19)",
+          "similarity": 0.7207908436809234
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client’s Margin (p. 11)",
+          "similarity": 0.7189265583026229
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "What should be included in an Annual Statement issued by the investment firm to its clients? (p. 19)",
+          "similarity": 0.7186853214944176
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Identification of client funds (p. 10)",
+          "similarity": 0.7169366568809743
+        }
+      ],
+      "hit_similarity": 0.7651438360893288
+    },
+    {
+      "id": "q05",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-06-cp95-funding-cost-of-financial-regulation",
+          "locator": "Chart 16.1 (p. 31)",
+          "similarity": 0.8174938668314312
+        },
+        {
+          "document_id": "doc-06-cp95-funding-cost-of-financial-regulation",
+          "locator": "2014 Levy by Industry Funding Category (p. 11)",
+          "similarity": 0.79707760828271
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.27",
+          "similarity": 0.7692147126622254
+        },
+        {
+          "document_id": "doc-06-cp95-funding-cost-of-financial-regulation",
+          "locator": "(SFTR) (p. 30)",
+          "similarity": 0.7601738715068191
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Note 7: Other Net Income (p. 134)",
+          "similarity": 0.744785473683095
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Levy Income Prepaid/Deferred (p. 177)",
+          "similarity": 0.7299680113792472
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "scheme (p. 40)",
+          "similarity": 0.7288780970050052
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Funding & Staffing of Regulation (p. 52)",
+          "similarity": 0.7284072365275339
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.18",
+          "similarity": 0.720389993272163
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.6",
+          "similarity": 0.718240795869527
+        }
+      ],
+      "hit_similarity": 0.8174938668314312
+    },
+    {
+      "id": "q06",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": null,
+      "retrieved": [
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "2.2",
+          "similarity": 0.6962488682197517
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "2.1",
+          "similarity": 0.6934176620274936
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "5.8",
+          "similarity": 0.6892949588616796
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "2.3",
+          "similarity": 0.6801166570500023
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "5.11",
+          "similarity": 0.6724622876739901
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "4.1",
+          "similarity": 0.6689032922252974
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "2.8",
+          "similarity": 0.6677276098865191
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "2.2",
+          "similarity": 0.6595820372425458
+        },
+        {
+          "document_id": "doc-07-cp131-recovery-planning-for-reinsurers",
+          "locator": "3.2",
+          "similarity": 0.6579967133400941
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "aforementioned vulnerabilities, with first-mover advantage or run (p. 20)",
+          "similarity": 0.657299135505639
+        }
+      ],
+      "hit_similarity": null
+    },
+    {
+      "id": "q07",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 3,
+      "retrieved": [
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "Review of Credit Union Exempt Services (p. 6)",
+          "similarity": 0.865804441821312
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "Credit Union Services (p. 5)",
+          "similarity": 0.8469227868780288
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "3.2.2 Exempt services (p. 10)",
+          "similarity": 0.8430555275744889
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "4.2.2 Investment and insurance intermediation (p. 16)",
+          "similarity": 0.815231850940691
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "3.2.3 Additional services (p. 10)",
+          "similarity": 0.8118594625247616
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "4.2.1 Changes to the conditions (p. 16)",
+          "similarity": 0.8100778105878181
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "Other (p. 20)",
+          "similarity": 0.8085630650184726
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "separate additional approval from the Central Bank under the 1997 Act in order to provide such broader intermediation (p. 17)",
+          "similarity": 0.804570531027831
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "Services) (p. 38)",
+          "similarity": 0.7958146211990502
+        },
+        {
+          "document_id": "doc-08-cp148-credit-union-exempt-services",
+          "locator": "Investment and insurance intermediation (p. 20)",
+          "similarity": 0.7816034295086236
+        }
+      ],
+      "hit_similarity": 0.8430555275744889
+    },
+    {
+      "id": "q08",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": null,
+      "retrieved": [
+        {
+          "document_id": "doc-10-cp160-fitness-and-probity-regime",
+          "locator": "Levels of experience (p. 8)",
+          "similarity": 0.6995474188305968
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.18",
+          "similarity": 0.6879581770972295
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Client Assets Oversight Role (“CAOR”) (p. 23)",
+          "similarity": 0.6872722356968488
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.15",
+          "similarity": 0.681399741005972
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.45",
+          "similarity": 0.6795647010982256
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.38",
+          "similarity": 0.6750658788081608
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Table 7: 2023 and 2024 Population of Each Industry Sector (p. 52)",
+          "similarity": 0.6749317631248055
+        },
+        {
+          "document_id": "doc-05-cp71-client-asset-regulations-guidance",
+          "locator": "Transitional Regulation (p. 27)",
+          "similarity": 0.6732940260663736
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.8",
+          "similarity": 0.670164506161887
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "1.3",
+          "similarity": 0.6698829141014936
+        }
+      ],
+      "hit_similarity": null
+    },
+    {
+      "id": "q09",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Chatbots (p. 20)",
+          "similarity": 0.8593519926071411
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "New and emerging technologies (p. 15)",
+          "similarity": 0.7034599053407103
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Big Data analytics (p. 16)",
+          "similarity": 0.6994551628665926
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Suitability (p. 30)",
+          "similarity": 0.6834942072342276
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "2.3 Informing Effectively (p. 40)",
+          "similarity": 0.6834457297985924
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Impact of social media (p. 13)",
+          "similarity": 0.6769417322593558
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Footnotes to Section 3 (p. 35)",
+          "similarity": 0.6769084123482261
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Access to financial services (p. 28)",
+          "similarity": 0.676054120063801
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Provision of information/disclosure (p. 29)",
+          "similarity": 0.6678236923008025
+        },
+        {
+          "document_id": "doc-11-dp7-digitalisation-and-consumer-protection-code",
+          "locator": "Code requirements regarding Access (p. 40)",
+          "similarity": 0.6667007605133186
+        }
+      ],
+      "hit_similarity": 0.8593519926071411
+    },
+    {
+      "id": "q10",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-12-dp8-outsourcing-findings-and-issues",
+          "locator": "3.2 Services most likely to be outsourced (p. 15)",
+          "similarity": 0.7771455315178054
+        },
+        {
+          "document_id": "doc-12-dp8-outsourcing-findings-and-issues",
+          "locator": "2. Cross Sector Survey of Regulated Firms’ Outsourcing Activity. (p. 7)",
+          "similarity": 0.7711017217929014
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Chapter 1: Introduction (p. 12)",
+          "similarity": 0.7412169267198234
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "The Irish-resident funds sector also intermediates funding to the (p. 11)",
+          "similarity": 0.7215719886846569
+        },
+        {
+          "document_id": "doc-12-dp8-outsourcing-findings-and-issues",
+          "locator": "Conclusions (p. 55)",
+          "similarity": 0.719775362001413
+        },
+        {
+          "document_id": "doc-12-dp8-outsourcing-findings-and-issues",
+          "locator": "Purpose (p. 5)",
+          "similarity": 0.7172914361146778
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "average across the sector (p. 30)",
+          "similarity": 0.713956696764225
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "global financial system, supporting the funding of financial (p. 11)",
+          "similarity": 0.7132094460836628
+        },
+        {
+          "document_id": "doc-12-dp8-outsourcing-findings-and-issues",
+          "locator": "Background (p. 6)",
+          "similarity": 0.7114281838282864
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "6. Tokenisation in Funds (p. 25)",
+          "similarity": 0.7099114021738189
+        }
+      ],
+      "hit_similarity": 0.7771455315178054
+    },
+    {
+      "id": "q11",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Efficiency (p. 9)",
+          "similarity": 0.7709971902954831
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Tokenisation Infrastructure (p. 21)",
+          "similarity": 0.7264729088719502
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Bank Money (p. 40)",
+          "similarity": 0.7085616677081173
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Interoperability and Standardisation (p. 14)",
+          "similarity": 0.7057585995854965
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "environment (p. 33)",
+          "similarity": 0.7035633181875456
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "settlement (p. 41)",
+          "similarity": 0.6966053455057247
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Operational Complexity and Resilience (p. 49)",
+          "similarity": 0.6929221819728755
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Operational Resilience and Scalability (p. 16)",
+          "similarity": 0.68464453474889
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "DLT, Tokenisation & the SIU (p. 20)",
+          "similarity": 0.6769825843824171
+        },
+        {
+          "document_id": "doc-14-dp12-dlt-tokenisation-financial-services",
+          "locator": "Next Steps (p. 6)",
+          "similarity": 0.6763424058440166
+        }
+      ],
+      "hit_similarity": 0.7709971902954831
+    },
+    {
+      "id": "q12",
+      "phrasing": "paraphrase",
+      "category": "single_passage",
+      "hit_rank": 4,
+      "retrieved": [
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.26",
+          "similarity": 0.7065174090462012
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.44",
+          "similarity": 0.7062855715070153
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.36",
+          "similarity": 0.7062314327817414
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.29",
+          "similarity": 0.6982223059998821
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.34",
+          "similarity": 0.6962112188339283
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Funding & Staffing of Regulation (p. 52)",
+          "similarity": 0.6912560462951709
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.51",
+          "similarity": 0.6905992073892142
+        },
+        {
+          "document_id": "doc-01-cp01-funding-of-ifsra",
+          "locator": "3.8",
+          "similarity": 0.6900607964450836
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "10.2",
+          "similarity": 0.688280902896035
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "3.34",
+          "similarity": 0.6872898413979636
+        }
+      ],
+      "hit_similarity": 0.6982223059998821
+    },
+    {
+      "id": "q13",
+      "phrasing": "lexical",
+      "category": "single_passage",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "LTV at origination (p. 12)",
+          "similarity": 0.802500414624782
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "6 Conclusion (p. 35)",
+          "similarity": 0.752042942540634
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "Loan-to Income, Loan terms and debt service ratios (p. 18)",
+          "similarity": 0.7446685059269821
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "Abstract (p. 2)",
+          "similarity": 0.7301318863073557
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "countries that did not experience a property boom-and-bust (p. 14)",
+          "similarity": 0.719527299446415
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "HMR borrower ages and incomes (p. 24)",
+          "similarity": 0.7125582996634472
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "3 Credit Standards for Residential Real Estate (RRE) (p. 12)",
+          "similarity": 0.704588875858321
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "(4) (p. 33)",
+          "similarity": 0.7009050219442009
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "Nontechnical Summary (p. 3)",
+          "similarity": 0.6964422075880234
+        },
+        {
+          "document_id": "doc-20-rtp-12rt18-pockets-of-risk-european-housing",
+          "locator": "Homeownership across countries (p. 23)",
+          "similarity": 0.6947131181996872
+        }
+      ],
+      "hit_similarity": 0.802500414624782
+    },
+    {
+      "id": "q14",
+      "phrasing": "lexical",
+      "category": "multi_locator",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "There are two main underlying potential sources of vulnerabilities (p. 18)",
+          "similarity": 0.8098095512844202
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "complements to, or even substitutes for, measures targeted at (p. 46)",
+          "similarity": 0.7700788330843846
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "The source of systemic risk and underlying economic (p. 2)",
+          "similarity": 0.7631886679710481
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "key factor in the application of other measures to reduce (p. 46)",
+          "similarity": 0.7454189809907209
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "interconnectedness of the funds sector with the real economy or (p. 20)",
+          "similarity": 0.7399207615570291
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "the real economy, particularly in times of market stress. (p. 5)",
+          "similarity": 0.7371359060474136
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "Policy tools targeting interconnectedness would differ (p. 44)",
+          "similarity": 0.7326282823735454
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "at the fund level, they have not been sufficient to reduce the (p. 29)",
+          "similarity": 0.7298504444645512
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "The funds sector is diverse, and not all cohorts display the same (p. 35)",
+          "similarity": 0.7276159687271253
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "exist in the intermediation of financing by the investment (p. 14)",
+          "similarity": 0.7254257424397057
+        }
+      ],
+      "hit_similarity": 0.8098095512844202
+    },
+    {
+      "id": "q15",
+      "phrasing": "paraphrase",
+      "category": "multi_locator",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "Soft Data (p. 4)",
+          "similarity": 0.7383052018739665
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "B. Unemployment Rate during COVID-19 Pandemic and 2008 Crisis (p. 5)",
+          "similarity": 0.7039440827136435
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "Hard Data (p. 5)",
+          "similarity": 0.6996700881731838
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "D. Manufacturing PMI (p. 4)",
+          "similarity": 0.6987444133689559
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "1. Introduction (p. 2)",
+          "similarity": 0.6789944418349216
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "Measuring Economic Activity in Real Time during COVID-19 (p. 2)",
+          "similarity": 0.6687059206822471
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Risk Landscape (p. 31)",
+          "similarity": 0.6685485848256654
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "Figure 7: BCI Estimate of MFDD for Q1 2020 5. Conclusion (p. 10)",
+          "similarity": 0.668452005815441
+        },
+        {
+          "document_id": "doc-15-economic-letter-vol2020no7-covid19-activity",
+          "locator": "Figure 3: Overview of additional hard data (p. 6)",
+          "similarity": 0.6681555313103766
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "COVID-19 driven stress of March 2020 (p. 24)",
+          "similarity": 0.6584510606989302
+        }
+      ],
+      "hit_similarity": 0.7383052018739665
+    },
+    {
+      "id": "q16",
+      "phrasing": "paraphrase",
+      "category": "multi_locator",
+      "hit_rank": 3,
+      "retrieved": [
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Increased excess CT receipts have coincided with rising intellectual property imports (p. 18)",
+          "similarity": 0.7807866204253818
+        },
+        {
+          "document_id": "doc-17-fsr-2026-i-financial-stability-review",
+          "locator": "Domestic risk assessment (p. 17)",
+          "similarity": 0.779175172374416
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "CT is increasingly dominating the revenue base (p. 15)",
+          "similarity": 0.7427943519371029
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Box A: Risks related to US Worldwide Taxation Box A: Risks related to US Worldwide Taxation By Radek Sauer (p. 17)",
+          "similarity": 0.7399735450744629
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Financial Stability Assessment and Analysis (p. 20)",
+          "similarity": 0.7372056119670487
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Response of the Irish Economy to Higher US Worldwide Taxation (p. 19)",
+          "similarity": 0.7347062582828545
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Exceptional CT growth has significantly changed the tax composition in Ireland, compared to the euro area (p. 16)",
+          "similarity": 0.7221758779373239
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Recent revenue developments (p. 13)",
+          "similarity": 0.7168863742366053
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "Principles of an effective fiscal anchor (p. 39)",
+          "similarity": 0.7167833705882327
+        },
+        {
+          "document_id": "doc-16-qb-signed-article-fiscal-risks-medium-term",
+          "locator": "1. Introduction (p. 6)",
+          "similarity": 0.7144068224450734
+        }
+      ],
+      "hit_similarity": 0.7427943519371029
+    },
+    {
+      "id": "q17",
+      "phrasing": "lexical",
+      "category": "supersession",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "7.1",
+          "similarity": 0.8813645455781454
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "REBATES AND CLAIMS PROCESSING (p. 63)",
+          "similarity": 0.8529076821584913
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "4.52",
+          "similarity": 0.8363954977623013
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "8.11",
+          "similarity": 0.8147238117785736
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "7.17",
+          "similarity": 0.7987495542690645
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "7.4",
+          "similarity": 0.7966859592913687
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "10.9",
+          "similarity": 0.7824852725881069
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "HANDLING COMPLAINTS (p. 77)",
+          "similarity": 0.7753436444551476
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "7.5",
+          "similarity": 0.7751724063939079
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "4.4",
+          "similarity": 0.7702912502960129
+        }
+      ],
+      "hit_similarity": 0.8813645455781454
+    },
+    {
+      "id": "q18",
+      "phrasing": "paraphrase",
+      "category": "supersession",
+      "hit_rank": 1,
+      "retrieved": [
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "3.32",
+          "similarity": 0.6523551577675152
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Retail Banking Review Recommendation (p. 75)",
+          "similarity": 0.6501411616633984
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "3.55",
+          "similarity": 0.6357016997692988
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Provision of Information to Enhance Internal Switching (p. 45)",
+          "similarity": 0.6351221175601017
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "UNSOLICITED CONTACT (COLDCALLING) (p. 35)",
+          "similarity": 0.6326519129223916
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.27",
+          "similarity": 0.630646103140025
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "9.35",
+          "similarity": 0.6292094742309465
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "3.34",
+          "similarity": 0.629036494802412
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "Warning: By switching to an alternative rate, the tracker rate (p. 46)",
+          "similarity": 0.6275679539022628
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "3.37",
+          "similarity": 0.6255923955926468
+        }
+      ],
+      "hit_similarity": 0.6523551577675152
+    },
+    {
+      "id": "q19",
+      "phrasing": "lexical",
+      "category": "unanswerable",
+      "hit_rank": null,
+      "retrieved": [
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Deposit Guarantee Scheme and Insurance Compensation Fund (p. 23)",
+          "similarity": 0.7267299077889509
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Note 30: Other Liabilities (p. 159)",
+          "similarity": 0.7023726009919925
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Monetary Policy Operations in Euro (p. 155)",
+          "similarity": 0.6953163899010213
+        },
+        {
+          "document_id": "doc-13-dp11-macroprudential-policy-investment-funds",
+          "locator": "The Central Bank has recent experience in implementing leverage (p. 43)",
+          "similarity": 0.6905803105753966
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Note 23: Other Liabilities to Euro Area Credit Institutions in Euro (p. 155)",
+          "similarity": 0.6796123015071786
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "16,552 (p. 127)",
+          "similarity": 0.6760982107246092
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Profit and Loss – Key Movements (p. 79)",
+          "similarity": 0.6737693943450181
+        },
+        {
+          "document_id": "doc-19-rtp-07rt19-money-market-funds-unconventional-policy",
+          "locator": "L (p. 14)",
+          "similarity": 0.66845494588688
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Unmatured Contracts in Foreign Exchange (p. 172)",
+          "similarity": 0.6605587191555216
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Eurosystem Monetary Policy Decisions (p. 18)",
+          "similarity": 0.6597210605533718
+        }
+      ],
+      "top1_similarity": 0.7267299077889509
+    },
+    {
+      "id": "q20",
+      "phrasing": "paraphrase",
+      "category": "unanswerable",
+      "hit_rank": null,
+      "retrieved": [
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "DO YOU NEED A PRSA? (p. 89)",
+          "similarity": 0.7045746195158381
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "5.2",
+          "similarity": 0.6651168464229029
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "BUYER BEWARE – WHAT TO LOOK OUT FOR (p. 90)",
+          "similarity": 0.6553622288894644
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "(f) Retirement Benefits (p. 119)",
+          "similarity": 0.6428305740907964
+        },
+        {
+          "document_id": "doc-09-cp158-consumer-protection-code",
+          "locator": "Insurance Switching (p. 72)",
+          "similarity": 0.6192301015439976
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "5.26",
+          "similarity": 0.6179386561495129
+        },
+        {
+          "document_id": "doc-04-cp54-second-consultation-consumer-protection-code",
+          "locator": "4.71",
+          "similarity": 0.616616753247963
+        },
+        {
+          "document_id": "doc-03-cp47-review-of-consumer-protection-code",
+          "locator": "WHAT TYPE OF PRSA IS BEST FOR YOU? (p. 90)",
+          "similarity": 0.6163503392682458
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "Mary-Elizabeth (p. 136)",
+          "similarity": 0.613177578393548
+        },
+        {
+          "document_id": "doc-18-annual-report-2025-performance-statement",
+          "locator": "17,871 (p. 156)",
+          "similarity": 0.61066001470626
+        }
+      ],
+      "top1_similarity": 0.7045746195158381
+    }
+  ]
+}

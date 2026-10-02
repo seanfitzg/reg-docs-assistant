@@ -16,7 +16,10 @@ def find_problems(dataset: dict, active_chunks: list[dict]) -> list[str]:
     # tuples gives O(1) membership checks below, like a HashSet<(string,
     # string)> in C# -- tuples compare by value, so ("a", "1.1") == ("a",
     # "1.1") even when they're different objects.
-    existing = {(c["document_id"], c["locator"]) for c in active_chunks}
+    existing = {
+        (c["document_id"], c["locator"])
+        for c in active_chunks
+    }
 
     seen_ids = set()
     for case in dataset["cases"]:

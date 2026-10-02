@@ -21,7 +21,11 @@ def test_match_is_case_insensitive_and_returns_document_and_locator():
 
     # A list comprehension -- the list equivalent of the set comprehension
     # in test_check_dataset.py, like matches.Select(m => ...).ToList().
-    assert [(m.document_id, m.locator) for m in matches] == [("doc-a", "3.12")]
+    found = [
+        (m.document_id, m.locator)
+        for m in matches
+    ]
+    assert found == [("doc-a", "3.12")]
 
 
 def test_every_term_must_appear_but_not_necessarily_adjacent():
@@ -30,7 +34,11 @@ def test_every_term_must_appear_but_not_necessarily_adjacent():
     # extraction, which an exact-phrase match would miss.
     matches = search(_chunks(), "comprehensive consumer framework")
 
-    assert [(m.document_id, m.locator) for m in matches] == [("doc-a", "1.1")]
+    found = [
+        (m.document_id, m.locator)
+        for m in matches
+    ]
+    assert found == [("doc-a", "1.1")]
 
 
 def test_inactive_generation_chunks_are_never_returned():
@@ -48,7 +56,11 @@ def test_document_filter_restricts_results_to_one_document():
 
     matches = search(_chunks(), "regulated entity", document_id="doc-b")
 
-    assert [(m.document_id, m.locator) for m in matches] == [("doc-b", "Introduction (p. 3)")]
+    found = [
+        (m.document_id, m.locator)
+        for m in matches
+    ]
+    assert found == [("doc-b", "Introduction (p. 3)")]
 
 
 def test_snippet_shows_the_match_with_whitespace_collapsed():

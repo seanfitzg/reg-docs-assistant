@@ -71,13 +71,20 @@ class OllamaEmbeddingClient:
         return list(response["embeddings"][0])
 
 
-def _vector_literal(vector: list[float]) -> str:
+def vector_literal(vector: list[float]) -> str:
     # pgvector accepts a vector as text in the form '[0.1,0.2,...]', which
-    # Postgres casts to the vector type on insert. Sending it as that string
-    # avoids needing pgvector's own Python adapter package for one column.
+    # Postgres casts to the vector type on insert (or, with an explicit
+    # ::vector cast, anywhere in a query -- eval/run_eval.py sends its query
+    # vectors this way too, which is why this isn't underscore-private).
+    # Sending it as that string avoids needing pgvector's own Python adapter
+    # package for one column.
     # str(float) gives the shortest text that round-trips the float exactly,
     # so no precision is lost in the conversion.
-    return "[" + ",".join(str(value) for value in vector) + "]"
+    values = ",".join(
+        str(value)
+        for value in vector
+    )
+    return "[" + values + "]"
 
 
 def embed_chunks(db_url: str, client: EmbeddingClient) -> None:
@@ -138,7 +145,7 @@ def embed_chunks(db_url: str, client: EmbeddingClient) -> None:
                         {
                             "chunk_id": chunk_id,
                             "embedding_model": EMBEDDING_MODEL,
-                            "embedding": _vector_literal(vector),
+                            "embedding": vector_literal(vector),
                         }
                     ],
                     conflict_columns=["chunk_id", "embedding_model"],

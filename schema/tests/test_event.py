@@ -42,7 +42,10 @@ def test_full_run_event_has_all_four_steps_in_order():
     # steps.Select(s => s["step_type"]).ToList(). It builds a new list by
     # evaluating step["step_type"] once per item in event["steps"], in
     # order, with no separate loop statement needed.
-    step_types = [step["step_type"] for step in event["steps"]]
+    step_types = [
+        step["step_type"]
+        for step in event["steps"]
+    ]
 
     # Comparing two Python lists with == checks every element in order —
     # value/structural equality, like C#'s Enumerable.SequenceEqual, not
@@ -99,7 +102,11 @@ def test_halted_at_classify_has_only_classify_step():
     event = load_json(EVENT_FIXTURES / "valid-halted-at-classify.json")
 
     assert "possible_prompt_injection" in event["flags"]
-    assert [step["step_type"] for step in event["steps"]] == ["classify"]
+    step_types = [
+        step["step_type"]
+        for step in event["steps"]
+    ]
+    assert step_types == ["classify"]
 
 
 def test_halted_at_retrieve_event_passes_validation():
@@ -113,7 +120,11 @@ def test_halted_at_retrieve_has_only_classify_and_retrieve_steps():
     event = load_json(EVENT_FIXTURES / "valid-halted-at-retrieve.json")
 
     assert "no_chunks_retrieved" in event["flags"]
-    assert [step["step_type"] for step in event["steps"]] == ["classify", "retrieve"]
+    step_types = [
+        step["step_type"]
+        for step in event["steps"]
+    ]
+    assert step_types == ["classify", "retrieve"]
 
 
 def test_no_chunks_retrieved_requires_the_retrieve_step_too():
