@@ -109,13 +109,15 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     # 0 -- chunk_id()'s zero-padded sequence number reads more naturally
     # starting at 1 (chunk-001) than 0 (chunk-000).
     for sequence_number, raw_chunk in enumerate(raw_chunks, start=1):
-        chunks.append({
-            "id": chunk_id(this_generation_id, sequence_number),
-            "document_id": document_id,
-            "chunking_generation_id": this_generation_id,
-            "locator": raw_chunk["locator"],
-            "text": raw_chunk["text"],
-        })
+        chunks.append(
+            {
+                "id": chunk_id(this_generation_id, sequence_number),
+                "document_id": document_id,
+                "chunking_generation_id": this_generation_id,
+                "locator": raw_chunk["locator"],
+                "text": raw_chunk["text"],
+            }
+        )
 
     document = {
         "id": document_id,
@@ -138,7 +140,9 @@ def build_document_and_chunks(entry: dict, corpus_dir: Path) -> tuple[dict, list
     return document, chunks
 
 
-def run_pipeline(manifest_path: Path, corpus_dir: Path, output_dir: Path) -> list[tuple[dict, list[dict]]]:
+def run_pipeline(
+    manifest_path: Path, corpus_dir: Path, output_dir: Path
+) -> list[tuple[dict, list[dict]]]:
     entries = load_manifest(manifest_path)
     document_schema = load_schema("document.schema.json")
     chunk_schema = load_schema("chunk.schema.json")
@@ -213,6 +217,8 @@ def run_pipeline(manifest_path: Path, corpus_dir: Path, output_dir: Path) -> lis
             # logger.error(..., exc_info=True) records the full traceback
             # alongside the message -- visible in logs for diagnosis --
             # without re-raising, which is what would halt the batch here.
-            logger.error("Skipping %s: %s", entry.get("filename", "<unknown>"), error, exc_info=True)
+            logger.error(
+                "Skipping %s: %s", entry.get("filename", "<unknown>"), error, exc_info=True
+            )
 
     return results

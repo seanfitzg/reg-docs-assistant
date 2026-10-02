@@ -51,11 +51,7 @@ def _find_boilerplate_lines(pages_of_lines: list[list[str]]) -> set[str]:
     # repeats across more pages than it actually does.
     line_counts: Counter[str] = Counter()
     for lines in pages_of_lines:
-        distinct_non_blank_lines = {
-            line
-            for line in lines
-            if line
-        }
+        distinct_non_blank_lines = {line for line in lines if line}
         line_counts.update(distinct_non_blank_lines)
 
     number_of_pages = len(pages_of_lines)
@@ -73,11 +69,7 @@ def _find_boilerplate_lines(pages_of_lines: list[list[str]]) -> set[str]:
     # essentially never repeats itself verbatim three separate times,
     # anywhere in a document, regardless of how long that document is.
     header_footer_threshold = min(3, number_of_pages)
-    return {
-        line
-        for line, count in line_counts.items()
-        if count >= header_footer_threshold
-    }
+    return {line for line, count in line_counts.items() if count >= header_footer_threshold}
 
 
 def _keep_line(normalized_text: str, boilerplate_lines: set[str]) -> bool:
@@ -105,23 +97,13 @@ def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
     # (whitespace-trimmed) so that e.g. "CP 54 " and "CP 54" still count as
     # the same repeated line, without permanently discarding the original
     # spacing from lines we decide to keep.
-    normalized_pages = [
-        [
-            line.strip()
-            for line in page.split("\n")
-        ]
-        for page in pages
-    ]
+    normalized_pages = [[line.strip() for line in page.split("\n")] for page in pages]
 
     boilerplate_lines = _find_boilerplate_lines(normalized_pages)
 
     cleaned_pages = []
     for lines in normalized_pages:
-        kept_lines = [
-            line
-            for line in lines
-            if _keep_line(line, boilerplate_lines)
-        ]
+        kept_lines = [line for line in lines if _keep_line(line, boilerplate_lines)]
         cleaned_pages.append("\n".join(kept_lines))
 
     return cleaned_pages
@@ -137,13 +119,7 @@ def strip_headers_footers_and_page_numbers_from_layout(
     # dict lookup by key, the same as C#'s dict["key"] indexer; it's safe
     # here (no KeyError risk) because every dict in this shape always has
     # both keys, guaranteed by whichever function built it.
-    normalized_pages = [
-        [
-            line["text"].strip()
-            for line in page_lines
-        ]
-        for page_lines in pages
-    ]
+    normalized_pages = [[line["text"].strip() for line in page_lines] for page_lines in pages]
 
     boilerplate_lines = _find_boilerplate_lines(normalized_pages)
 

@@ -62,11 +62,7 @@ def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stri
     # expression rather than a separate loop with an if/else inside it. The
     # parentheses let the ternary itself span three lines.
     pages = [
-        (
-            "Running Header\nReal page content."
-            if i < 5
-            else f"Page {i} unique content."
-        )
+        ("Running Header\nReal page content." if i < 5 else f"Page {i} unique content.")
         for i in range(20)
     ]
 
@@ -144,6 +140,7 @@ def test_a_number_that_is_part_of_real_text_is_kept():
 # so this variant works on the structured list[list[dict]] shape instead of
 # plain per-page strings, but applies the exact same boilerplate rules.
 
+
 def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
     pages = [
         [
@@ -167,10 +164,7 @@ def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
 
     # The repeated header line is gone from every page...
     for page_lines in cleaned:
-        assert all(
-            line["text"] != "Central Bank of Ireland"
-            for line in page_lines
-        )
+        assert all(line["text"] != "Central Bank of Ireland" for line in page_lines)
 
     # ...but the real lines, and whether each one is a heading, survive.
     assert cleaned[0] == [
@@ -184,7 +178,10 @@ def test_layout_variant_strips_page_number_lines():
     # both pages would itself trigger the header/footer rule and confuse
     # what this test is actually checking.
     pages = [
-        [{"text": "Page 5", "is_heading": False}, {"text": "Content on five.", "is_heading": False}],
+        [
+            {"text": "Page 5", "is_heading": False},
+            {"text": "Content on five.", "is_heading": False},
+        ],
         [{"text": "Page 6", "is_heading": False}, {"text": "Content on six.", "is_heading": False}],
     ]
 
@@ -205,6 +202,7 @@ def test_layout_variant_strips_page_number_lines():
 # hardcoded constants, so most fixtures here deliberately use invented
 # headings/patterns to prove the functions aren't secretly still tied to
 # one real document.
+
 
 def test_strip_section_between_headings_removes_the_span_between_markers():
     pages = [
@@ -244,7 +242,10 @@ def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
     # boundaries, not just work within a single page.
     pages = [
         [{"text": "Start", "is_heading": True}, {"text": "Page one.", "is_heading": False}],
-        [{"text": "Middle Heading", "is_heading": True}, {"text": "Page two.", "is_heading": False}],
+        [
+            {"text": "Middle Heading", "is_heading": True},
+            {"text": "Page two.", "is_heading": False},
+        ],
         [{"text": "Page three, no heading here.", "is_heading": False}],
         [{"text": "End", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
     ]
@@ -290,7 +291,10 @@ def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span
 
 def test_strip_section_between_headings_with_no_matching_markers_is_unaffected():
     pages = [
-        [{"text": "Purpose", "is_heading": True}, {"text": "Ordinary content.", "is_heading": False}],
+        [
+            {"text": "Purpose", "is_heading": True},
+            {"text": "Ordinary content.", "is_heading": False},
+        ],
     ]
 
     cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
@@ -406,7 +410,9 @@ def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_type():
     # unrecognized chunking_strategy already raises in pipeline.py), not
     # silently do nothing.
     with pytest.raises(KeyError):
-        apply_cleanup_flags([[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}])
+        apply_cleanup_flags(
+            [[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}]
+        )
 
 
 def test_apply_cleanup_flags_raises_on_a_flag_with_a_mismatched_parameter_name():

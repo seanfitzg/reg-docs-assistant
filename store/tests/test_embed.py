@@ -51,13 +51,8 @@ def _load_fixture(tmp_path):
 
 def _embedded_chunk_ids() -> list[str]:
     with psycopg.connect(DB_URL) as conn:
-        rows = conn.execute(
-            "SELECT chunk_id FROM chunk_embeddings ORDER BY chunk_id"
-        ).fetchall()
-    return [
-        row[0]
-        for row in rows
-    ]
+        rows = conn.execute("SELECT chunk_id FROM chunk_embeddings ORDER BY chunk_id").fetchall()
+    return [row[0] for row in rows]
 
 
 @requires_postgres
@@ -88,10 +83,7 @@ def test_text_is_prefixed_for_the_model_but_stored_raw(tmp_path, clean_db):
     embed_chunks(DB_URL, client)
 
     # The client saw the prefixed text (ADR-0026)...
-    expected_texts = [
-        DOCUMENT_PREFIX + text
-        for text in ACTIVE_CHUNK_TEXTS
-    ]
+    expected_texts = [DOCUMENT_PREFIX + text for text in ACTIVE_CHUNK_TEXTS]
     assert sorted(client.texts) == sorted(expected_texts)
     assert DOCUMENT_PREFIX == "search_document: "
     # ...but chunks.text itself was never modified.
@@ -99,10 +91,7 @@ def test_text_is_prefixed_for_the_model_but_stored_raw(tmp_path, clean_db):
         stored = conn.execute(
             "SELECT text FROM chunks WHERE chunking_generation_id = 'doc-fixture-doc-gen-2' ORDER BY id"
         ).fetchall()
-    stored_texts = [
-        row[0]
-        for row in stored
-    ]
+    stored_texts = [row[0] for row in stored]
     assert stored_texts == ACTIVE_CHUNK_TEXTS
 
 

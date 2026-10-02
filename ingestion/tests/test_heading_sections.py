@@ -26,10 +26,7 @@ def test_splits_on_each_heading():
 
     chunks = chunk(pages)
 
-    locators = [
-        c["locator"]
-        for c in chunks
-    ]
+    locators = [c["locator"] for c in chunks]
     assert locators == ["Purpose (p. 1)", "Background (p. 1)"]
 
 
@@ -51,7 +48,10 @@ def test_chunk_text_is_everything_up_to_the_next_heading():
 
 def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
     pages = [
-        [{"text": "Introduction", "is_heading": True}, {"text": "Intro text.", "is_heading": False}],
+        [
+            {"text": "Introduction", "is_heading": True},
+            {"text": "Intro text.", "is_heading": False},
+        ],
         [{"text": "Findings", "is_heading": True}, {"text": "Findings text.", "is_heading": False}],
     ]
 

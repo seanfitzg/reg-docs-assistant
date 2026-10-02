@@ -64,20 +64,13 @@ requires_fsr = pytest.mark.skipif(
 # means this stays correct even if the corpus directory ever has stray
 # extra PDFs sitting in it that aren't in the manifest.
 requires_full_corpus = pytest.mark.skipif(
-    not all(
-        (CORPUS_DIR / entry["filename"]).exists()
-        for entry in load_manifest(MANIFEST_PATH)
-    ),
+    not all((CORPUS_DIR / entry["filename"]).exists() for entry in load_manifest(MANIFEST_PATH)),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
 
 
 def _entry_for(entries: list[dict], filename: str) -> dict:
-    return next(
-        e
-        for e in entries
-        if e["filename"] == filename
-    )
+    return next(e for e in entries if e["filename"] == filename)
 
 
 def test_load_manifest_reads_all_twenty_entries():
@@ -194,11 +187,7 @@ def test_chunk_locators_are_bare_clause_numbers_not_page_decorated():
     # roughly the same job as C#'s chunks.First(c => c.Locator == "1.8"),
     # but built from two separate, more general pieces (a generator, plus
     # next()) rather than one LINQ method.
-    known_real_clause = next(
-        c
-        for c in chunks
-        if c["locator"] == "1.8"
-    )
+    known_real_clause = next(c for c in chunks if c["locator"] == "1.8")
     assert "(p." not in known_real_clause["locator"]
 
 
@@ -215,6 +204,7 @@ def test_repeated_header_is_stripped_from_every_chunk():
 
 
 # ---- heading_sections: DP8 (issue #6) ----
+
 
 @requires_dp8
 def test_dp8_build_document_and_chunks_produces_schema_valid_output():
@@ -248,11 +238,7 @@ def test_dp8_chunk_locators_pair_a_real_heading_with_a_page_number():
     # (page 5 of the extracted text) -- proving the strategy found a real
     # bold heading, not just any line, and decorated it with a page number
     # (ADR-0015), unlike clause_numbered's bare locators.
-    purpose_chunk = next(
-        c
-        for c in chunks
-        if c["locator"].startswith("Purpose")
-    )
+    purpose_chunk = next(c for c in chunks if c["locator"].startswith("Purpose"))
     assert purpose_chunk["locator"] == "Purpose (p. 5)"
 
 
@@ -277,13 +263,11 @@ def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
         # the "Page "-prefixed page-number rule (added for this ticket)
         # actually fires on this real document, not just the synthetic test
         # in test_clean.py.
-        assert not any(
-            line.startswith("Page ") and line[5:].isdigit()
-            for line in chunk_lines
-        )
+        assert not any(line.startswith("Page ") and line[5:].isdigit() for line in chunk_lines)
 
 
 # ---- academic_sections: RTP07/19 (issue #7) ----
+
 
 @requires_rtp
 def test_rtp_build_document_and_chunks_produces_schema_valid_output():
@@ -316,11 +300,7 @@ def test_rtp_chunk_locators_pair_a_real_heading_with_a_page_number():
     # "Introduction" is a real, single-line heading confirmed by direct
     # inspection of the PDF (page 4) -- proving the strategy found a real
     # bold heading and decorated it with a page number (ADR-0015).
-    introduction_chunk = next(
-        c
-        for c in chunks
-        if c["locator"] == "Introduction (p. 4)"
-    )
+    introduction_chunk = next(c for c in chunks if c["locator"] == "Introduction (p. 4)")
     assert introduction_chunk["text"]
 
 
@@ -334,11 +314,7 @@ def test_rtp_a_heading_wrapped_across_two_bold_lines_is_joined_in_the_real_pdf()
     # "Regressions") -- confirming academic_sections' join behaviour
     # (module-level docstring) fires correctly against the real document,
     # not just the synthetic fixture in test_academic_sections.py.
-    appendix_chunk = next(
-        c
-        for c in chunks
-        if c["locator"].startswith("A Sources")
-    )
+    appendix_chunk = next(c for c in chunks if c["locator"].startswith("A Sources"))
     assert appendix_chunk["locator"] == (
         "A Sources and Construction of Variables Used in Panel Regressions (p. 26)"
     )
@@ -360,11 +336,7 @@ def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(_entry_for(entries, RTP_FILENAME), CORPUS_DIR)
 
-    abstract_chunk = next(
-        c
-        for c in chunks
-        if c["locator"] == "Abstract (p. 2)"
-    )
+    abstract_chunk = next(c for c in chunks if c["locator"] == "Abstract (p. 2)")
     normalized_text = unicodedata.normalize("NFKC", abstract_chunk["text"])
     assert "certificates of deposits" in normalized_text
 
@@ -414,14 +386,12 @@ def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(_entry_for(entries, DP7_FILENAME), CORPUS_DIR)
 
-    assert any(
-        "Annex 2" in one_chunk["text"]
-        for one_chunk in chunks
-    )
+    assert any("Annex 2" in one_chunk["text"] for one_chunk in chunks)
 
 
 # ---- manifest-flagged cleanup: FSR "duplicate_section_removal" (ADR-0016,
 # ---- issue #9, parameterised in issue #13) ----
+
 
 @requires_fsr
 def test_fsr_build_document_and_chunks_produces_schema_valid_output():
@@ -445,18 +415,9 @@ def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
     # PDF -- confirmed by direct inspection. If the duplicate_section_removal
     # flag is working (this document's manifest entry sets its start_heading
     # to "Réamhrá"), neither should survive as a locator of its own.
-    locators = [
-        one_chunk["locator"]
-        for one_chunk in chunks
-    ]
-    assert not any(
-        locator.startswith("Réamhrá")
-        for locator in locators
-    )
-    assert not any(
-        locator.startswith("Forbhreathnú")
-        for locator in locators
-    )
+    locators = [one_chunk["locator"] for one_chunk in chunks]
+    assert not any(locator.startswith("Réamhrá") for locator in locators)
+    assert not any(locator.startswith("Forbhreathnú") for locator in locators)
 
 
 @requires_fsr
@@ -468,18 +429,9 @@ def test_fsr_english_content_either_side_of_the_irish_section_survives():
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(_entry_for(entries, FSR_FILENAME), CORPUS_DIR)
 
-    locators = [
-        one_chunk["locator"]
-        for one_chunk in chunks
-    ]
-    assert any(
-        locator.startswith("Preface")
-        for locator in locators
-    )
-    assert any(
-        locator.startswith("Global risk assessment")
-        for locator in locators
-    )
+    locators = [one_chunk["locator"] for one_chunk in chunks]
+    assert any(locator.startswith("Preface") for locator in locators)
+    assert any(locator.startswith("Global risk assessment") for locator in locators)
 
 
 # ---- full 20-document corpus (issue #10) ----
@@ -490,6 +442,7 @@ def test_fsr_english_content_either_side_of_the_irish_section_survives():
 # (the acceptance criteria's "no document silently fails or is skipped
 # without a surfaced reason"), and the two supersedes links resolve
 # correctly end to end.
+
 
 @requires_full_corpus
 def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path):
@@ -550,7 +503,9 @@ def test_run_pipeline_writes_the_supersedes_link_for_cp54(tmp_path):
 
     run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
 
-    cp54_path = output_dir / "documents" / "doc-04-cp54-second-consultation-consumer-protection-code.json"
+    cp54_path = (
+        output_dir / "documents" / "doc-04-cp54-second-consultation-consumer-protection-code.json"
+    )
     cp54_document = json.loads(cp54_path.read_text(encoding="utf-8"))
     assert cp54_document["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
 

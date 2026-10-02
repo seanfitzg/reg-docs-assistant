@@ -24,10 +24,7 @@ def test_splits_on_each_heading():
 
     chunks = chunk(pages)
 
-    locators = [
-        c["locator"]
-        for c in chunks
-    ]
+    locators = [c["locator"] for c in chunks]
     assert locators == ["Introduction (p. 1)", "Literature Review (p. 1)"]
 
 
@@ -49,7 +46,10 @@ def test_chunk_text_is_everything_up_to_the_next_heading():
 
 def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
     pages = [
-        [{"text": "Introduction", "is_heading": True}, {"text": "Intro text.", "is_heading": False}],
+        [
+            {"text": "Introduction", "is_heading": True},
+            {"text": "Intro text.", "is_heading": False},
+        ],
         [{"text": "Results", "is_heading": True}, {"text": "Results text.", "is_heading": False}],
     ]
 
@@ -114,7 +114,10 @@ def test_a_heading_that_wraps_across_two_bold_lines_is_joined_into_one_locator()
     chunks = chunk(pages)
 
     assert len(chunks) == 1
-    assert chunks[0]["locator"] == "A Sources and Construction of Variables Used in Panel Regressions (p. 1)"
+    assert (
+        chunks[0]["locator"]
+        == "A Sources and Construction of Variables Used in Panel Regressions (p. 1)"
+    )
     assert chunks[0]["text"] == "For the policy rates we use a 3-month rate."
 
 

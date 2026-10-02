@@ -30,10 +30,7 @@ def test_splits_on_each_clause_number():
 
     chunks = chunk(text)
 
-    locators = [
-        c["locator"]
-        for c in chunks
-    ]
+    locators = [c["locator"] for c in chunks]
     assert locators == ["1.1", "1.2"]
 
 
@@ -65,7 +62,10 @@ def test_clause_number_directly_followed_by_body_text_on_the_same_line():
     chunks = chunk(text)
 
     assert chunks[0]["locator"] == "1.11"
-    assert chunks[0]["text"] == "In relation to other matters raised, we have reached a final position."
+    assert (
+        chunks[0]["text"]
+        == "In relation to other matters raised, we have reached a final position."
+    )
 
 
 def test_two_digit_second_component_is_not_mistaken_for_two_clauses():
@@ -75,17 +75,16 @@ def test_two_digit_second_component_is_not_mistaken_for_two_clauses():
 
     chunks = chunk(text)
 
-    locators = [
-        c["locator"]
-        for c in chunks
-    ]
+    locators = [c["locator"] for c in chunks]
     assert locators == ["1.1", "1.10"]
 
 
 def test_text_before_the_first_clause_number_is_discarded():
     # Front matter/preamble (cover page, table of contents) doesn't belong
     # to any clause and isn't a citable unit -- it's simply not chunked.
-    text = "Second Consultation on Review of Consumer Protection Code\n1.1\nPurpose\nThe purpose is X."
+    text = (
+        "Second Consultation on Review of Consumer Protection Code\n1.1\nPurpose\nThe purpose is X."
+    )
 
     chunks = chunk(text)
 
@@ -108,11 +107,5 @@ def test_chunk_document_extracts_cleans_and_chunks_the_real_pdf_end_to_end():
     # actually works together against the real corpus, not just in theory.
     chunks = chunk_document(CP54_PDF)
 
-    assert any(
-        c["locator"] == "1.8"
-        for c in chunks
-    )
-    assert all(
-        "Consultation Paper CP 54" not in c["text"]
-        for c in chunks
-    )
+    assert any(c["locator"] == "1.8" for c in chunks)
+    assert all("Consultation Paper CP 54" not in c["text"] for c in chunks)

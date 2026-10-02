@@ -45,10 +45,7 @@ def add(*vectors: list[float]) -> list[float]:
     # Element-wise sum: zip(*vectors) walks the vectors in lockstep, one
     # tuple of same-position values at a time (like LINQ's Zip, but over
     # any number of sequences).
-    return [
-        sum(values)
-        for values in zip(*vectors)
-    ]
+    return [sum(values) for values in zip(*vectors)]
 
 
 # Every Chunk in the fixture store: (chunk id, document, generation,
@@ -118,7 +115,13 @@ def _load_fixture_store():
 
 
 def _case(case_id, question, phrasing, category, gold):
-    case = {"id": case_id, "question": question, "phrasing": phrasing, "category": category, "gold_locators": gold}
+    case = {
+        "id": case_id,
+        "question": question,
+        "phrasing": phrasing,
+        "category": category,
+        "gold_locators": gold,
+    }
     if category != "unanswerable":
         case["answer_quote"] = "fixture quote"
     return case
@@ -128,14 +131,32 @@ DATASET = {
     "dataset_version": 7,
     "cases": [
         # Nearest Chunk is the gold one -> hit at rank 1.
-        _case("q01", "rank one", "lexical", "single_passage", [{"document_id": CLAUSE_DOC, "locator": "1.1"}]),
+        _case(
+            "q01",
+            "rank one",
+            "lexical",
+            "single_passage",
+            [{"document_id": CLAUSE_DOC, "locator": "1.1"}],
+        ),
         # Gold is the third-nearest, and a heading_sections Chunk -> hit at
         # rank 3 (which also proves the query returns each Chunk's own
         # strategy: parsing "Introduction (p. 2)" as a clause would raise).
-        _case("q02", "rank three", "paraphrase", "single_passage", [{"document_id": HEADING_DOC, "locator": "Introduction (p. 2)"}]),
+        _case(
+            "q02",
+            "rank three",
+            "paraphrase",
+            "single_passage",
+            [{"document_id": HEADING_DOC, "locator": "Introduction (p. 2)"}],
+        ),
         # Gold only exists in the inactive generation, and the query points
         # straight at it -> must be a miss, never rank 1.
-        _case("q03", "inactive only", "paraphrase", "multi_locator", [{"document_id": CLAUSE_DOC, "locator": "2.1"}]),
+        _case(
+            "q03",
+            "inactive only",
+            "paraphrase",
+            "multi_locator",
+            [{"document_id": CLAUSE_DOC, "locator": "2.1"}],
+        ),
         # Unanswerable: no rank, but the top-1 similarity is recorded.
         _case("q04", "nothing to find", "lexical", "unanswerable", []),
     ],
@@ -165,21 +186,14 @@ def fixture_run(clean_db):
 def _case_result(report, case_id):
     # next(<generator>) returns the first item the generator produces --
     # here, the first case with this id (like LINQ's First(predicate)).
-    return next(
-        case
-        for case in report["cases"]
-        if case["id"] == case_id
-    )
+    return next(case for case in report["cases"] if case["id"] == case_id)
 
 
 @requires_postgres
 def test_every_question_is_embedded_with_the_query_prefix(fixture_run):
     _, client = fixture_run
     assert QUERY_PREFIX == "search_query: "
-    expected_texts = [
-        QUERY_PREFIX + case["question"]
-        for case in DATASET["cases"]
-    ]
+    expected_texts = [QUERY_PREFIX + case["question"] for case in DATASET["cases"]]
     assert client.texts == expected_texts
 
 
@@ -202,10 +216,7 @@ def test_inactive_generation_chunks_are_never_retrieved(fixture_run):
     missed = _case_result(report, "q03")
     assert missed["hit_rank"] is None
     assert missed["hit_similarity"] is None
-    retrieved_ids = {
-        (chunk["document_id"], chunk["locator"])
-        for chunk in missed["retrieved"]
-    }
+    retrieved_ids = {(chunk["document_id"], chunk["locator"]) for chunk in missed["retrieved"]}
     assert (CLAUSE_DOC, "2.1") not in retrieved_ids
 
 
@@ -283,7 +294,10 @@ def test_a_dataset_with_no_answerable_cases_is_rejected(fixture_run):
 
 def test_write_report_names_the_file_by_timestamp_and_model_and_never_overwrites(tmp_path):
     # No database needed: this only exercises the file-writing half.
-    report_dict = {"created_at": "2026-09-29T10:15:30Z", "config": {"embedding_model": "nomic-embed-text"}}
+    report_dict = {
+        "created_at": "2026-09-29T10:15:30Z",
+        "config": {"embedding_model": "nomic-embed-text"},
+    }
 
     path = write_report(report_dict, tmp_path)
 

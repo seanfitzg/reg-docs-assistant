@@ -44,10 +44,7 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
     """
     # .split() with no argument splits on any run of whitespace and drops
     # empty strings; .lower() makes the comparison case-insensitive.
-    wanted = [
-        t.lower()
-        for t in terms.split()
-    ]
+    wanted = [t.lower() for t in terms.split()]
 
     # Blank terms must be rejected explicitly: all() over an empty sequence
     # is True ("vacuous truth" -- no item failed), so without this every
@@ -73,15 +70,14 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
         # all(...) is True only if every item is truthy -- LINQ's .All().
         # The argument is a generator expression, evaluated lazily and
         # stopping at the first term that's missing.
-        if all(
-            term in lowered
-            for term in wanted
-        ):
+        if all(term in lowered for term in wanted):
             start = lowered.find(wanted[0])
             # Slicing text[a:b] takes characters a up to (not including) b;
             # max(0, ...) stops a negative start wrapping round to the end,
             # since negative indices count from the end in Python.
-            snippet = text[max(0, start - SNIPPET_CONTEXT) : start + len(wanted[0]) + SNIPPET_CONTEXT]
+            snippet = text[
+                max(0, start - SNIPPET_CONTEXT) : start + len(wanted[0]) + SNIPPET_CONTEXT
+            ]
             matches.append(KeywordMatch(chunk["document_id"], chunk["locator"], snippet))
     return matches
 
@@ -97,7 +93,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Find (document_id, locator) pairs by keyword.")
     parser.add_argument("terms", help="words that must all appear in the Chunk text")
     parser.add_argument("--doc", help="only search this document_id")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="ingestion output to search")
+    parser.add_argument(
+        "--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="ingestion output to search"
+    )
     args = parser.parse_args(argv)
 
     # parser.error() prints the usage line plus the message to stderr and
@@ -115,7 +113,10 @@ def main(argv: list[str] | None = None) -> int:
     if not (args.output_dir / "chunks").is_dir():
         # file=sys.stderr sends this line to the error stream rather than
         # stdout -- Console.Error.WriteLine rather than Console.WriteLine.
-        print(f"No ingestion output at {args.output_dir} -- run the ingestion pipeline first.", file=sys.stderr)
+        print(
+            f"No ingestion output at {args.output_dir} -- run the ingestion pipeline first.",
+            file=sys.stderr,
+        )
         return 1
 
     chunks = load_active_chunks(args.output_dir)
@@ -123,10 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     # A mistyped --doc would otherwise just print "0 match(es)", which reads
     # like "not in this Document" -- say plainly that the id doesn't exist.
     # any(...) is LINQ's .Any().
-    document_exists = any(
-        c["document_id"] == args.doc
-        for c in chunks
-    )
+    document_exists = any(c["document_id"] == args.doc for c in chunks)
     if args.doc is not None and not document_exists:
         print(f"No Document with id {args.doc!r} in {args.output_dir}.", file=sys.stderr)
         return 1

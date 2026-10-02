@@ -26,6 +26,7 @@ CHUNK_FIXTURES = SCHEMA_DIR / "fixtures" / "chunk"
 
 # ---- Document schema ----
 
+
 def test_original_document_passes_validation():
     schema = load_json(DOCUMENT_SCHEMA)
     payload = load_json(DOCUMENT_FIXTURES / "valid-original.json")
@@ -96,6 +97,7 @@ def test_document_with_empty_id_fails_validation():
 
 # ---- Chunk schema ----
 
+
 def test_generation_one_chunk_passes_validation():
     schema = load_json(CHUNK_SCHEMA)
     payload = load_json(CHUNK_FIXTURES / "valid-generation-1.json")
@@ -127,6 +129,7 @@ def test_chunk_with_empty_text_fails_validation():
 
 
 # ---- Cross-fixture relationship: active generation among more than one ----
+
 
 def test_document_active_generation_points_at_the_correct_chunk_generation():
     document = load_json(DOCUMENT_FIXTURES / "valid-original.json")

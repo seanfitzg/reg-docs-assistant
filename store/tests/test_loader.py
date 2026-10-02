@@ -150,9 +150,7 @@ def _write_fixture_corpus(base: Path) -> tuple[Path, Path]:
             "text": "Second generation, second chunk.",
         },
     ]
-    (output_dir / "chunks" / f"{document_id}.json").write_text(
-        json.dumps(chunks), encoding="utf-8"
-    )
+    (output_dir / "chunks" / f"{document_id}.json").write_text(json.dumps(chunks), encoding="utf-8")
 
     manifest_path = base / "manifest.json"
     manifest_path.write_text(
@@ -266,9 +264,7 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
 
     with psycopg.connect(DB_URL) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, chunking_strategy FROM chunking_generations ORDER BY id"
-            )
+            cur.execute("SELECT id, chunking_strategy FROM chunking_generations ORDER BY id")
             # Both existing Generations must still show "clause_numbered" --
             # the strategy they were *actually* created with, unaffected by
             # manifest.json's later drift.
@@ -341,7 +337,9 @@ def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
     # JSON's value ever changed -- contradicting supersedes' own status as
     # an immutable fact about a Document (CONTEXT.md), the same guarantee
     # upsert_immutable already gives title/publisher/etc.
-    output_dir, manifest_path = _write_two_document_fixture(tmp_path, second_supersedes="doc-original")
+    output_dir, manifest_path = _write_two_document_fixture(
+        tmp_path, second_supersedes="doc-original"
+    )
     load_store(output_dir, manifest_path, DB_URL)
 
     # Re-run with doc-successor's supersedes changed to point at nothing

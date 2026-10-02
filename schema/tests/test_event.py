@@ -27,6 +27,7 @@ ANSWER_OVERRIDDEN_FIXTURES = SCHEMA_DIR / "fixtures" / "answer-overridden"
 
 # ---- Event schema: full run ----
 
+
 def test_full_run_event_passes_validation():
     schema = load_json(EVENT_SCHEMA)
     payload = load_json(EVENT_FIXTURES / "valid-full-run.json")
@@ -42,10 +43,7 @@ def test_full_run_event_has_all_four_steps_in_order():
     # steps.Select(s => s["step_type"]).ToList(). It builds a new list by
     # evaluating step["step_type"] once per item in event["steps"], in
     # order, with no separate loop statement needed.
-    step_types = [
-        step["step_type"]
-        for step in event["steps"]
-    ]
+    step_types = [step["step_type"] for step in event["steps"]]
 
     # Comparing two Python lists with == checks every element in order —
     # value/structural equality, like C#'s Enumerable.SequenceEqual, not
@@ -71,6 +69,7 @@ def test_retrieve_step_stores_pinned_chunk_text_not_just_id():
 
 # ---- Event schema: annotate-only flag doesn't halt ----
 
+
 def test_full_run_with_annotate_only_flag_passes_validation():
     schema = load_json(EVENT_SCHEMA)
     payload = load_json(EVENT_FIXTURES / "valid-full-run-with-annotate-only-flag.json")
@@ -91,6 +90,7 @@ def test_annotate_only_flag_does_not_reduce_step_count():
 
 # ---- Event schema: halted pipelines ----
 
+
 def test_halted_at_classify_event_passes_validation():
     schema = load_json(EVENT_SCHEMA)
     payload = load_json(EVENT_FIXTURES / "valid-halted-at-classify.json")
@@ -102,10 +102,7 @@ def test_halted_at_classify_has_only_classify_step():
     event = load_json(EVENT_FIXTURES / "valid-halted-at-classify.json")
 
     assert "possible_prompt_injection" in event["flags"]
-    step_types = [
-        step["step_type"]
-        for step in event["steps"]
-    ]
+    step_types = [step["step_type"] for step in event["steps"]]
     assert step_types == ["classify"]
 
 
@@ -120,10 +117,7 @@ def test_halted_at_retrieve_has_only_classify_and_retrieve_steps():
     event = load_json(EVENT_FIXTURES / "valid-halted-at-retrieve.json")
 
     assert "no_chunks_retrieved" in event["flags"]
-    step_types = [
-        step["step_type"]
-        for step in event["steps"]
-    ]
+    step_types = [step["step_type"] for step in event["steps"]]
     assert step_types == ["classify", "retrieve"]
 
 
@@ -140,6 +134,7 @@ def test_no_chunks_retrieved_requires_the_retrieve_step_too():
 
 
 # ---- Event schema: invalid fixtures ----
+
 
 def test_event_missing_steps_without_halting_flag_fails_validation():
     # This is the schema-level enforcement of the halt-vs-full-run rule:
@@ -185,6 +180,7 @@ def test_event_with_scrambled_step_order_fails_validation():
 
 # ---- EventFlagged schema ----
 
+
 def test_event_flagged_passes_validation():
     schema = load_json(EVENT_FLAGGED_SCHEMA)
     payload = load_json(EVENT_FLAGGED_FIXTURES / "valid.json")
@@ -208,6 +204,7 @@ def test_invalid_event_flagged_fails_validation():
 
 
 # ---- AnswerOverridden schema ----
+
 
 def test_answer_overridden_passes_validation():
     schema = load_json(ANSWER_OVERRIDDEN_SCHEMA)

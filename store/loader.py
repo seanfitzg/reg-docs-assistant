@@ -88,8 +88,7 @@ def _read_json_files(directory: Path) -> list[dict[str, Any]]:
     # though it has no effect on correctness since every write below is
     # either an upsert or an idempotent UPDATE.
     return [
-        json.loads(path.read_text(encoding="utf-8"))
-        for path in sorted(directory.glob("*.json"))
+        json.loads(path.read_text(encoding="utf-8")) for path in sorted(directory.glob("*.json"))
     ]
 
 
@@ -179,10 +178,7 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
     strategy_by_document_id = _load_manifest_strategies(manifest_path)
 
     documents = _read_json_files(output_dir / "documents")
-    document_ids = {
-        document["id"]
-        for document in documents
-    }
+    document_ids = {document["id"] for document in documents}
 
     # Each chunks/<doc-id>.json file holds a JSON *array* of Chunk records
     # for one Document (ingestion/README.md) -- _read_json_files parses
@@ -229,18 +225,12 @@ def load_store(output_dir: Path, manifest_path: Path, db_url: str) -> None:
             # membership against a whole Python list in one round trip,
             # the SQL equivalent of C#'s `list.Contains(...)` used as a
             # LINQ `Where` predicate, rather than one query per id.
-            incoming_document_ids = [
-                document["id"]
-                for document in documents
-            ]
+            incoming_document_ids = [document["id"] for document in documents]
             cur.execute(
                 "SELECT id FROM documents WHERE id = ANY(%s)",
                 (incoming_document_ids,),
             )
-            already_loaded_document_ids = {
-                row[0]
-                for row in cur.fetchall()
-            }
+            already_loaded_document_ids = {row[0] for row in cur.fetchall()}
 
             # Phase 1: documents, WITHOUT their two circular-reference
             # fields (supersedes, active_chunking_generation_id). Both can
