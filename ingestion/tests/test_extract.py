@@ -52,7 +52,15 @@ def test_extract_pages_with_headings_flags_bold_lines_as_headings(tmp_path):
 
     assert len(pages) == 1
     lines = pages[0]
-    heading_line = next(line for line in lines if line["text"] == "A Heading")
-    body_line = next(line for line in lines if line["text"] == "Regular body text.")
+    heading_line = next(
+        line
+        for line in lines
+        if line["text"] == "A Heading"
+    )
+    body_line = next(
+        line
+        for line in lines
+        if line["text"] == "Regular body text."
+    )
     assert heading_line["is_heading"] is True
     assert body_line["is_heading"] is False

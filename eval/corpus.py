@@ -23,11 +23,17 @@ def load_active_chunks(output_dir: Path = DEFAULT_OUTPUT_DIR) -> list[dict]:
     # list comprehension -- like .Select(...).ToList(). sorted() makes the
     # file order (and so every result below) stable across operating
     # systems, since glob order isn't guaranteed.
-    documents = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((output_dir / "documents").glob("*.json"))]
+    documents = [
+        json.loads(p.read_text(encoding="utf-8"))
+        for p in sorted((output_dir / "documents").glob("*.json"))
+    ]
     # A lookup of document_id -> active generation id. {key: value for item
     # in iterable} is a dict comprehension -- like
     # .ToDictionary(d => d.Id, d => d.ActiveGen).
-    active_generation = {d["id"]: d["active_chunking_generation_id"] for d in documents}
+    active_generation = {
+        d["id"]: d["active_chunking_generation_id"]
+        for d in documents
+    }
 
     chunks = []
     for path in sorted((output_dir / "chunks").glob("*.json")):

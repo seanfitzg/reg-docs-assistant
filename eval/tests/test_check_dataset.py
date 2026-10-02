@@ -33,9 +33,12 @@ def test_only_active_generation_chunks_are_loaded():
     chunks = load_active_chunks(FIXTURE_OUTPUT)
 
     # A set comprehension: {expression for item in iterable} builds a set
-    # in one line -- like chunks.Select(c => (c.DocumentId, c.Locator))
+    # in one expression -- like chunks.Select(c => (c.DocumentId, c.Locator))
     # .ToHashSet(), with each element a (document_id, locator) tuple.
-    pairs = {(c["document_id"], c["locator"]) for c in chunks}
+    pairs = {
+        (c["document_id"], c["locator"])
+        for c in chunks
+    }
 
     # doc-a's "9.9" only exists in its inactive gen-1, so it must not be
     # here: retrieval never sees it, so a Gold Locator can't point at it.

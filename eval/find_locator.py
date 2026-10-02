@@ -44,7 +44,10 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
     """
     # .split() with no argument splits on any run of whitespace and drops
     # empty strings; .lower() makes the comparison case-insensitive.
-    wanted = [t.lower() for t in terms.split()]
+    wanted = [
+        t.lower()
+        for t in terms.split()
+    ]
 
     # Blank terms must be rejected explicitly: all() over an empty sequence
     # is True ("vacuous truth" -- no item failed), so without this every
@@ -70,7 +73,10 @@ def search(chunks: list[dict], terms: str, document_id: str | None = None) -> li
         # all(...) is True only if every item is truthy -- LINQ's .All().
         # The argument is a generator expression, evaluated lazily and
         # stopping at the first term that's missing.
-        if all(term in lowered for term in wanted):
+        if all(
+            term in lowered
+            for term in wanted
+        ):
             start = lowered.find(wanted[0])
             # Slicing text[a:b] takes characters a up to (not including) b;
             # max(0, ...) stops a negative start wrapping round to the end,
@@ -117,7 +123,11 @@ def main(argv: list[str] | None = None) -> int:
     # A mistyped --doc would otherwise just print "0 match(es)", which reads
     # like "not in this Document" -- say plainly that the id doesn't exist.
     # any(...) is LINQ's .Any().
-    if args.doc is not None and not any(c["document_id"] == args.doc for c in chunks):
+    document_exists = any(
+        c["document_id"] == args.doc
+        for c in chunks
+    )
+    if args.doc is not None and not document_exists:
         print(f"No Document with id {args.doc!r} in {args.output_dir}.", file=sys.stderr)
         return 1
 

@@ -25,7 +25,10 @@ def extract_pages(pdf_path: Path) -> list[str]:
     # page.get_text() returns the page's text as a single string, with "\n"
     # separating lines. This list comprehension builds one such string per
     # page, in page order.
-    return [page.get_text() for page in document]
+    return [
+        page.get_text()
+        for page in document
+    ]
 
 
 # pymupdf represents each span of text (a run of characters sharing one
@@ -69,7 +72,10 @@ def extract_pages_with_headings(pdf_path: Path) -> list[list[dict]]:
                 # "".join(...) concatenates every span's text into one
                 # string for the line -- equivalent to string.Concat(...)
                 # or string.Join("", ...) in C#.
-                text = "".join(span["text"] for span in spans)
+                text = "".join(
+                    span["text"]
+                    for span in spans
+                )
                 if not text.strip():
                     continue
 
@@ -79,7 +85,10 @@ def extract_pages_with_headings(pdf_path: Path) -> list[list[dict]]:
                 # heading if EVERY span on it is bold; a sentence with just
                 # one bold word in the middle (used for emphasis, not as a
                 # section title) must not be mistaken for one.
-                is_heading = all(span["flags"] & BOLD_FLAG for span in spans)
+                is_heading = all(
+                    span["flags"] & BOLD_FLAG
+                    for span in spans
+                )
 
                 lines_on_this_page.append({"text": text, "is_heading": is_heading})
 

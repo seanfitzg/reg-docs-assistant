@@ -59,8 +59,16 @@ def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stri
     # of C#'s "cond ? X : Y" ternary), used here *inside* a list
     # comprehension -- for each i in range(20), it evaluates the ternary to
     # decide which string that page gets, producing a 20-item list in one
-    # expression rather than a separate loop with an if/else inside it.
-    pages = ["Running Header\nReal page content." if i < 5 else f"Page {i} unique content." for i in range(20)]
+    # expression rather than a separate loop with an if/else inside it. The
+    # parentheses let the ternary itself span three lines.
+    pages = [
+        (
+            "Running Header\nReal page content."
+            if i < 5
+            else f"Page {i} unique content."
+        )
+        for i in range(20)
+    ]
 
     cleaned = strip_headers_footers_and_page_numbers(pages)
 
@@ -159,7 +167,10 @@ def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
 
     # The repeated header line is gone from every page...
     for page_lines in cleaned:
-        assert all(line["text"] != "Central Bank of Ireland" for line in page_lines)
+        assert all(
+            line["text"] != "Central Bank of Ireland"
+            for line in page_lines
+        )
 
     # ...but the real lines, and whether each one is a heading, survive.
     assert cleaned[0] == [
