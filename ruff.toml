@@ -1,0 +1,32 @@
+# Ruff: the Python formatter (and linter) for every subproject in this repo --
+# Python's equivalent of Prettier. One config at the repo root applies to
+# schema/, ingestion/, store/ and eval/ alike, because Ruff searches upward
+# from each file for the nearest ruff.toml.
+#
+# Run from the repo root:
+#   ruff format .            # rewrite files in place
+#   ruff format --check .    # report what *would* change, change nothing (CI-style)
+#
+# Watch out: Ruff (like Black) JOINS a multi-line comprehension back onto one
+# line whenever it fits within line-length -- the "magic trailing comma" that
+# keeps calls and literals split can't apply, because a comprehension has no
+# trailing comma. Parenthesised `x if cond else y` ternaries are joined the
+# same way. Plain for loops and if/else statements are left exactly as
+# written, which is why CLAUDE.md prefers them while Python is new territory.
+
+# Black's default is 88. 100 is a common, slightly roomier choice that matches
+# the line lengths already used across this codebase, so adopting the
+# formatter doesn't rewrap most of it.
+line-length = 100
+
+# The Python version every venv here runs (3.14), so Ruff only emits syntax
+# that version understands.
+target-version = "py314"
+
+[format]
+# Double quotes, spaces for indentation, and the "magic trailing comma"
+# (a trailing comma after the last item keeps a call or literal one-item-per-line)
+# are all Ruff's defaults -- spelled out here only so the choice is visible.
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

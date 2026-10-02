@@ -1,3 +1,5 @@
 psycopg[binary]>=3.2
 pytest>=8.3
 ollama>=0.4
+# Formatter (see ruff.toml at the repo root).
+ruff>=0.16

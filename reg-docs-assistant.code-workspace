@@ -34,5 +34,10 @@
     // whatever interpreter happened to be selected).
     "python.testing.pytestEnabled": false,
     "liveServer.settings.multiRootWorkspaceName": "repo root"
+  },
+  "extensions": {
+    // Ruff formats Python on save in every subproject (see ruff.toml and each
+    // subfolder's .vscode/settings.json). VS Code offers to install it.
+    "recommendations": ["charliermarsh.ruff"]
   }
 }
