@@ -344,7 +344,11 @@ def format_summary(report: dict) -> str:
     for key, metrics in summary["by_category"].items():
         lines.append(row(f"category={key}", metrics))
 
-    unanswerable = [c for c in report["cases"] if c["category"] == "unanswerable"]
+    unanswerable = [
+        c
+        for c in report["cases"]
+        if c["category"] == "unanswerable"  # keep only the unanswerable cases
+    ]
     if unanswerable:
         lines.append("")
         lines.append("unanswerable (top-1 similarity -- no threshold applied):")
