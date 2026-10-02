@@ -99,7 +99,10 @@ RETRIEVAL_SQL = """
 
 
 def _retrieve(cur: psycopg.Cursor, query_vector: list[float]) -> list[dict]:
-    cur.execute(RETRIEVAL_SQL, {"query": vector_literal(query_vector), "model": EMBEDDING_MODEL, "k": K})
+    cur.execute(
+        RETRIEVAL_SQL,
+        {"query": vector_literal(query_vector), "model": EMBEDDING_MODEL, "k": K},
+    )
     rows = cur.fetchall()
     if not rows:
         # Vector search always returns its nearest neighbours when there
@@ -143,7 +146,7 @@ def _score_case(case: dict, retrieved: list[dict]) -> dict:
     # 1-based rank. Checking *all* of them (not stopping at the first hit)
     # matters: case_hit also validates each Chunk's locator, raising on one
     # it can't parse (ADR-0028) instead of letting it score a silent miss.
-    
+
     # hit_ranks = [rank for rank, chunk in enumerate(retrieved, start=1) if case_hit(gold, [chunk])]
     hit_ranks = []
     for rank, chunk in enumerate(retrieved, start=1):
@@ -209,16 +212,9 @@ def _metrics(ranks: list[int | None]) -> dict:
     metrics = {"cases": count}
     for cutoff in RECALL_CUTOFFS:
         # sum() over a generator of booleans counts the Trues (True == 1).
-        hits_within_cutoff = sum(
-            r is not None and r <= cutoff
-            for r in ranks
-        )
+        hits_within_cutoff = sum(r is not None and r <= cutoff for r in ranks)
         metrics[f"recall@{cutoff}"] = hits_within_cutoff / count
-    reciprocal_rank_total = sum(
-        1 / r
-        for r in ranks
-        if r is not None
-    )
+    reciprocal_rank_total = sum(1 / r for r in ranks if r is not None)
     metrics["mrr"] = reciprocal_rank_total / count
     return metrics
 
@@ -227,16 +223,14 @@ def _summarise(case_results: list[dict]) -> dict:
     # Unanswerable cases are excluded from every metric (ADR-0029): they
     # have no Gold Locators, so "recall" means nothing for them and counting
     # them as misses would drag every score down for the wrong reason.
-    answerable = [
-        c
-        for c in case_results
-        if c["category"] != "unanswerable"
-    ]
+    answerable = [c for c in case_results if c["category"] != "unanswerable"]
     if not answerable:
         # Every metric is an average over answerable cases; with none there
         # is nothing to average (and _metrics would divide by zero). A
         # dataset like that is a mistake, so say so plainly.
-        raise ValueError("the dataset has no answerable cases, so recall and MRR are undefined")
+        raise ValueError(
+            "the dataset has no answerable cases, so recall and MRR are undefined"
+        )
 
     def grouped(field: str) -> dict:
         # defaultdict(list) creates an empty list the first time a key is
@@ -244,15 +238,9 @@ def _summarise(case_results: list[dict]) -> dict:
         groups = defaultdict(list)
         for case in answerable:
             groups[case[field]].append(case["hit_rank"])
-        return {
-            key: _metrics(ranks)
-            for key, ranks in sorted(groups.items())
-        }
+        return {key: _metrics(ranks) for key, ranks in sorted(groups.items())}
 
-    overall_ranks = [
-        c["hit_rank"]
-        for c in answerable
-    ]
+    overall_ranks = [c["hit_rank"] for c in answerable]
     return {
         "overall": _metrics(overall_ranks),
         # Reported separately to expose lexical-overlap bias (ADR-0029): if
@@ -274,8 +262,7 @@ def run_eval(db_url: str, client: EmbeddingClient, dataset: dict) -> dict:
     # Ollama problem then fails on the first question, and the database
     # transaction below isn't held open across slow model calls.
     query_vectors = [
-        client.embed(QUERY_PREFIX + case["question"])
-        for case in dataset["cases"]
+        client.embed(QUERY_PREFIX + case["question"]) for case in dataset["cases"]
     ]
 
     with psycopg.connect(db_url) as conn:
@@ -343,10 +330,7 @@ def format_summary(report: dict) -> str:
     #   :<26   left-align in a 26-character column   (C# {x,-26})
     #   :>4    right-align in a 4-character column   (C# {x,4})
     #   :>7.2f right-align in 7 characters, as a float with 2 decimals (C# {x,7:F2})
-    recall_headers = "".join(
-        f"{'R@' + str(c):>7}"
-        for c in RECALL_CUTOFFS
-    )
+    recall_headers = "".join(f"{'R@' + str(c):>7}" for c in RECALL_CUTOFFS)
     header = f"{'group':<26}{'n':>4}" + recall_headers + f"{'MRR':>7}"
     lines = [header, "-" * len(header)]
 
@@ -355,10 +339,7 @@ def format_summary(report: dict) -> str:
         # inner one builds the key ("recall@3"), the outer one looks it up
         # and formats the value. The inner uses single quotes so it doesn't
         # end the outer double-quoted string.
-        recalls = "".join(
-            f"{m[f'recall@{c}']:>7.2f}"
-            for c in RECALL_CUTOFFS
-        )
+        recalls = "".join(f"{m[f'recall@{c}']:>7.2f}" for c in RECALL_CUTOFFS)
         return f"{label:<26}{m['cases']:>4}{recalls}{m['mrr']:>7.2f}"
 
     summary = report["summary"]
@@ -371,7 +352,7 @@ def format_summary(report: dict) -> str:
     unanswerable = [
         c
         for c in report["cases"]
-        if c["category"] == "unanswerable"
+        if c["category"] == "unanswerable"  # keep only the unanswerable cases
     ]
     if unanswerable:
         lines.append("")
@@ -385,7 +366,9 @@ if __name__ == "__main__":
     dataset = json.loads(DEFAULT_DATASET.read_text(encoding="utf-8"))
     report = run_eval(
         db_url=os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL),
-        client=OllamaEmbeddingClient(host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)),
+        client=OllamaEmbeddingClient(
+            host=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_HOST)
+        ),
         dataset=dataset,
     )
     path = write_report(report)

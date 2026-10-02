@@ -80,10 +80,7 @@ def vector_literal(vector: list[float]) -> str:
     # package for one column.
     # str(float) gives the shortest text that round-trips the float exactly,
     # so no precision is lost in the conversion.
-    values = ",".join(
-        str(value)
-        for value in vector
-    )
+    values = ",".join(str(value) for value in vector)
     return "[" + values + "]"
 
 

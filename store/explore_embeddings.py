@@ -50,18 +50,9 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     #              a.Zip(b), giving (a0, b0), (a1, b1), ...
     #   sum(...)   adds up the products: that's the dot product.
     #   math.sqrt(sum(x * x ...)) is the length (magnitude) of one vector.
-    dot = sum(
-        x * y
-        for x, y in zip(a, b)
-    )
-    length_a = math.sqrt(sum(
-        x * x
-        for x in a
-    ))
-    length_b = math.sqrt(sum(
-        y * y
-        for y in b
-    ))
+    dot = sum(x * y for x, y in zip(a, b))
+    length_a = math.sqrt(sum(x * x for x in a))
+    length_b = math.sqrt(sum(y * y for y in b))
     return dot / (length_a * length_b)
 
 
@@ -79,10 +70,7 @@ def print_matrix(vectors: list[list[float]]) -> None:
     # The diagonal is always 1.00 (a sentence is identical to itself).
     # Columns are labelled #1..#n to keep the grid narrow; the legend
     # underneath says which number is which sentence.
-    column_labels = "".join(
-        f"  #{n + 1:<3}"
-        for n in range(len(vectors))
-    )
+    column_labels = "".join(f"  #{n + 1:<3}" for n in range(len(vectors)))
     print("       " + column_labels)
     for i, row_vector in enumerate(vectors):
         # A list comprehension building one formatted cell per column.
@@ -96,7 +84,9 @@ def print_matrix(vectors: list[list[float]]) -> None:
         print(f"  #{i + 1} = {sentence}")
 
 
-def print_ranking(question_vector: list[float], document_vectors: list[list[float]]) -> None:
+def print_ranking(
+    question_vector: list[float], document_vectors: list[list[float]]
+) -> None:
     # Scores every sentence against the question, then prints best-first.
     # This is the whole of "retrieval" in miniature: embed the question,
     # measure closeness to each stored vector, sort. pgvector will do the
@@ -120,15 +110,9 @@ def main() -> None:
     print("1. How similar is every sentence to every other sentence?")
     print("   (1.00 = identical direction; lower = less related)")
     print("=" * 72)
-    document_vectors = [
-        client.embed(DOCUMENT_PREFIX + s)
-        for s in SENTENCES
-    ]
+    document_vectors = [client.embed(DOCUMENT_PREFIX + s) for s in SENTENCES]
     print(f"   Each sentence became a vector of {len(document_vectors[0])} numbers.")
-    first_five = [
-        round(x, 3)
-        for x in document_vectors[0][:5]
-    ]
+    first_five = [round(x, 3) for x in document_vectors[0][:5]]
     print(f"   First 5 numbers of sentence #1: {first_five}")
     print("   (Individual numbers mean nothing on their own -- only comparisons do.)\n")
     print_matrix(document_vectors)
@@ -148,10 +132,7 @@ def main() -> None:
     print("3. Same question, but with NO prefixes on either side")
     print("   (compare the order and the score gaps with section 2)")
     print("=" * 72)
-    bare_document_vectors = [
-        client.embed(s)
-        for s in SENTENCES
-    ]
+    bare_document_vectors = [client.embed(s) for s in SENTENCES]
     bare_question_vector = client.embed(QUESTION)
     print_ranking(bare_question_vector, bare_document_vectors)
 

@@ -29,23 +29,26 @@ def _valid_dataset() -> dict:
 
 # ---- load_active_chunks ----
 
+
 def test_only_active_generation_chunks_are_loaded():
     chunks = load_active_chunks(FIXTURE_OUTPUT)
 
     # A set comprehension: {expression for item in iterable} builds a set
     # in one expression -- like chunks.Select(c => (c.DocumentId, c.Locator))
     # .ToHashSet(), with each element a (document_id, locator) tuple.
-    pairs = {
-        (c["document_id"], c["locator"])
-        for c in chunks
-    }
+    pairs = {(c["document_id"], c["locator"]) for c in chunks}
 
     # doc-a's "9.9" only exists in its inactive gen-1, so it must not be
     # here: retrieval never sees it, so a Gold Locator can't point at it.
-    assert pairs == {("doc-a", "1.1"), ("doc-a", "3.12"), ("doc-b", "Introduction (p. 3)")}
+    assert pairs == {
+        ("doc-a", "1.1"),
+        ("doc-a", "3.12"),
+        ("doc-b", "Introduction (p. 3)"),
+    }
 
 
 # ---- find_problems ----
+
 
 def test_valid_dataset_has_no_problems():
     assert find_problems(_valid_dataset(), load_active_chunks(FIXTURE_OUTPUT)) == []

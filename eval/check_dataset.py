@@ -16,10 +16,7 @@ def find_problems(dataset: dict, active_chunks: list[dict]) -> list[str]:
     # tuples gives O(1) membership checks below, like a HashSet<(string,
     # string)> in C# -- tuples compare by value, so ("a", "1.1") == ("a",
     # "1.1") even when they're different objects.
-    existing = {
-        (c["document_id"], c["locator"])
-        for c in active_chunks
-    }
+    existing = {(c["document_id"], c["locator"]) for c in active_chunks}
 
     seen_ids = set()
     for case in dataset["cases"]:
@@ -37,7 +34,10 @@ def find_problems(dataset: dict, active_chunks: list[dict]) -> list[str]:
         # foreach (var (field, label) in ...) over value tuples.
         # superseded_locators is optional, so .get(..., []) falls back to an
         # empty list rather than raising KeyError when it's absent.
-        for field, label in (("gold_locators", "gold"), ("superseded_locators", "superseded")):
+        for field, label in (
+            ("gold_locators", "gold"),
+            ("superseded_locators", "superseded"),
+        ):
             for entry in case.get(field, []):
                 if (entry["document_id"], entry["locator"]) not in existing:
                     problems.append(

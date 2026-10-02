@@ -30,10 +30,7 @@ def load_active_chunks(output_dir: Path = DEFAULT_OUTPUT_DIR) -> list[dict]:
     # A lookup of document_id -> active generation id. {key: value for item
     # in iterable} is a dict comprehension -- like
     # .ToDictionary(d => d.Id, d => d.ActiveGen).
-    active_generation = {
-        d["id"]: d["active_chunking_generation_id"]
-        for d in documents
-    }
+    active_generation = {d["id"]: d["active_chunking_generation_id"] for d in documents}
 
     chunks = []
     for path in sorted((output_dir / "chunks").glob("*.json")):
@@ -42,6 +39,9 @@ def load_active_chunks(output_dir: Path = DEFAULT_OUTPUT_DIR) -> list[dict]:
             # .get() returns None instead of raising KeyError for a missing
             # key -- so a Chunk whose Document file is somehow absent is
             # treated as inactive (skipped) rather than crashing.
-            if active_generation.get(chunk["document_id"]) == chunk["chunking_generation_id"]:
+            if (
+                active_generation.get(chunk["document_id"])
+                == chunk["chunking_generation_id"]
+            ):
                 chunks.append(chunk)
     return chunks

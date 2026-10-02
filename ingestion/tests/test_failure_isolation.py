@@ -68,20 +68,29 @@ def _write_manifest(manifest_path, entries):
 
 
 def _entry(filename, chunking_strategy):
-    return {"filename": filename, "chunking_strategy": chunking_strategy, **MANIFEST_ENTRY_DEFAULTS}
+    return {
+        "filename": filename,
+        "chunking_strategy": chunking_strategy,
+        **MANIFEST_ENTRY_DEFAULTS,
+    }
 
 
-def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_continues(tmp_path, caplog):
+def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_continues(
+    tmp_path, caplog
+):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "good.pdf", with_clauses=True)
     _write_clause_numbered_pdf(corpus_dir / "empty.pdf", with_clauses=False)
 
     manifest_path = tmp_path / "manifest.json"
-    _write_manifest(manifest_path, [
-        _entry("empty.pdf", "clause_numbered"),
-        _entry("good.pdf", "clause_numbered"),
-    ])
+    _write_manifest(
+        manifest_path,
+        [
+            _entry("empty.pdf", "clause_numbered"),
+            _entry("good.pdf", "clause_numbered"),
+        ],
+    )
 
     # caplog is a built-in pytest fixture that captures everything logged
     # through Python's standard `logging` module during the test -- the
@@ -106,7 +115,9 @@ def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_contin
     assert "clause_numbered" in caplog.text
 
 
-def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(tmp_path, caplog):
+def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(
+    tmp_path, caplog
+):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "good.pdf", with_clauses=True)
@@ -115,10 +126,13 @@ def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(tmp
     (corpus_dir / "corrupt.pdf").write_bytes(b"not a real pdf file, just garbage bytes")
 
     manifest_path = tmp_path / "manifest.json"
-    _write_manifest(manifest_path, [
-        _entry("corrupt.pdf", "clause_numbered"),
-        _entry("good.pdf", "clause_numbered"),
-    ])
+    _write_manifest(
+        manifest_path,
+        [
+            _entry("corrupt.pdf", "clause_numbered"),
+            _entry("good.pdf", "clause_numbered"),
+        ],
+    )
 
     with caplog.at_level(logging.ERROR):
         results = run_pipeline(manifest_path, corpus_dir, tmp_path / "output")
@@ -133,7 +147,9 @@ def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(tmp
     assert "corrupt.pdf" in caplog.text
 
 
-def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(tmp_path, monkeypatch, caplog):
+def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(
+    tmp_path, monkeypatch, caplog
+):
     # /code-review (issue #8) caught this: the document JSON and chunks
     # JSON are two separate write_text() calls, not one atomic operation.
     # If the second one fails after the first succeeded (a locked file, a
@@ -176,7 +192,9 @@ def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(tmp_path
     assert "good.pdf" in caplog.text
 
 
-def test_all_documents_in_a_batch_failing_produces_no_results_and_no_output_files(tmp_path, caplog):
+def test_all_documents_in_a_batch_failing_produces_no_results_and_no_output_files(
+    tmp_path, caplog
+):
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "empty.pdf", with_clauses=False)

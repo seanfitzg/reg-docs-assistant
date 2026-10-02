@@ -87,7 +87,9 @@ def _clause_covers(gold_segments: list[str], retrieved_segments: list[str]) -> b
 def _parse_heading(locator: str) -> tuple[str, int]:
     match = HEADING_PATTERN.fullmatch(locator)
     if match is None:
-        raise ValueError(f"unparseable heading_sections/academic_sections locator: {locator!r}")
+        raise ValueError(
+            f"unparseable heading_sections/academic_sections locator: {locator!r}"
+        )
     # A tuple return -- like C#'s (string Heading, int Page) value tuple.
     # int(...) converts the captured digits, since regex groups are strings.
     return match.group(1), int(match.group(2))
@@ -101,7 +103,10 @@ def _heading_covers(gold: tuple[str, int], retrieved: tuple[str, int]) -> bool:
     # Exact heading equality, whitespace and case included: both sides come
     # from the same Document's extraction, so normalising would only risk
     # merging two genuinely different headings.
-    return gold_heading == retrieved_heading and abs(gold_page - retrieved_page) <= PAGE_TOLERANCE
+    return (
+        gold_heading == retrieved_heading
+        and abs(gold_page - retrieved_page) <= PAGE_TOLERANCE
+    )
 
 
 # chunking_strategy -> (parse, covers) for that strategy's locator format:
@@ -127,7 +132,9 @@ def _rule(chunking_strategy: str):
     return rule
 
 
-def locator_matches(gold_locator: str, retrieved_locator: str, chunking_strategy: str) -> bool:
+def locator_matches(
+    gold_locator: str, retrieved_locator: str, chunking_strategy: str
+) -> bool:
     """Whether a retrieved Chunk's locator is a hit for a Gold Locator.
 
     Both locators must belong to the same Document -- that's the caller's

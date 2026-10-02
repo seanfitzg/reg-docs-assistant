@@ -278,7 +278,9 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
             ]
 
 
-def _write_two_document_fixture(base: Path, second_supersedes: str | None) -> tuple[Path, Path]:
+def _write_two_document_fixture(
+    base: Path, second_supersedes: str | None
+) -> tuple[Path, Path]:
     # A second, smaller fixture: two Documents, where the second document's
     # `supersedes` can be varied between calls (that's the whole point --
     # proving a second load_store call with a *different* supersedes value
@@ -287,7 +289,10 @@ def _write_two_document_fixture(base: Path, second_supersedes: str | None) -> tu
     (output_dir / "documents").mkdir(parents=True, exist_ok=True)
     (output_dir / "chunks").mkdir(parents=True, exist_ok=True)
 
-    for doc_id, supersedes in (("doc-original", None), ("doc-successor", second_supersedes)):
+    for doc_id, supersedes in (
+        ("doc-original", None),
+        ("doc-successor", second_supersedes),
+    ):
         document: dict[str, Any] = {
             "id": doc_id,
             "title": f"Fixture {doc_id}",
@@ -341,12 +346,16 @@ def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
     # JSON's value ever changed -- contradicting supersedes' own status as
     # an immutable fact about a Document (CONTEXT.md), the same guarantee
     # upsert_immutable already gives title/publisher/etc.
-    output_dir, manifest_path = _write_two_document_fixture(tmp_path, second_supersedes="doc-original")
+    output_dir, manifest_path = _write_two_document_fixture(
+        tmp_path, second_supersedes="doc-original"
+    )
     load_store(output_dir, manifest_path, DB_URL)
 
     # Re-run with doc-successor's supersedes changed to point at nothing
     # (None) -- simulating drift in a regenerated Document JSON.
-    output_dir, manifest_path = _write_two_document_fixture(tmp_path, second_supersedes=None)
+    output_dir, manifest_path = _write_two_document_fixture(
+        tmp_path, second_supersedes=None
+    )
     load_store(output_dir, manifest_path, DB_URL)
 
     with psycopg.connect(DB_URL) as conn:

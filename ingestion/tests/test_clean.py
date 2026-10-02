@@ -62,11 +62,7 @@ def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stri
     # expression rather than a separate loop with an if/else inside it. The
     # parentheses let the ternary itself span three lines.
     pages = [
-        (
-            "Running Header\nReal page content."
-            if i < 5
-            else f"Page {i} unique content."
-        )
+        ("Running Header\nReal page content." if i < 5 else f"Page {i} unique content.")
         for i in range(20)
     ]
 
@@ -144,6 +140,7 @@ def test_a_number_that_is_part_of_real_text_is_kept():
 # so this variant works on the structured list[list[dict]] shape instead of
 # plain per-page strings, but applies the exact same boilerplate rules.
 
+
 def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
     pages = [
         [
@@ -167,10 +164,7 @@ def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
 
     # The repeated header line is gone from every page...
     for page_lines in cleaned:
-        assert all(
-            line["text"] != "Central Bank of Ireland"
-            for line in page_lines
-        )
+        assert all(line["text"] != "Central Bank of Ireland" for line in page_lines)
 
     # ...but the real lines, and whether each one is a heading, survive.
     assert cleaned[0] == [
@@ -184,8 +178,14 @@ def test_layout_variant_strips_page_number_lines():
     # both pages would itself trigger the header/footer rule and confuse
     # what this test is actually checking.
     pages = [
-        [{"text": "Page 5", "is_heading": False}, {"text": "Content on five.", "is_heading": False}],
-        [{"text": "Page 6", "is_heading": False}, {"text": "Content on six.", "is_heading": False}],
+        [
+            {"text": "Page 5", "is_heading": False},
+            {"text": "Content on five.", "is_heading": False},
+        ],
+        [
+            {"text": "Page 6", "is_heading": False},
+            {"text": "Content on six.", "is_heading": False},
+        ],
     ]
 
     cleaned = strip_headers_footers_and_page_numbers_from_layout(pages)
@@ -205,6 +205,7 @@ def test_layout_variant_strips_page_number_lines():
 # hardcoded constants, so most fixtures here deliberately use invented
 # headings/patterns to prove the functions aren't secretly still tied to
 # one real document.
+
 
 def test_strip_section_between_headings_removes_the_span_between_markers():
     pages = [
@@ -243,13 +244,24 @@ def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
     # Global risk assessment) -- the removal has to survive page
     # boundaries, not just work within a single page.
     pages = [
-        [{"text": "Start", "is_heading": True}, {"text": "Page one.", "is_heading": False}],
-        [{"text": "Middle Heading", "is_heading": True}, {"text": "Page two.", "is_heading": False}],
+        [
+            {"text": "Start", "is_heading": True},
+            {"text": "Page one.", "is_heading": False},
+        ],
+        [
+            {"text": "Middle Heading", "is_heading": True},
+            {"text": "Page two.", "is_heading": False},
+        ],
         [{"text": "Page three, no heading here.", "is_heading": False}],
-        [{"text": "End", "is_heading": True}, {"text": "Real content.", "is_heading": False}],
+        [
+            {"text": "End", "is_heading": True},
+            {"text": "Real content.", "is_heading": False},
+        ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned[0] == []
     assert cleaned[1] == []
@@ -274,13 +286,18 @@ def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span
     pages = [
         [
             {"text": "Start", "is_heading": True},
-            {"text": "This whole line is bold too, but isn't the end marker.", "is_heading": True},
+            {
+                "text": "This whole line is bold too, but isn't the end marker.",
+                "is_heading": True,
+            },
             {"text": "End", "is_heading": True},
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned[0] == [
         {"text": "End", "is_heading": True},
@@ -290,10 +307,15 @@ def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span
 
 def test_strip_section_between_headings_with_no_matching_markers_is_unaffected():
     pages = [
-        [{"text": "Purpose", "is_heading": True}, {"text": "Ordinary content.", "is_heading": False}],
+        [
+            {"text": "Purpose", "is_heading": True},
+            {"text": "Ordinary content.", "is_heading": False},
+        ],
     ]
 
-    cleaned = strip_section_between_headings(pages, start_heading="Start", end_heading="End")
+    cleaned = strip_section_between_headings(
+        pages, start_heading="Start", end_heading="End"
+    )
 
     assert cleaned == pages
 
@@ -307,12 +329,17 @@ def test_strip_lines_with_repeated_pattern_removes_a_line_meeting_the_threshold(
     # prove the function itself carries no real document's wording.
     pages = [
         [
-            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": True},
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": True,
+            },
             {"text": "Real content.", "is_heading": False},
         ],
     ]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"Widget \d", minimum_matches=4
+    )
 
     assert cleaned[0] == [{"text": "Real content.", "is_heading": False}]
 
@@ -330,7 +357,9 @@ def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
         ],
     ]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"Widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"Widget \d", minimum_matches=4
+    )
 
     assert cleaned == pages
 
@@ -338,18 +367,26 @@ def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
 def test_strip_lines_with_repeated_pattern_is_case_insensitive():
     pages = [[{"text": "widget 1  widget 2  WIDGET 3  Widget 4", "is_heading": False}]]
 
-    cleaned = strip_lines_with_repeated_pattern(pages, pattern=r"widget \d", minimum_matches=4)
+    cleaned = strip_lines_with_repeated_pattern(
+        pages, pattern=r"widget \d", minimum_matches=4
+    )
 
     assert cleaned[0] == []
 
 
 def test_apply_cleanup_flags_runs_the_named_flag_type_with_its_parameters():
     pages = [
-        [{"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False}],
+        [
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": False,
+            }
+        ],
     ]
 
     cleaned = apply_cleanup_flags(
-        pages, [{"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4}]
+        pages,
+        [{"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4}],
     )
 
     assert cleaned[0] == []
@@ -379,7 +416,10 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
         ],
         [
             {"text": "End", "is_heading": True},
-            {"text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4", "is_heading": False},
+            {
+                "text": "Widget 1 >  | Widget 2  | Widget 3  | Widget 4",
+                "is_heading": False,
+            },
             {"text": "Real content.", "is_heading": False},
         ],
     ]
@@ -387,8 +427,16 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
     cleaned = apply_cleanup_flags(
         pages,
         [
-            {"type": "duplicate_section_removal", "start_heading": "Start", "end_heading": "End"},
-            {"type": "navigation_chrome", "pattern": r"Widget \d", "minimum_matches": 4},
+            {
+                "type": "duplicate_section_removal",
+                "start_heading": "Start",
+                "end_heading": "End",
+            },
+            {
+                "type": "navigation_chrome",
+                "pattern": r"Widget \d",
+                "minimum_matches": 4,
+            },
         ],
     )
 
@@ -406,7 +454,9 @@ def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_type():
     # unrecognized chunking_strategy already raises in pipeline.py), not
     # silently do nothing.
     with pytest.raises(KeyError):
-        apply_cleanup_flags([[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}])
+        apply_cleanup_flags(
+            [[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}]
+        )
 
 
 def test_apply_cleanup_flags_raises_on_a_flag_with_a_mismatched_parameter_name():

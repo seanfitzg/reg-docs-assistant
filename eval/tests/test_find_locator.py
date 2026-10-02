@@ -21,10 +21,7 @@ def test_match_is_case_insensitive_and_returns_document_and_locator():
 
     # A list comprehension -- the list equivalent of the set comprehension
     # in test_check_dataset.py, like matches.Select(m => ...).ToList().
-    found = [
-        (m.document_id, m.locator)
-        for m in matches
-    ]
+    found = [(m.document_id, m.locator) for m in matches]
     assert found == [("doc-a", "3.12")]
 
 
@@ -34,10 +31,7 @@ def test_every_term_must_appear_but_not_necessarily_adjacent():
     # extraction, which an exact-phrase match would miss.
     matches = search(_chunks(), "comprehensive consumer framework")
 
-    found = [
-        (m.document_id, m.locator)
-        for m in matches
-    ]
+    found = [(m.document_id, m.locator) for m in matches]
     assert found == [("doc-a", "1.1")]
 
 
@@ -56,10 +50,7 @@ def test_document_filter_restricts_results_to_one_document():
 
     matches = search(_chunks(), "regulated entity", document_id="doc-b")
 
-    found = [
-        (m.document_id, m.locator)
-        for m in matches
-    ]
+    found = [(m.document_id, m.locator) for m in matches]
     assert found == [("doc-b", "Introduction (p. 3)")]
 
 
@@ -91,6 +82,7 @@ def test_blank_terms_are_rejected(blank):
 
 # ---- main (the command-line entry point) ----
 
+
 def test_cli_rejects_blank_terms_with_a_usage_error():
     # parser.error() exits via SystemExit rather than returning -- Python's
     # sys.exit() is an exception, so pytest.raises can catch it. Exit code
@@ -104,7 +96,9 @@ def test_cli_rejects_blank_terms_with_a_usage_error():
 def test_cli_reports_an_unknown_document_id(capsys):
     # capsys is a built-in pytest fixture: naming it as a parameter makes
     # pytest inject it, and it captures what the code under test printed.
-    exit_code = main(["consumer", "--doc", "doc-typo", "--output-dir", str(FIXTURE_OUTPUT)])
+    exit_code = main(
+        ["consumer", "--doc", "doc-typo", "--output-dir", str(FIXTURE_OUTPUT)]
+    )
 
     assert exit_code == 1
     assert "No Document with id 'doc-typo'" in capsys.readouterr().err

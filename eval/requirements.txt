@@ -4,3 +4,5 @@ pytest>=8.3
 # the same drivers /store's own venv installs.
 psycopg[binary]>=3.2
 ollama>=0.4
+# Formatter (see ruff.toml at the repo root).
+ruff>=0.16
