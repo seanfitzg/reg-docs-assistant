@@ -1,8 +1,6 @@
 # Tests for eval-dataset.schema.json (issue #29): the shape of the retrieval
 # eval set in eval/dataset.json (ADR-0027, ADR-0029).
 #
-# See test_harness.py for the basics and test_document_chunk.py for the
-# support.py helpers -- this file only comments on what's new here.
 # Relational checks the schema can't express (unique case ids, Gold Locators
 # that really exist in the ingested Chunks) live in eval/, not here, since
 # they need the corpus rather than just the file's shape.
@@ -19,11 +17,6 @@ EVAL_DATASET_SCHEMA = SCHEMA_DIR / "eval-dataset.schema.json"
 FIXTURES = SCHEMA_DIR / "fixtures" / "eval-dataset"
 
 
-# @pytest.mark.parametrize runs the decorated test once per value in the
-# list, binding each to the named argument ("fixture_name") -- the same idea
-# as nUnit's [TestCase("...")] attributes. Each run is reported as its own
-# test (e.g. test_valid_dataset_passes_validation[valid-empty-seed.json]),
-# so one failing fixture doesn't hide the others.
 @pytest.mark.parametrize(
     "fixture_name",
     [

@@ -4,10 +4,6 @@
 # AnswerOverridden fixtures genuinely reference a real Event fixture by id,
 # and that the halt-vs-annotate Flag behaviour (ADR-0006, 0008, 0009) holds
 # on the actual fixture content, not just "the schema allows this shape".
-#
-# See test_harness.py and test_document_chunk.py for the basics (imports,
-# pathlib, load_json/validate from support.py, dict indexing, pytest.raises,
-# plain assert). This file only comments on constructs that are new here.
 
 from pathlib import Path
 
@@ -38,17 +34,8 @@ def test_full_run_event_passes_validation():
 def test_full_run_event_has_all_four_steps_in_order():
     event = load_json(EVENT_FIXTURES / "valid-full-run.json")
 
-    # [expr for item in iterable] is a *list comprehension* — Python's
-    # built-in way of writing what C# LINQ does with
-    # steps.Select(s => s["step_type"]).ToList(). It builds a new list by
-    # evaluating step["step_type"] once per item in event["steps"], in
-    # order, with no separate loop statement needed.
     step_types = [step["step_type"] for step in event["steps"]]
 
-    # Comparing two Python lists with == checks every element in order —
-    # value/structural equality, like C#'s Enumerable.SequenceEqual, not
-    # reference equality. No special method call needed, unlike
-    # list1.SequenceEqual(list2) in C#.
     assert step_types == ["classify", "retrieve", "draft", "verify"]
 
 
@@ -58,10 +45,8 @@ def test_retrieve_step_stores_pinned_chunk_text_not_just_id():
     retrieve_step = event["steps"][1]
     chunk = retrieve_step["retrieved_chunks"][0]
 
-    # "in" here checks dict membership (does this key exist), same idea as
-    # C#'s dict.ContainsKey(...). This is the direct proof for the
-    # acceptance criterion: retrieve stores the actual chunk text alongside
-    # the id, not the id alone.
+    # Direct proof of the acceptance criterion: retrieve stores the actual
+    # chunk text alongside the id, not the id alone.
     assert "chunk_id" in chunk
     assert "text" in chunk
     assert chunk["text"].startswith("A regulated entity shall provide")
@@ -80,10 +65,6 @@ def test_full_run_with_annotate_only_flag_passes_validation():
 def test_annotate_only_flag_does_not_reduce_step_count():
     event = load_json(EVENT_FIXTURES / "valid-full-run-with-annotate-only-flag.json")
 
-    # len(...) is Python's built-in for "how many items", equivalent to a
-    # C# collection's .Count property but called as a function on the
-    # collection rather than a member of it: len(event["steps"]) rather
-    # than event["steps"].Count.
     assert "low_confidence" in event["flags"]
     assert len(event["steps"]) == 4
 

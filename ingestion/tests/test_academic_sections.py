@@ -1,13 +1,9 @@
 # Tests for the academic_sections chunking strategy (ADR-0014): splitting a
 # Research Technical Paper's text at bold heading lines, with the locator
 # pairing the heading text with the page it starts on (ADR-0015) -- e.g.
-# "Literature Review (p. 7)". Same input/output shape as
-# test_heading_sections.py (chunk() takes the list[list[dict]] shape
-# extract_pages_with_headings() produces), so most of these mirror that
-# file's cases directly. The cases new to this file (the "_wraps_" and
-# "_no_body_ever_follows_" tests below) cover the one real behavioural
-# difference: a heading here can span more than one bold line, which
-# heading_sections never had to handle for DP8.
+# "Literature Review (p. 7)". Most cases mirror test_heading_sections.py; the
+# "_wraps_" and "_no_body_ever_follows_" tests cover the one real difference:
+# a heading here can span more than one bold line.
 
 from strategies.academic_sections import chunk
 
@@ -102,13 +98,11 @@ def test_no_headings_produces_no_chunks():
 
 
 def test_a_heading_that_wraps_across_two_bold_lines_is_joined_into_one_locator():
-    # Found on the real RTP07/19 PDF: its Appendix A heading is two
-    # consecutive bold lines ("A Sources and Construction of Variables Used
-    # in Panel" / "Regressions") with nothing else between them -- one
-    # heading split across a line break by the PDF's layout, not two
-    # separate sections. Unlike heading_sections (written for DP8, where
-    # back-to-back bold lines are a spurious cover-page/ToC entry directly
-    # followed by a real heading), this strategy joins them.
+    # Found on the real RTP07/19 PDF: Appendix A's heading is two consecutive
+    # bold lines ("A Sources and Construction of Variables Used in Panel" /
+    # "Regressions"), one heading split by layout. Unlike heading_sections
+    # (written for DP8, where back-to-back bold lines are a spurious
+    # cover-page/ToC entry before a real heading), this strategy joins them.
     pages = [
         [
             {
@@ -134,18 +128,14 @@ def test_a_heading_that_wraps_across_two_bold_lines_is_joined_into_one_locator()
 
 
 def test_a_heading_run_does_not_continue_across_a_page_boundary():
-    # A join is only allowed within a single page (module docstring):
-    # chunk_document() strips boilerplate -- running headers/footers, bare
-    # page numbers -- before chunk() ever sees the pages, so a footer
-    # stripped off the bottom of page 1 and a header stripped off the top
-    # of page 2 would otherwise make two *unrelated* headings either side
-    # of that page break look exactly like one back-to-back run, the same
-    # shape a real same-page wrap has. "Trailing Heading" here stands in
-    # for a heading that, in the real PDF, would have had a footer after it
-    # that clean.py already removed by the time chunk() runs -- it never
-    # reaches a body line of its own, so (same "no empty chunk" guarantee
-    # as elsewhere) it's silently dropped rather than merged into the next
-    # page's real heading.
+    # A join is only allowed within a single page (module comment).
+    # chunk_document() strips boilerplate before chunk() sees the pages, so a
+    # footer stripped from the bottom of page 1 and a header from the top of
+    # page 2 would make two *unrelated* headings across the break look like a
+    # wrapped one. "Trailing Heading" stands in for a heading that had a
+    # footer after it, already removed by clean.py: it never reaches a body
+    # line, so (the "no empty chunk" guarantee) it's dropped rather than
+    # merged into the next page's heading.
     pages = [
         [{"text": "Trailing Heading", "is_heading": True}],
         [
@@ -161,10 +151,9 @@ def test_a_heading_run_does_not_continue_across_a_page_boundary():
 
 
 def test_a_heading_with_no_body_text_ever_following_it_produces_no_chunk():
-    # The very last lines in the document are all bold -- there's no body
-    # text left to complete that heading's section, so it never becomes a
-    # citable chunk. Same "no empty chunk" guarantee heading_sections gives,
-    # reached here via the pending-heading-lines path instead.
+    # The last lines are all bold, so no body text completes that heading's
+    # section and it never becomes a chunk: heading_sections' "no empty
+    # chunk" guarantee, reached via the pending-heading-lines path.
     pages = [
         [
             {"text": "Conclusions", "is_heading": True},

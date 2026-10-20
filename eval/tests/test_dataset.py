@@ -17,8 +17,7 @@ DATASET = EVAL_DIR / "dataset.json"
 SCHEMA = EVAL_DIR.parent / "schema" / "eval-dataset.schema.json"
 
 # ingestion/output/ is gitignored (a regenerable projection, ADR-0012), so a
-# fresh clone won't have it. Mirrors ingestion/tests' requires_cp54 and
-# store/tests' requires_postgres: skip, with a reason, rather than fail.
+# fresh clone won't have it: skip rather than fail.
 requires_ingestion_output = pytest.mark.skipif(
     not (DEFAULT_OUTPUT_DIR / "chunks").is_dir(),
     reason="ingestion/output not present -- run the ingestion pipeline first",
@@ -33,18 +32,15 @@ def _load(path: Path):
     "dataset_path",
     [
         DATASET,
-        # Also keeps the unit-test fixture honest: if the schema tightens,
-        # test_check_dataset.py shouldn't silently keep testing a dataset
-        # shape the real file could no longer have.
+        # Keeps the unit-test fixture honest: if the schema tightens,
+        # test_check_dataset.py shouldn't keep testing a dataset shape the
+        # real file could no longer have.
         Path(__file__).parent / "fixtures" / "valid-dataset.json",
     ],
-    # ids= names each parametrized run in pytest's output, instead of it
-    # printing the full path.
     ids=["eval/dataset.json", "fixtures/valid-dataset.json"],
 )
 def test_dataset_matches_schema(dataset_path):
-    # Same format-enforcing validation as schema/tests/support.py -- see the
-    # comment there on why FormatChecker has to be passed explicitly.
+    # FormatChecker enforced explicitly, as in schema/tests/support.py.
     jsonschema.validate(
         instance=_load(dataset_path),
         schema=_load(SCHEMA),
@@ -56,6 +52,5 @@ def test_dataset_matches_schema(dataset_path):
 def test_dataset_has_no_duplicate_ids_or_missing_locators():
     problems = find_problems(_load(DATASET), load_active_chunks())
 
-    # Joining the list into the assertion message means a failure prints
-    # every problem at once, one per line, rather than just "assert [...]".
+    # The joined message makes a failure print every problem at once.
     assert problems == [], "\n".join(problems)

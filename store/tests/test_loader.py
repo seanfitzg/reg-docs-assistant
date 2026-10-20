@@ -1,13 +1,11 @@
 # Single-seam integration test for loader.py's load_store -- per the seam
-# agreed before implementation (/to-spec), this is the *only* test file for
-# the loader: no unit tests for upsert SQL or FK-ordering logic in
-# isolation, since neither means anything except against a real database
-# with its real constraints.
+# agreed before implementation (/to-spec), the *only* test file for the
+# loader: upsert SQL and FK ordering mean nothing except against a real
+# database with its real constraints.
 #
-# Mirrors ingestion/tests/test_pipeline.py's requires_cp54-style pattern:
-# tests that need a real precondition (there, corpus PDFs on disk; here, a
-# reachable Postgres) are decorated to *skip*, not fail, when that
-# precondition isn't met locally.
+# Like ingestion/tests/test_pipeline.py's requires_cp54, tests needing a real
+# precondition (here, a reachable Postgres) skip rather than fail when it's
+# missing.
 
 import json
 import os
@@ -20,14 +18,10 @@ import pytest
 from db import DEFAULT_DB_URL
 from loader import load_store
 
-# Tests run against a *separate* database (regdocs_test) from the one
-# store/README.md's "Loading data" section tells you to load the real
-# corpus into (regdocs) -- store/init/002_test_database.sql creates
-# regdocs_test with the same schema, empty, specifically so running this
-# suite can never wipe out real data you've already loaded. Deriving this
-# from DEFAULT_DB_URL (rather than writing out the connection string again)
-# means the host/user/password can only ever come from one place -- only
-# the database name differs.
+# Tests run against a *separate* database (regdocs_test), created empty with
+# the same schema by store/init/002_test_database.sql, so the suite can never
+# wipe real data loaded into regdocs. Derived from DEFAULT_DB_URL so the
+# credentials come from one place; only the database name differs.
 DB_URL = os.environ.get(
     "STORE_TEST_DATABASE_URL",
     DEFAULT_DB_URL.rsplit("/", 1)[0] + "/regdocs_test",
@@ -35,9 +29,7 @@ DB_URL = os.environ.get(
 
 
 def _postgres_reachable() -> bool:
-    # connect_timeout keeps this fast-failing (default is much longer) --
-    # this only needs to answer "is anything listening", not tolerate a
-    # slow network.
+    # Short timeout: this only asks "is anything listening".
     try:
         with psycopg.connect(DB_URL, connect_timeout=2):
             return True
@@ -57,27 +49,12 @@ REAL_MANIFEST_PATH = REPO_ROOT / "ingestion" / "manifest.json"
 
 @pytest.fixture
 def clean_db():
-    # @pytest.fixture marks this function as something a test can receive
-    # by naming it as a parameter -- every test below takes `clean_db` as
-    # an argument, and pytest calls this function automatically before the
-    # test body runs.
-    #
-    # `yield` (instead of `return`) is what splits this function into a
-    # "before" half and an "after" half: everything up to `yield` runs
-    # before the test, then the test body itself runs, then execution
-    # resumes right after `yield` once the test finishes -- whether it
-    # passed or failed. The nearest .NET equivalent is a try/finally
-    # wrapped around the test, or xUnit's IDisposable.Dispose() convention
-    # for per-test cleanup.
-    #
-    # /store's schema has two circular-ish foreign keys (documents <->
-    # chunking_generations, documents.supersedes -> documents itself), so
-    # clearing every table between tests has to null those out first --
-    # otherwise a DELETE hits "still referenced from table ..." errors.
-    # This is test-only teardown, not something loader.py itself ever
-    # does -- the loader never deletes anything (ADR-0021). It's also only
-    # ever pointed at regdocs_test (DB_URL above), never the real dev
-    # database, so this destructive cleanup can't reach real loaded data.
+    # The schema has two circular-ish foreign keys (documents <->
+    # chunking_generations, documents.supersedes -> documents), so clearing
+    # every table has to null those out first or DELETE hits "still
+    # referenced" errors. Test-only teardown -- the loader never deletes
+    # (ADR-0021) -- and only ever pointed at regdocs_test, never the real dev
+    # database.
     def _clear():
         with psycopg.connect(DB_URL) as conn:
             with conn.cursor() as cur:
@@ -96,15 +73,11 @@ def clean_db():
 
 
 def _write_fixture_corpus(base: Path) -> tuple[Path, Path]:
-    # Builds a small synthetic ingestion/output + manifest.json, in the
-    # exact shape ingestion/pipeline.py actually produces (per
-    # ingestion/README.md), for one Document that has been re-chunked --
-    # i.e. it has *two* Chunking Generations, not just one. The real
-    # corpus (as ingested so far) only ever has one Generation per
-    # Document, so this is the only way to prove upsert-by-id doesn't
-    # collide or overwrite across multiple Generations of the same
-    # Document -- an acceptance criterion the real corpus alone can't
-    # exercise.
+    # A small synthetic ingestion/output + manifest.json, in the shape
+    # pipeline.py produces (ingestion/README.md), for one re-chunked Document
+    # with *two* Chunking Generations. The real corpus has only one per
+    # Document, so this is the only way to prove upsert-by-id doesn't collide
+    # or overwrite across Generations of the same Document.
     output_dir = base / "output"
     (output_dir / "documents").mkdir(parents=True, exist_ok=True)
     (output_dir / "chunks").mkdir(parents=True, exist_ok=True)
@@ -118,9 +91,8 @@ def _write_fixture_corpus(base: Path) -> tuple[Path, Path]:
                 "publisher": "Test Publisher",
                 "published_date": "2024-01-01",
                 "source_url": "https://example.com/fixture-doc",
-                # Active generation is the *second* one -- proves the
-                # loader doesn't just always point at whichever Generation
-                # happened to be inserted first.
+                # The *second* generation is active, proving the loader
+                # doesn't just point at the first one inserted.
                 "active_chunking_generation_id": f"{document_id}-gen-2",
             }
         ),
@@ -177,12 +149,6 @@ def _write_fixture_corpus(base: Path) -> tuple[Path, Path]:
 
 @requires_postgres
 def test_loads_document_with_multiple_generations_without_collision(tmp_path, clean_db):
-    # tmp_path is a *built-in* pytest fixture -- not defined anywhere in
-    # this file, the way clean_db is just above. pytest recognizes the
-    # parameter name itself and injects a fresh, empty pathlib.Path
-    # pointing at a unique temp directory for this one test, deleted
-    # automatically afterward. pytest doesn't distinguish "built-in" from
-    # "defined in this file" -- both are just fixtures, matched by name.
     output_dir, manifest_path = _write_fixture_corpus(tmp_path)
 
     load_store(output_dir, manifest_path, DB_URL)
@@ -231,16 +197,12 @@ def test_rerunning_the_loader_is_a_safe_no_op(tmp_path, clean_db):
 
 @requires_postgres
 def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean_db):
-    # Regression test for a bug /code-review caught: chunking_strategy came
-    # from manifest.json, looked up fresh on every call to load_store. If a
-    # Document were later re-chunked with a *different* strategy and
-    # manifest.json's entry updated in place (rather than recording history
-    # anywhere), a naive upsert would silently rewrite an existing, already
-    # immutable Chunking Generation's recorded strategy on the next loader
-    # run -- corrupting a fact ADR-0021's Replay guarantee depends on
-    # staying accurate. upsert_immutable's ON CONFLICT DO NOTHING is what
-    # prevents this: this test proves it, rather than just asserting the
-    # loader "should" be safe.
+    # Regression test for a bug /code-review caught: chunking_strategy is read
+    # from manifest.json on every load_store call. If a Document were
+    # re-chunked with a different strategy and its manifest entry updated in
+    # place, a naive upsert would rewrite an immutable Chunking Generation's
+    # recorded strategy, corrupting a fact ADR-0021's Replay guarantee
+    # depends on. upsert_immutable's ON CONFLICT DO NOTHING prevents it.
     output_dir, manifest_path = _write_fixture_corpus(tmp_path)
     load_store(output_dir, manifest_path, DB_URL)
 
@@ -269,9 +231,8 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
             cur.execute(
                 "SELECT id, chunking_strategy FROM chunking_generations ORDER BY id"
             )
-            # Both existing Generations must still show "clause_numbered" --
-            # the strategy they were *actually* created with, unaffected by
-            # manifest.json's later drift.
+            # Still "clause_numbered", the strategy they were created with,
+            # unaffected by the manifest's later drift.
             assert cur.fetchall() == [
                 ("doc-fixture-doc-gen-1", "clause_numbered"),
                 ("doc-fixture-doc-gen-2", "clause_numbered"),
@@ -281,10 +242,9 @@ def test_rerun_never_overwrites_an_existing_generations_strategy(tmp_path, clean
 def _write_two_document_fixture(
     base: Path, second_supersedes: str | None
 ) -> tuple[Path, Path]:
-    # A second, smaller fixture: two Documents, where the second document's
-    # `supersedes` can be varied between calls (that's the whole point --
-    # proving a second load_store call with a *different* supersedes value
-    # for an already-loaded Document doesn't change what's stored).
+    # Two Documents, where the second's `supersedes` varies between calls, to
+    # prove a second load with a different value for an already-loaded
+    # Document doesn't change what's stored.
     output_dir = base / "output"
     (output_dir / "documents").mkdir(parents=True, exist_ok=True)
     (output_dir / "chunks").mkdir(parents=True, exist_ok=True)
@@ -338,21 +298,18 @@ def _write_two_document_fixture(
 
 @requires_postgres
 def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
-    # Regression test for the same class of bug as
-    # test_rerun_never_overwrites_an_existing_generations_strategy, but for
-    # documents.supersedes: /code-review caught that phase 3's UPDATE was
-    # setting it unconditionally on *every* run, which would silently
-    # rewrite an already-loaded Document's supersedes link if the source
-    # JSON's value ever changed -- contradicting supersedes' own status as
-    # an immutable fact about a Document (CONTEXT.md), the same guarantee
-    # upsert_immutable already gives title/publisher/etc.
+    # Same class of bug as
+    # test_rerun_never_overwrites_an_existing_generations_strategy, for
+    # documents.supersedes: /code-review caught that phase 3's UPDATE set it
+    # on *every* run, which would rewrite an already-loaded Document's link if
+    # the source JSON changed, contradicting its immutability (CONTEXT.md).
     output_dir, manifest_path = _write_two_document_fixture(
         tmp_path, second_supersedes="doc-original"
     )
     load_store(output_dir, manifest_path, DB_URL)
 
-    # Re-run with doc-successor's supersedes changed to point at nothing
-    # (None) -- simulating drift in a regenerated Document JSON.
+    # Re-run with doc-successor's supersedes dropped, simulating drift in
+    # regenerated Document JSON.
     output_dir, manifest_path = _write_two_document_fixture(
         tmp_path, second_supersedes=None
     )
@@ -361,8 +318,7 @@ def test_supersedes_is_set_once_and_never_overwritten(tmp_path, clean_db):
     with psycopg.connect(DB_URL) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT supersedes FROM documents WHERE id = 'doc-successor'")
-            # Still "doc-original" -- the value from the *first* load,
-            # unaffected by the second run's different input.
+            # Still the value from the *first* load.
             assert cur.fetchone() == ("doc-original",)
 
 
@@ -390,10 +346,8 @@ def test_invalid_chunking_strategy_raises_a_clear_error(tmp_path, clean_db):
         load_store(output_dir, manifest_path, DB_URL)
 
 
-# Mirrors ingestion/tests/test_pipeline.py's requires_full_corpus: the real
-# corpus isn't committed to git, so this skips (not fails) unless
-# `ingestion/output` has actually been generated locally by running
-# ingestion's pipeline first.
+# Like test_pipeline.py's requires_full_corpus: the real corpus isn't in git,
+# so skip unless ingestion/output has been generated locally.
 requires_ingested_corpus = pytest.mark.skipif(
     not (REAL_OUTPUT_DIR / "documents").is_dir(),
     reason="ingestion/output isn't present -- run ingestion's pipeline first (see ingestion/README.md)",
@@ -419,9 +373,7 @@ def test_loads_the_full_ingested_corpus(clean_db):
             cur.execute("SELECT COUNT(*) FROM chunks")
             assert cur.fetchone() == (expected_chunk_count,)
 
-            # Every Document that has been chunked at all must have its
-            # active_chunking_generation_id set -- phase 3 of load_store
-            # backfills it for every Document, so none should still be NULL.
+            # Phase 3 sets it for every Document, so none should be NULL.
             cur.execute(
                 "SELECT COUNT(*) FROM documents WHERE active_chunking_generation_id IS NULL"
             )

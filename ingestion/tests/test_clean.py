@@ -1,10 +1,8 @@
-# Tests for clean.py (ADR-0016), in two parts: the automatic cleanup step
-# (no manifest flag needed) -- stripping running headers/footers, plus the
-# closely related case of bare page-number lines, which don't repeat
-# verbatim (the number itself changes every page) but are just as
-# mechanical and judgment-free to detect and remove -- and, further down,
-# the manifest-flagged cleanup step (issue #9, generalised in issue #13),
-# which only ever runs when a manifest entry names it explicitly.
+# Tests for clean.py (ADR-0016), in two parts: the automatic cleanup (running
+# headers/footers, plus bare page-number lines, which don't repeat verbatim
+# but are just as mechanical to remove), and the manifest-flagged cleanup
+# (issue #9, generalised in #13), which runs only when a manifest entry names
+# it.
 
 import pytest
 
@@ -46,21 +44,11 @@ def test_real_content_on_every_page_is_kept():
 
 
 def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stripped():
-    # Real documents can confine one header style to a single section, not
-    # the whole document -- inspecting the actual CP54 PDF while building
-    # this pipeline found its running header printed on only 15 of its 96
-    # pages (the discussion section; the rest is the appended draft Code
-    # text under a different header). Neither "every page" nor "a majority
-    # of pages" would ever fire there. What both this real case and this
-    # synthetic one share is a line repeating far more often than real
-    # prose plausibly would: here, 5 of 20 pages.
-    #
-    # "X if cond else Y" is Python's conditional expression (the equivalent
-    # of C#'s "cond ? X : Y" ternary), used here *inside* a list
-    # comprehension -- for each i in range(20), it evaluates the ternary to
-    # decide which string that page gets, producing a 20-item list in one
-    # expression rather than a separate loop with an if/else inside it. The
-    # parentheses let the ternary itself span three lines.
+    # A header style can be confined to one section: the real CP54 PDF's
+    # running header prints on only 15 of 96 pages (the rest is the appended
+    # draft Code under a different header), so neither "every page" nor "a
+    # majority" would fire. What this synthetic case shares with it is a line
+    # repeating far more often than real prose would: 5 of 20 pages.
     pages = [
         ("Running Header\nReal page content." if i < 5 else f"Page {i} unique content.")
         for i in range(20)
@@ -73,10 +61,8 @@ def test_line_repeated_on_only_a_small_fraction_of_a_long_document_is_still_stri
 
 
 def test_line_only_on_one_page_is_not_treated_as_a_header():
-    # A line has to repeat across *every* page to count as a header/footer
-    # -- ADR-0016 chose this mechanical, no-judgment-call rule specifically
-    # because it has no real false-positive risk. A line that only shows up
-    # once is exactly the kind of thing that rule must never touch.
+    # ADR-0016 chose a mechanical repetition rule because it has no real
+    # false-positive risk; a line that shows up once must never be touched.
     pages = [
         "1.1\nPurpose",
         "1.2\nScope",
@@ -89,9 +75,8 @@ def test_line_only_on_one_page_is_not_treated_as_a_header():
 
 
 def test_bare_page_number_lines_are_stripped():
-    # Page numbers ascend every page, so they never repeat verbatim -- they
-    # need their own rule: a line that is *only* digits is a page number,
-    # not real content, on essentially any document.
+    # Page numbers never repeat verbatim, so they need their own rule: a line
+    # of *only* digits is a page number on essentially any document.
     pages = [
         "6\nSome real text on page six.",
         "7\nSome real text on page seven.",
@@ -106,12 +91,9 @@ def test_bare_page_number_lines_are_stripped():
 
 
 def test_page_prefixed_page_number_lines_are_stripped():
-    # DP8's real running footer is "Page 5", "Page 6", ... -- a page number
-    # with a "Page " prefix, which is neither a repeated verbatim line
-    # (the digit changes every page) nor caught by the bare-digit rule
-    # above (the line isn't *only* digits). It needs its own recognition,
-    # same mechanical justification as bare digits: no real sentence is
-    # ever just the word "Page" followed by a number and nothing else.
+    # DP8's real footer is "Page 5", "Page 6", ...: neither a verbatim repeat
+    # nor caught by the bare-digit rule. No real sentence is just "Page"
+    # followed by a number, so it's equally safe to strip.
     pages = ["Page 5\nReal text on page five.", "Page 6\nReal text on page six."]
 
     cleaned = strip_headers_footers_and_page_numbers(pages)
@@ -122,9 +104,8 @@ def test_page_prefixed_page_number_lines_are_stripped():
 
 
 def test_a_number_that_is_part_of_real_text_is_kept():
-    # Only a line that is *nothing but* digits is treated as a page number.
-    # A line like "1.1" (a clause locator) or a sentence containing a number
-    # must survive untouched.
+    # A clause locator like "1.1" or a sentence containing a number must
+    # survive.
     pages = ["1.1\nThe fee is 30 days.", "1.2\nMore text."]
 
     cleaned = strip_headers_footers_and_page_numbers(pages)
@@ -136,9 +117,8 @@ def test_a_number_that_is_part_of_real_text_is_kept():
 # ---- Layout-aware variant, for heading_sections documents ----
 #
 # heading_sections needs to know *which* surviving lines are headings
-# (extract_pages_with_headings' "is_heading" flag), not just their text --
-# so this variant works on the structured list[list[dict]] shape instead of
-# plain per-page strings, but applies the exact same boilerplate rules.
+# ("is_heading"), so this variant works on the list[list[dict]] shape but
+# applies the same boilerplate rules.
 
 
 def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
@@ -174,9 +154,8 @@ def test_layout_variant_strips_repeated_lines_but_keeps_the_heading_flag():
 
 
 def test_layout_variant_strips_page_number_lines():
-    # Distinct content per page here, deliberately -- identical content on
-    # both pages would itself trigger the header/footer rule and confuse
-    # what this test is actually checking.
+    # Distinct content per page: identical content would itself trigger the
+    # header/footer rule.
     pages = [
         [
             {"text": "Page 5", "is_heading": False},
@@ -195,16 +174,11 @@ def test_layout_variant_strips_page_number_lines():
 
 # ---- Manifest-flagged cleanup (ADR-0016) ----
 #
-# Unlike the automatic rules above, these only ever run when a manifest
-# entry names them explicitly (issue #9) -- so every test here builds its
-# own small fixture rather than relying on anything being auto-detected.
-# Both functions are generic/parameterised (issue #13): FSR and DP7's own
-# real quirks (their exact heading text, their exact nav-chrome pattern) are
-# only ever mentioned in *comments* below, as motivating examples -- the
-# functions under test take those specifics as plain arguments, not as
-# hardcoded constants, so most fixtures here deliberately use invented
-# headings/patterns to prove the functions aren't secretly still tied to
-# one real document.
+# These run only when a manifest entry names them (issue #9), so every test
+# builds its own small fixture. Both functions are parameterised (issue #13):
+# FSR's and DP7's real quirks appear only in comments as motivating examples,
+# and most fixtures use invented headings/patterns to prove the functions
+# aren't still tied to one real document.
 
 
 def test_strip_section_between_headings_removes_the_span_between_markers():
@@ -239,10 +213,8 @@ def test_strip_section_between_headings_removes_the_span_between_markers():
 
 
 def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
-    # Mirrors the real FSR document's shape (its own removed span runs
-    # Réamhrá -> Forbhreathnú -> a third page with no heading of its own ->
-    # Global risk assessment) -- the removal has to survive page
-    # boundaries, not just work within a single page.
+    # Mirrors FSR's shape (Réamhrá -> Forbhreathnú -> a page with no heading
+    # -> Global risk assessment): the removal must survive page boundaries.
     pages = [
         [
             {"text": "Start", "is_heading": True},
@@ -273,16 +245,11 @@ def test_strip_section_between_headings_spanning_multiple_pages_is_removed():
 
 
 def test_strip_section_between_headings_ignores_other_bold_lines_inside_the_span():
-    # The real FSR document's Réamhrá/Forbhreathnú sections come out of
-    # extract_pages_with_headings with their *entire* body marked
-    # is_heading=True, not just the section title -- pymupdf reports that
-    # text as bold, and extract_pages_with_headings has no way to tell "a
-    # real heading" from "a bold paragraph" apart (heading_sections.py's own
-    # module comment documents this same ambiguity for a different case). A
-    # naive "any heading line exits the zone" rule would wrongly stop
-    # removing right after the start marker, keeping everything else in the
-    # section. This bold line's text isn't the configured end marker, so it
-    # must not end the removal early.
+    # FSR's Réamhrá/Forbhreathnú sections come out of extraction with their
+    # *entire* body marked is_heading=True (it's bold, and a bold paragraph
+    # can't be told from a heading). A naive "any heading exits the zone" rule
+    # would stop removing right after the start marker. This bold line isn't
+    # the configured end marker, so it must not end the removal.
     pages = [
         [
             {"text": "Start", "is_heading": True},
@@ -321,12 +288,10 @@ def test_strip_section_between_headings_with_no_matching_markers_is_unaffected()
 
 
 def test_strip_lines_with_repeated_pattern_removes_a_line_meeting_the_threshold():
-    # Modelled on DP7's real Annex nav-breadcrumb footer, e.g.
-    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- the
-    # "page X of Y" part changes every occurrence, so unlike a running
-    # header/footer this line never repeats verbatim (ADR-0016) and needs
-    # its own rule. Using an invented "Widget" pattern here, not "Annex", to
-    # prove the function itself carries no real document's wording.
+    # Modelled on DP7's Annex nav-breadcrumb footer ("Annex 1 page 1 of 3 >  |
+    # Annex 2  | Annex 3  | Annex 4"), whose "page X of Y" part changes each
+    # time, so it never repeats verbatim (ADR-0016). An invented "Widget"
+    # pattern proves the function carries no real document's wording.
     pages = [
         [
             {
@@ -345,10 +310,9 @@ def test_strip_lines_with_repeated_pattern_removes_a_line_meeting_the_threshold(
 
 
 def test_strip_lines_with_repeated_pattern_keeps_a_line_below_the_threshold():
-    # DP7's real Table of Contents lists "Annex 1", "Annex 2", "Annex 3" and
-    # "Annex 4" as four *separate* lines, each naming only one Annex -- real
-    # content, not the nav footer, and must survive; a sentence that
-    # legitimately mentions the pattern once must too.
+    # DP7's Table of Contents lists "Annex 1".."Annex 4" as four *separate*
+    # lines: real content that must survive, as must a sentence mentioning the
+    # pattern once.
     pages = [
         [
             {"text": "Widget 1", "is_heading": False},
@@ -401,14 +365,10 @@ def test_apply_cleanup_flags_with_no_flags_is_a_no_op():
 
 
 def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
-    # The manifest supports "one or more" cleanup flags per document
-    # (ADR-0016, issue #9) -- no single real document in this corpus needs
-    # both flags at once, but the mechanism itself must genuinely chain
-    # multiple flags, not just work for a single-flag list. Each flag's
-    # effect is independently verifiable here: the removed section (matched
-    # by heading text) is gone, and so is the navigation-chrome line
-    # (matched by its own, unrelated pattern) that was sitting right next to
-    # it.
+    # The manifest allows several flags per document (ADR-0016, issue #9).
+    # No real document needs two, but the mechanism must chain them: both the
+    # removed section and the unrelated navigation-chrome line next to it
+    # are gone.
     pages = [
         [
             {"text": "Start", "is_heading": True},
@@ -448,11 +408,9 @@ def test_apply_cleanup_flags_applies_more_than_one_flag_in_sequence():
 
 
 def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_type():
-    # An unrecognized flag type is almost certainly a typo in the manifest,
-    # not a genuinely empty set of cleanup rules -- this should raise loudly
-    # (ADR-0019's "fail loudly" reasoning, applied here the same way an
-    # unrecognized chunking_strategy already raises in pipeline.py), not
-    # silently do nothing.
+    # Almost certainly a manifest typo, so it must raise, as an unrecognized
+    # chunking_strategy does in pipeline.py (ADR-0019), not silently do
+    # nothing.
     with pytest.raises(KeyError):
         apply_cleanup_flags(
             [[{"text": "x", "is_heading": False}]], [{"type": "not_a_real_flag_type"}]
@@ -460,11 +418,8 @@ def test_apply_cleanup_flags_raises_on_an_unrecognized_flag_type():
 
 
 def test_apply_cleanup_flags_raises_on_a_flag_with_a_mismatched_parameter_name():
-    # A flag's parameters must match its function's keyword argument names
-    # exactly (apply_cleanup_flags passes them straight through as
-    # **kwargs) -- a manifest typo like "min_matches" instead of
-    # "minimum_matches" should fail loudly, not silently apply some
-    # unintended default.
+    # Flag parameters pass straight through as kwargs, so a manifest typo like
+    # "min_matches" must fail loudly, not apply some unintended default.
     with pytest.raises(TypeError):
         apply_cleanup_flags(
             [[{"text": "x", "is_heading": False}]],

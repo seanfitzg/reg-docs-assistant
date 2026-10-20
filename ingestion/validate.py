@@ -1,13 +1,10 @@
 # Validates pipeline output against the shared JSON Schemas in /schema.
 #
-# This mirrors schema/tests/support.py (same FormatChecker reasoning: a
-# plain jsonschema.validate() call silently skips "format" keywords like
-# "date"/"uri" unless a FormatChecker is passed explicitly). It isn't
-# imported from schema/tests directly, though, because ingestion/ is a
-# separate component with its own virtual environment and dependencies
-# (schema/'s venv has no reason to carry pymupdf, and vice versa) -- schema/
-# stays the "shared spine" both future tracks depend on, ingestion is one
-# more independent consumer of it, not an extension of its test suite.
+# Mirrors schema/tests/support.py (a plain jsonschema.validate() silently
+# skips "format" keywords like "date"/"uri" unless a FormatChecker is passed).
+# Not imported from there because ingestion/ has its own virtual environment
+# and dependencies; schema/ stays the shared spine, and ingestion is one more
+# independent consumer of it.
 
 import json
 from pathlib import Path
@@ -24,7 +21,5 @@ def load_schema(schema_filename: str) -> dict:
 
 
 def validate_against_schema(payload: dict, schema: dict) -> None:
-    # Raises jsonschema.exceptions.ValidationError on failure; returns
-    # nothing on success, the same "no news is good news" shape as
-    # schema/tests/support.py's validate().
+    # Raises jsonschema.exceptions.ValidationError on failure.
     jsonschema.validate(instance=payload, schema=schema, format_checker=FORMAT_CHECKER)

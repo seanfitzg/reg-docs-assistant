@@ -14,18 +14,13 @@
 
 import math
 
-# Reuse the real client and constants from embed.py, so this script talks
-# to Ollama exactly the way the pipeline will. (Importing embed.py doesn't
-# touch the database -- that only happens inside embed_chunks().)
 from embed import DOCUMENT_PREFIX, OllamaEmbeddingClient
 
-# The prefix for the *query* side. embed.py only ever needs the document
-# prefix (it only stores things); this script is the first place the query
-# prefix appears, and the future retrieval ticket will need it too.
+# Query-side prefix; embed.py only needs the document prefix.
 QUERY_PREFIX = "search_query: "
 
-# A tiny made-up "corpus": a few regulatory-flavoured sentences, plus two
-# deliberately unrelated ones as controls. Watch where those two land.
+# A tiny made-up corpus: regulatory-flavoured sentences plus two unrelated
+# controls. Watch where those two land.
 SENTENCES = [
     "Banks must hold a minimum amount of capital against their risk exposures.",
     "Credit institutions are required to maintain minimum own funds.",
@@ -39,17 +34,10 @@ QUESTION = "How much capital does a bank need to keep?"
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
-    # Cosine similarity = "how much do these two arrows point the same way?"
-    # 1.0 means same direction, 0 means unrelated (at right angles), and
-    # negative means roughly opposite. It ignores how *long* the arrows are
-    # and looks only at direction, which is what "similar meaning" is
-    # supposed to be about.
-    #
-    # The formula: dot product divided by the product of the lengths.
-    #   zip(a, b)  pairs up the two lists element by element, like LINQ's
-    #              a.Zip(b), giving (a0, b0), (a1, b1), ...
-    #   sum(...)   adds up the products: that's the dot product.
-    #   math.sqrt(sum(x * x ...)) is the length (magnitude) of one vector.
+    # Cosine similarity: how much two arrows point the same way. 1.0 = same
+    # direction, 0 = unrelated (right angles), negative = roughly opposite.
+    # It ignores vector length and looks only at direction, which is what
+    # "similar meaning" is about. Formula: dot product / product of lengths.
     dot = sum(x * y for x, y in zip(a, b))
     length_a = math.sqrt(sum(x * x for x in a))
     length_b = math.sqrt(sum(y * y for y in b))
@@ -57,23 +45,18 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
 
 
 def short(text: str, width: int = 34) -> str:
-    # Trims a sentence so the printed tables stay readable: keep the first
-    # `width` characters, adding "..." only if something was cut off. The
-    # slice text[:width] means "characters from the start up to width".
+    # Trims a sentence to `width` characters, adding "..." if cut.
     if len(text) <= width:
         return text
     return text[: width - 3] + "..."
 
 
 def print_matrix(vectors: list[list[float]]) -> None:
-    # Prints a grid: row i, column j = similarity of sentence i to sentence j.
-    # The diagonal is always 1.00 (a sentence is identical to itself).
-    # Columns are labelled #1..#n to keep the grid narrow; the legend
-    # underneath says which number is which sentence.
+    # Row i, column j = similarity of sentence i to sentence j; the diagonal
+    # is always 1.00. Columns are labelled #1..#n, with a legend underneath.
     column_labels = "".join(f"  #{n + 1:<3}" for n in range(len(vectors)))
     print("       " + column_labels)
     for i, row_vector in enumerate(vectors):
-        # A list comprehension building one formatted cell per column.
         cells = "".join(
             f"  {cosine_similarity(row_vector, column_vector):.2f}"
             for column_vector in vectors
@@ -87,16 +70,12 @@ def print_matrix(vectors: list[list[float]]) -> None:
 def print_ranking(
     question_vector: list[float], document_vectors: list[list[float]]
 ) -> None:
-    # Scores every sentence against the question, then prints best-first.
-    # This is the whole of "retrieval" in miniature: embed the question,
-    # measure closeness to each stored vector, sort. pgvector will do the
-    # same thing inside Postgres, with an index to make it fast at scale.
+    # "Retrieval" in miniature: score every sentence against the question,
+    # best first. pgvector does the same inside Postgres.
     scored = [
         (cosine_similarity(question_vector, vector), sentence)
         for vector, sentence in zip(document_vectors, SENTENCES)
     ]
-    # sort(reverse=True) sorts tuples by their first element (the score),
-    # highest first.
     scored.sort(reverse=True)
     for score, sentence in scored:
         print(f"  {score:.3f}  {short(sentence, 70)}")

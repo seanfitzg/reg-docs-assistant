@@ -4,12 +4,6 @@
 # and that a Document's active_chunking_generation_id genuinely picks out one
 # generation among more than one Chunk generation on disk.
 #
-# See test_harness.py for the basics (imports, pathlib, jsonschema.validate,
-# pytest.raises) — this file only comments on what's new here. load_json()
-# and validate() (which enforces "format" constraints, unlike calling
-# jsonschema.validate() directly) live in support.py so they aren't
-# redefined per file.
-
 from pathlib import Path
 
 import jsonschema
@@ -45,16 +39,6 @@ def test_superseding_document_references_the_original_by_id():
     original = load_json(DOCUMENT_FIXTURES / "valid-original.json")
     superseding = load_json(DOCUMENT_FIXTURES / "valid-superseding.json")
 
-    # Square brackets on a dict do a key lookup — like a C# Dictionary's
-    # indexer, except there's no declared value type since Python resolves
-    # types at runtime. A missing key raises KeyError rather than returning
-    # null, so this line also doubles as "the field is actually present".
-    #
-    # "assert" is a language keyword here, not a method call — pytest
-    # rewrites it under the hood so that on failure it reports the actual
-    # values of both sides (e.g. "assert 'doc-1' == 'doc-2'"), similar to
-    # what Assert.AreEqual(expected, actual) gives you in nUnit, but without
-    # having to call a separate Assert API.
     assert superseding["supersedes"] == original["id"]
 
 
@@ -67,8 +51,8 @@ def test_invalid_document_fails_validation():
 
 
 def test_document_with_malformed_date_fails_validation():
-    # Proves support.validate()'s format enforcement is actually doing
-    # something for "date": without it, "not-a-date" would pass.
+    # Proves format enforcement works for "date": without it, "not-a-date"
+    # would pass.
     schema = load_json(DOCUMENT_SCHEMA)
     payload = load_json(DOCUMENT_FIXTURES / "invalid-bad-date-format.json")
 
@@ -77,9 +61,8 @@ def test_document_with_malformed_date_fails_validation():
 
 
 def test_document_with_malformed_url_fails_validation():
-    # Same proof, for "uri" specifically — jsonschema's default install
-    # doesn't even register a "uri" checker (only "date" works out of the
-    # box), which is why requirements.txt pins jsonschema[format].
+    # Same proof for "uri": jsonschema's default install registers no "uri"
+    # checker, which is why requirements.txt pins jsonschema[format].
     schema = load_json(DOCUMENT_SCHEMA)
     payload = load_json(DOCUMENT_FIXTURES / "invalid-bad-uri-format.json")
 
@@ -145,10 +128,8 @@ def test_document_active_generation_points_at_the_correct_chunk_generation():
         != generation_two["chunking_generation_id"]
     )
 
-    # The Document's active pointer matches generation_two specifically —
-    # combined with the inequality above, that already establishes
-    # generation_one is not the active one too, so a third assertion here
-    # would just restate what these two already guarantee.
+    # With the inequality above, matching generation_two already establishes
+    # generation_one is not active, so no third assertion is needed.
     assert (
         document["active_chunking_generation_id"]
         == generation_two["chunking_generation_id"]

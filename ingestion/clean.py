@@ -1,32 +1,23 @@
 # Automatic text cleanup (ADR-0016): stripping repeated headers/footers and
-# page-number lines. This is deliberately the *only* cleanup applied without
-# a human declaring it in the manifest -- both rules here are safe,
-# mechanical pattern-matches with no real judgment call involved. Further
-# down, the "Manifest-flagged cleanup" section covers the opposite case:
+# page-number lines. This is deliberately the only cleanup applied without a
+# human declaring it in the manifest -- both rules are safe, mechanical
+# pattern-matches. The "Manifest-flagged cleanup" section below covers
 # document-specific quirks (bilingual duplication, navigation chrome) that
-# only apply when a manifest entry names them explicitly (issue #9).
+# apply only when a manifest entry names them (issue #9).
 #
-# Two public functions share the same underlying automatic rules but work
-# on different shapes: strip_headers_footers_and_page_numbers() takes plain
-# per-page text (what extract_pages() returns, used by clause_numbered);
+# Two public functions share the same automatic rules but work on different
+# shapes: strip_headers_footers_and_page_numbers() takes plain per-page text
+# (extract_pages(), used by clause_numbered);
 # strip_headers_footers_and_page_numbers_from_layout() takes the
-# list[list[dict]] shape extract_pages_with_headings() returns, and
-# preserves each surviving line's "is_heading" flag alongside it (needed by
-# heading_sections, which extract_pages() throws away by design).
+# list[list[dict]] shape of extract_pages_with_headings() and preserves each
+# line's "is_heading" flag (needed by heading_sections).
 
 import re
 from collections import Counter
 
-# re.compile(...) pre-builds this pattern once rather than re-parsing it on
-# every call -- the same idea as a static readonly Regex field in C#.
-# fullmatch (used below, not search/match) requires the *entire* line to
-# match, not just some substring within it.
-#   (?:page\s+)?   an optional, non-capturing "page " (or "Page ", "PAGE ",
-#                  ... -- see re.IGNORECASE below) prefix
-#   \d+            one or more digits
-# This intentionally only matches a line that is *nothing but* an optional
-# "page" word and a number -- "Page 5" or "5", never "Page 5 of the
-# Handbook" or a sentence that happens to contain a number.
+# fullmatch (below) requires the *entire* line to match, so this only matches
+# a line that is nothing but an optional "page" word and a number ("Page 5",
+# "5"), never "Page 5 of the Handbook" or a sentence containing a number.
 PAGE_NUMBER_PATTERN = re.compile(r"(?:page\s+)?\d+", re.IGNORECASE)
 
 
@@ -35,39 +26,27 @@ def _is_page_number(line: str) -> bool:
 
 
 def _find_boilerplate_lines(pages_of_lines: list[list[str]]) -> set[str]:
-    # This is the shared core both public functions below call: given each
-    # page's lines (already whitespace-trimmed), work out which distinct
-    # lines of text count as a running header/footer.
+    # Shared core of both public functions: given each page's
+    # whitespace-trimmed lines, find the distinct lines that count as a
+    # running header/footer.
 
-    # Counter is a dict subclass from Python's standard library that counts
-    # how many times each value occurs -- roughly a shortcut for what you'd
-    # build by hand with a Dictionary<string, int> and a foreach loop that
-    # increments a count per key.
-    #
-    # For each page we count each *distinct* non-blank line once (via
-    # set(...) before updating the counter), not once per occurrence on
-    # that page -- otherwise a line repeated twice on the same page (e.g.
-    # by accident in a table) would inflate its count and look like it
-    # repeats across more pages than it actually does.
+    # Each distinct non-blank line is counted once per page (via the set), so
+    # a line repeated twice on one page (e.g. by accident in a table) doesn't
+    # look like it repeats across more pages than it does.
     line_counts: Counter[str] = Counter()
     for lines in pages_of_lines:
         distinct_non_blank_lines = {line for line in lines if line}
         line_counts.update(distinct_non_blank_lines)
 
     number_of_pages = len(pages_of_lines)
-    # A line counts as a running header/footer once it repeats verbatim on
-    # at least 3 pages -- or, for a document shorter than 3 pages, on all
-    # of them (there's no "3 pages" to require from a 1- or 2-page
-    # document). This started life as "every single page" and then
-    # "a majority of pages", but inspecting the real CP54 PDF while
-    # building this pipeline showed neither survives contact with a real
-    # document: its running header prints on only 15 of its 96 pages (the
-    # discussion section; the other 81 are the appended draft Code text
-    # with a different header), which is neither "every page" nor
-    # "a majority". A small absolute count still keeps the same safety
-    # property "every page" was chosen for in the first place -- real prose
-    # essentially never repeats itself verbatim three separate times,
-    # anywhere in a document, regardless of how long that document is.
+    # A line is a running header/footer once it repeats verbatim on at least 3
+    # pages -- or on all of them, for a document shorter than 3 pages. This
+    # started as "every page", then "a majority of pages", but the real CP54
+    # PDF showed neither works: its running header prints on only 15 of 96
+    # pages (the other 81 are appended draft Code text with a different
+    # header). A small absolute count keeps the safety property "every page"
+    # was chosen for: real prose essentially never repeats verbatim three
+    # times, however long the document.
     header_footer_threshold = min(3, number_of_pages)
     return {
         line for line, count in line_counts.items() if count >= header_footer_threshold
@@ -75,9 +54,7 @@ def _find_boilerplate_lines(pages_of_lines: list[list[str]]) -> set[str]:
 
 
 def _keep_line(normalized_text: str, boilerplate_lines: set[str]) -> bool:
-    # Shared by both public functions below, so the actual keep/discard
-    # rule is written -- and explained -- exactly once, however many
-    # different input shapes end up calling it.
+    # The single keep/discard rule shared by both public functions.
     return (
         # A blank line carries nothing to keep either way.
         bool(normalized_text)
@@ -90,15 +67,9 @@ def _keep_line(normalized_text: str, boilerplate_lines: set[str]) -> bool:
 
 
 def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
-    # .split("\n") breaks each page's raw text into one string per line
-    # (pymupdf's get_text() already uses "\n" as the line separator). This
-    # gives a list of lists: one inner list of lines per page.
-    #
-    # .strip() removes leading/trailing whitespace from a string -- the
-    # same idea as C#'s string.Trim(). We compare *normalized* lines
-    # (whitespace-trimmed) so that e.g. "CP 54 " and "CP 54" still count as
-    # the same repeated line, without permanently discarding the original
-    # spacing from lines we decide to keep.
+    # Compare *normalized* (trimmed) lines so "CP 54 " and "CP 54" count as
+    # the same repeated line, without discarding the original spacing of lines
+    # we keep.
     normalized_pages = [[line.strip() for line in page.split("\n")] for page in pages]
 
     boilerplate_lines = _find_boilerplate_lines(normalized_pages)
@@ -114,13 +85,8 @@ def strip_headers_footers_and_page_numbers(pages: list[str]) -> list[str]:
 def strip_headers_footers_and_page_numbers_from_layout(
     pages: list[list[dict]],
 ) -> list[list[dict]]:
-    # This variant takes the shape extract_pages_with_headings() produces:
-    # one list per page, each item a dict {"text": str, "is_heading": bool}
-    # for one line -- not a plain string per page, the way extract_pages()
-    # (and the function above) works. line["text"]/line["is_heading"] is a
-    # dict lookup by key, the same as C#'s dict["key"] indexer; it's safe
-    # here (no KeyError risk) because every dict in this shape always has
-    # both keys, guaranteed by whichever function built it.
+    # Takes extract_pages_with_headings()'s shape: per page, a list of
+    # {"text": str, "is_heading": bool} dicts, one per line.
     normalized_pages = [
         [line["text"].strip() for line in page_lines] for page_lines in pages
     ]
@@ -133,10 +99,9 @@ def strip_headers_footers_and_page_numbers_from_layout(
         for line in page_lines:
             normalized_text = line["text"].strip()
             if _keep_line(normalized_text, boilerplate_lines):
-                # Rebuild the dict with the *normalized* text (matching what
-                # strip_headers_footers_and_page_numbers keeps above), but
-                # carry the original "is_heading" flag through untouched --
-                # that flag is the entire reason this variant exists.
+                # Keep the normalized text (as the plain-text variant does)
+                # and carry "is_heading" through -- the reason this variant
+                # exists.
                 kept_lines.append(
                     {"text": normalized_text, "is_heading": line["is_heading"]}
                 )
@@ -147,54 +112,36 @@ def strip_headers_footers_and_page_numbers_from_layout(
 
 # ---- Manifest-flagged cleanup (ADR-0016) ----
 #
-# Everything above is safe and automatic because it's mechanical, with no
-# real judgment call. What follows is the opposite: document-specific noise
-# that only a human reading the document would recognise as noise, so it's
-# never applied automatically -- only when a manifest entry names it
-# explicitly via "cleanup_flags" (pipeline.py passes that list straight
-# through to apply_cleanup_flags() below). Both functions here work on the
-# same list[list[dict]] layout shape as the _from_layout variant above,
-# since both documents these were built for (issue #9) use heading_sections.
+# Everything above is automatic because it's mechanical. What follows is
+# document-specific noise only a human would recognise, so it's applied only
+# when a manifest entry names it in "cleanup_flags" (pipeline.py passes that
+# list to apply_cleanup_flags()). Both functions work on the same
+# list[list[dict]] layout shape as the _from_layout variant, since both
+# documents they were built for (issue #9) use heading_sections.
 #
-# Issue #9 first built these two functions with the FSR/DP7 documents'
-# *exact* text hardcoded in (a fixed "Réamhrá"/"Global risk assessment" pair,
-# a fixed "Annex \d" pattern) -- which meant this file, meant to be a
-# reusable pipeline module, only actually worked for two specific Central
-# Bank of Ireland documents. Issue #13 generalises both into parameterised
-# utilities: the *document-specific* values now live in each manifest
-# entry's "cleanup_flags" (each one a {"type": ..., ...params} object,
-# where "type" selects the function via CLEANUP_FLAG_TYPES below and
-# every other key is passed straight through as that function's keyword
-# arguments), while this file only supplies the *mechanism* -- "remove
-# everything between two named headings", "remove a line where some pattern
-# shows up at least N times" -- which is generic enough to apply to any
-# future document with the same *shape* of quirk, not just these two.
+# Issue #9 hardcoded the FSR/DP7 documents' exact text here. Issue #13
+# generalised it: document-specific values now live in each manifest entry's
+# "cleanup_flags" ({"type": ..., ...params}, where "type" selects the function
+# via CLEANUP_FLAG_TYPES and the other keys are its keyword arguments), and
+# this file supplies only the generic mechanism -- "remove everything between
+# two named headings", "remove a line where a pattern appears at least N
+# times".
 
 
 def strip_section_between_headings(
     pages: list[list[dict]], start_heading: str, end_heading: str
 ) -> list[list[dict]]:
     # Removes every line from a heading whose text exactly matches
-    # start_heading, up to (but not including) the next heading whose text
-    # exactly matches end_heading -- the general shape behind FSR's real
-    # "duplicate_section_removal" flag, which sets start_heading="Réamhrá"
-    # and end_heading="Global risk assessment" to drop its duplicated
-    # Irish-language Preface/Overview. Any other document whose noise is "an
-    # unwanted section that starts and ends at two known headings" (a
-    # superseded notice, a withdrawn-draft section, ...) can reuse this same
-    # function with its own two heading names -- nothing here is specific to
-    # FSR's actual headings any more.
+    # start_heading, up to (but not including) the next heading exactly
+    # matching end_heading. FSR's "duplicate_section_removal" flag uses it
+    # with "Réamhrá" and "Global risk assessment" to drop its duplicated
+    # Irish-language Preface/Overview; any "unwanted section between two known
+    # headings" can reuse it.
     cleaned_pages = []
-    # Tracks whether the walk is currently inside the span being removed.
-    # Only a heading line whose text is *exactly* one of the two markers
-    # toggles this -- every other line, heading or not, is left alone. That
-    # matters because some of FSR's own body paragraphs are themselves bold
-    # (get_text("dict") marks the whole Réamhrá/Forbhreathnú body as
-    # "is_heading", not just the section titles) -- a simpler "any heading
-    # line exits the zone" rule would wrongly exit on the very first bold
-    # body line of the removed section, instead of at its real end. Keying
-    # only off an *exact* text match to the two configured markers avoids
-    # that regardless of which document supplies them.
+    # Only a heading with text *exactly* equal to a marker toggles this. A
+    # simpler "any heading exits the zone" rule would exit too early, because
+    # some of FSR's body paragraphs are bold too (get_text("dict") marks the
+    # whole Réamhrá/Forbhreathnú body as "is_heading").
     in_removed_section = False
     for page_lines in pages:
         kept_lines = []
@@ -212,24 +159,17 @@ def strip_section_between_headings(
 def strip_lines_with_repeated_pattern(
     pages: list[list[dict]], pattern: str, minimum_matches: int
 ) -> list[list[dict]]:
-    # Removes any line where `pattern` (a regular-expression string) matches
-    # at least `minimum_matches` times -- the general shape behind DP7's
-    # real "navigation_chrome" flag, which sets pattern="Annex \\d" and
-    # minimum_matches=4 to catch its Annex-page nav-breadcrumb footer (e.g.
-    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4"): the
-    # "page X of Y" part changes on every occurrence, so unlike a running
-    # header/footer the line never repeats verbatim and evades the
-    # automatic rule above. Any other document whose chrome has the same
-    # shape -- some marker mentioned several times on one line, in a way
-    # real prose won't plausibly produce -- can reuse this with its own
-    # pattern and threshold; nothing here is specific to DP7's Annexes any
-    # more.
+    # Removes any line where the regex `pattern` matches at least
+    # `minimum_matches` times. DP7's "navigation_chrome" flag uses it with
+    # pattern="Annex \\d" and minimum_matches=4 to catch its Annex-page
+    # breadcrumb footer (e.g. "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  |
+    # Annex 4"). The "page X of Y" part changes each time, so the line never
+    # repeats verbatim and evades the automatic header/footer rule. Any
+    # chrome with a marker repeated on one line, in a way prose won't
+    # plausibly produce, can reuse it.
     #
-    # re.compile(...) happens on every call here, unlike the module-level
-    # PAGE_NUMBER_PATTERN above -- that constant pattern never changes, so
-    # compiling it once at import time is free; `pattern` here is a string
-    # supplied per-flag from the manifest, so there's nothing to precompile
-    # ahead of time.
+    # Compiled per call (unlike PAGE_NUMBER_PATTERN) because the pattern is
+    # supplied per-flag from the manifest.
     compiled_pattern = re.compile(pattern, re.IGNORECASE)
     return [
         [
@@ -241,10 +181,8 @@ def strip_lines_with_repeated_pattern(
     ]
 
 
-# A dict from a manifest cleanup flag's "type" to the function that
-# implements it -- the same lookup-table-of-functions idea pipeline.py uses
-# for CHUNKING_STRATEGIES, so a new flag type only needs registering here,
-# never a change to whichever strategy module applies it.
+# Maps a manifest cleanup flag's "type" to its function, like pipeline.py's
+# CHUNKING_STRATEGIES: a new flag type is registered here only.
 CLEANUP_FLAG_TYPES = {
     "duplicate_section_removal": strip_section_between_headings,
     "navigation_chrome": strip_lines_with_repeated_pattern,
@@ -252,22 +190,16 @@ CLEANUP_FLAG_TYPES = {
 
 
 def apply_cleanup_flags(pages: list[list[dict]], flags: list[dict]) -> list[list[dict]]:
-    # Each flag is a manifest-supplied object like
-    # {"type": "navigation_chrome", "pattern": "Annex \\d", "minimum_matches": 4}
-    # -- "type" selects the function via CLEANUP_FLAG_TYPES, and every other
-    # key is passed straight through as that function's keyword arguments
-    # (dict(flag) copies the flag first so .pop("type") below doesn't mutate
-    # the manifest entry the caller passed in). If a flag's remaining keys
-    # don't match its function's parameter names -- a typo'd manifest field,
-    # e.g. "min_matches" instead of "minimum_matches" -- Python's own
-    # keyword-argument matching raises a TypeError for us; nothing extra to
-    # write for that.
+    # Each flag is a manifest object like
+    # {"type": "navigation_chrome", "pattern": "Annex \\d", "minimum_matches": 4}:
+    # "type" selects the function and the other keys are passed as its keyword
+    # arguments. The flag is copied first so pop("type") doesn't mutate the
+    # caller's manifest entry. A typo'd key (e.g. "min_matches") raises a
+    # TypeError from Python's keyword matching.
     for flag in flags:
         flag = dict(flag)
-        # CLEANUP_FLAG_TYPES[...] deliberately uses [], not .get(...) -- an
-        # unrecognised flag type (a typo in the manifest, most likely)
-        # should raise loudly rather than silently doing nothing, the same
-        # reasoning pipeline.py already applies to an unrecognised
+        # [] not .get(): an unrecognised flag type (likely a manifest typo)
+        # should fail loudly, as pipeline.py does for an unrecognised
         # chunking_strategy.
         cleanup_function = CLEANUP_FLAG_TYPES[flag.pop("type")]
         pages = cleanup_function(pages, **flag)

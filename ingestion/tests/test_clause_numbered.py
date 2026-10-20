@@ -4,11 +4,9 @@
 # no page number needed, since "1.1" is already directly searchable in the
 # source PDF).
 #
-# The patterns exercised here (a heading line under the number, a number
-# followed immediately by body text, a trailing period after the number)
-# all come from inspecting the real target document (CP54) directly, not
-# guesswork -- real regulatory-PDF text extraction is inconsistent about
-# which of these shapes shows up where.
+# The patterns exercised (a heading line under the number, body text right
+# after it, a trailing period) come from inspecting CP54: real PDF extraction
+# is inconsistent about which shape shows up where.
 
 from pathlib import Path
 
@@ -104,9 +102,8 @@ def test_no_clause_numbers_produces_no_chunks():
 
 @requires_corpus
 def test_chunk_document_extracts_cleans_and_chunks_the_real_pdf_end_to_end():
-    # chunk() alone (tested above) never touches a PDF -- this proves the
-    # extract -> clean -> chunk wiring chunk_document() adds on top of it
-    # actually works together against the real corpus, not just in theory.
+    # chunk() alone never touches a PDF; this proves the extract -> clean ->
+    # chunk wiring works against the real corpus.
     chunks = chunk_document(CP54_PDF)
 
     assert any(c["locator"] == "1.8" for c in chunks)

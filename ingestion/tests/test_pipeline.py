@@ -2,16 +2,12 @@
 # validate -> write, run against real corpus PDFs -- CP54 for
 # clause_numbered (issue #5), DP8 for heading_sections (issue #6), RTP07/19
 # for academic_sections (issue #7), DP7 and FSR for manifest-flagged cleanup
-# (ADR-0016, issue #9), and the full 20-document corpus (issue #10). These
-# are the only tests in this ticket exercising every module together rather
-# than in isolation; everything else here (test_ids.py, test_clean.py,
-# test_clause_numbered.py, test_heading_sections.py, test_academic_sections.py,
-# test_extract.py) is a focused unit test for one module, following the same
-# shape as schema/tests.
+# (ADR-0016, issue #9), and the full 20-document corpus (issue #10). These are
+# the only tests exercising every module together; the others are unit tests
+# for one module each.
 #
-# The corpus isn't committed to git (see corpus/SOURCES.md -- it's
-# re-downloadable, not checked in), so these tests skip themselves rather
-# than failing outright when a PDF isn't present locally.
+# The corpus isn't committed to git (see corpus/SOURCES.md), so these tests
+# skip rather than fail when a PDF isn't present locally.
 
 import json
 import logging
@@ -32,10 +28,6 @@ RTP_PDF = CORPUS_DIR / "19-rtp-07rt19-money-market-funds-unconventional-policy.p
 FSR_PDF = CORPUS_DIR / "17-fsr-2026-i-financial-stability-review.pdf"
 MANIFEST_PATH = Path(__file__).parent.parent / "manifest.json"
 
-# pytest.mark.skipif decorates every test below with a condition: if it's
-# True, pytest reports the test as "skipped" (not failed, not passed)
-# rather than running it. The equivalent in nUnit would be
-# [Ignore("reason")] applied conditionally rather than unconditionally.
 requires_cp54 = pytest.mark.skipif(
     not CP54_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
@@ -56,13 +48,9 @@ requires_fsr = pytest.mark.skipif(
     not FSR_PDF.exists(),
     reason="corpus PDFs aren't committed to git -- see corpus/SOURCES.md to download them",
 )
-# The issue #10 tests below need every PDF the manifest actually declares,
-# not just the five other tests in this file individually depend on -- a
-# separate guard so those specific tests skip (rather than fail) on a
-# machine that only has a partial corpus downloaded. Checking each declared
-# filename's existence (not just counting *.pdf files in the directory)
-# means this stays correct even if the corpus directory ever has stray
-# extra PDFs sitting in it that aren't in the manifest.
+# The issue #10 tests need every PDF the manifest declares, so they get a
+# separate guard to skip on a partial corpus. Checking each declared filename
+# (not counting *.pdf files) stays correct if the directory has stray PDFs.
 requires_full_corpus = pytest.mark.skipif(
     not all(
         (CORPUS_DIR / entry["filename"]).exists()
@@ -85,32 +73,23 @@ def test_load_manifest_reads_all_twenty_entries():
         entries, "04-cp54-second-consultation-consumer-protection-code.pdf"
     )
     assert cp54["chunking_strategy"] == "clause_numbered"
-    # CP54 is the Central Bank's second consultation on the same Code review
-    # CP47 opened -- its manifest entry should link back to CP47 (ADR-0002),
-    # confirmed by direct inspection of both documents' cover text (issue #10).
+    # CP54 is the second consultation on the Code review CP47 opened, so it
+    # links back to CP47 (ADR-0002), confirmed from both covers (issue #10).
     assert cp54["supersedes"] == "doc-03-cp47-review-of-consumer-protection-code"
 
     cp158 = _entry_for(entries, "09-cp158-consumer-protection-code.pdf")
-    # heading_sections, not clause_numbered -- confirmed by direct inspection
-    # (issue #10): unlike CP54/CP131, CP158's body prose isn't consistently
-    # decimal-clause-numbered throughout. clause_numbered on this document
+    # heading_sections, not clause_numbered (issue #10): unlike CP54/CP131,
+    # CP158's prose isn't consistently clause-numbered. clause_numbered
     # produces duplicate locators (a "2.1"-"3.5" run from the Table of
-    # Contents' dotted page-reference lines, then a second, real "2.1"-"3.5"
-    # run for the body) and one 43,762-character mega-chunk covering
-    # everything the sparse real clause markers miss -- heading_sections
-    # instead finds 98 clean, bounded chunks (each under ~7KB) using this
-    # document's real titled sections ("Chapter 1: Introduction", "A
-    # Modernised Code", ...).
+    # Contents' dotted lines, then a real run for the body) and one
+    # 43,762-character mega-chunk, whereas heading_sections finds 98 clean
+    # chunks (each under ~7KB) from its titled sections.
     assert cp158["chunking_strategy"] == "heading_sections"
-    # CP158's own text cites "Our 2022 Code Review Discussion Paper" as its
-    # direct predecessor -- not DP7 (a narrower, single-topic 2017 paper on
-    # digitalisation specifically, never mentioned anywhere in CP158). That
-    # 2022 discussion paper isn't one of this corpus's 20 documents, so
-    # there's no real Document id CP158 could correctly supersede -- setting
-    # one anyway (even to the "nearest" discussion paper in the corpus)
-    # would record a factually wrong link, which is worse than recording
-    # none (ADR-0010's same "wrong but plausible beats obviously missing"
-    # reasoning, applied here to Supersedes rather than a citation).
+    # CP158 cites "Our 2022 Code Review Discussion Paper" as its predecessor,
+    # not DP7 (a narrower 2017 digitalisation paper). The 2022 paper isn't in
+    # the corpus, so no real Document id can be superseded; setting one anyway
+    # would record a factually wrong link, worse than none (ADR-0010's "wrong
+    # but plausible beats obviously missing" reasoning, applied to Supersedes).
     assert cp158["supersedes"] is None
 
     dp8 = _entry_for(entries, "12-dp8-outsourcing-findings-and-issues.pdf")
@@ -175,9 +154,8 @@ def test_document_id_is_derived_and_generation_is_active():
     )
 
     assert document["id"] == "doc-04-cp54-second-consultation-consumer-protection-code"
-    # Every chunk belongs to the generation the Document points at as active
-    # (ADR-0004) -- proving the pointer was actually wired up, not just
-    # present with some other value.
+    # Every chunk belongs to the Document's active generation (ADR-0004),
+    # proving the pointer is wired up, not just present.
     for one_chunk in chunks:
         assert (
             one_chunk["chunking_generation_id"]
@@ -193,18 +171,9 @@ def test_chunk_locators_are_bare_clause_numbers_not_page_decorated():
         _entry_for(entries, CP54_FILENAME), CORPUS_DIR
     )
 
-    # A bare clause number like "1.8" -- not "1.8 (p. 7)". heading_sections/
-    # academic_sections documents get page-decorated locators (ADR-0015);
-    # clause_numbered ones deliberately don't (Q5 of the grilling session).
-    #
-    # "c for c in chunks if ..." is a *generator expression* -- like the
-    # list comprehensions used elsewhere in this project, but without the
-    # surrounding [ ], so it produces values lazily one at a time instead of
-    # building the whole list up front. next(...) pulls just the first
-    # value out of it (and would raise StopIteration if nothing matched) --
-    # roughly the same job as C#'s chunks.First(c => c.Locator == "1.8"),
-    # but built from two separate, more general pieces (a generator, plus
-    # next()) rather than one LINQ method.
+    # A bare clause number like "1.8", not "1.8 (p. 7)": heading_sections/
+    # academic_sections locators are page-decorated (ADR-0015); clause_numbered
+    # ones deliberately aren't (Q5 of the grilling session).
     known_real_clause = next(c for c in chunks if c["locator"] == "1.8")
     assert "(p." not in known_real_clause["locator"]
 
@@ -216,9 +185,8 @@ def test_repeated_header_is_stripped_from_every_chunk():
         _entry_for(entries, CP54_FILENAME), CORPUS_DIR
     )
 
-    # "Consultation Paper CP 54" is part of the running header repeated on
-    # every page -- if header stripping (ADR-0016) is working, it should
-    # never survive into any chunk's text.
+    # "Consultation Paper CP 54" is the running header on every page, so
+    # header stripping (ADR-0016) should keep it out of every chunk.
     for one_chunk in chunks:
         assert "Consultation Paper CP 54" not in one_chunk["text"]
 
@@ -263,10 +231,8 @@ def test_dp8_chunk_locators_pair_a_real_heading_with_a_page_number():
         _entry_for(entries, DP8_FILENAME), CORPUS_DIR
     )
 
-    # "Purpose" is a real heading confirmed by direct inspection of the PDF
-    # (page 5 of the extracted text) -- proving the strategy found a real
-    # bold heading, not just any line, and decorated it with a page number
-    # (ADR-0015), unlike clause_numbered's bare locators.
+    # "Purpose" is a real heading on page 5, so the strategy found a bold
+    # heading and decorated it with a page number (ADR-0015).
     purpose_chunk = next(c for c in chunks if c["locator"].startswith("Purpose"))
     assert purpose_chunk["locator"] == "Purpose (p. 5)"
 
@@ -278,22 +244,16 @@ def test_dp8_repeated_header_and_page_footer_are_stripped_from_every_chunk():
         _entry_for(entries, DP8_FILENAME), CORPUS_DIR
     )
 
-    # Note: checking whole *lines*, not substrings -- "Central Bank of
-    # Ireland" and "Outsourcing" are also, unsurprisingly, words that show
-    # up constantly within real body prose in a Central Bank paper about
-    # outsourcing (e.g. citing "Central Bank of Ireland AIF Rulebook" in a
-    # references section). What must never survive is either phrase
-    # appearing as its *own standalone line* -- that shape is specific to
-    # the running header, not to a sentence that happens to contain the
-    # same words.
+    # Checks whole *lines*, not substrings: "Central Bank of Ireland" and
+    # "Outsourcing" appear constantly in body prose. Only a standalone line is
+    # the running header.
     for one_chunk in chunks:
         chunk_lines = one_chunk["text"].splitlines()
         assert "Central Bank of Ireland" not in chunk_lines
         assert "Outsourcing" not in chunk_lines
-        # DP8's real running footer is "Page <N>" as its own line -- proving
-        # the "Page "-prefixed page-number rule (added for this ticket)
-        # actually fires on this real document, not just the synthetic test
-        # in test_clean.py.
+        # DP8's footer is "Page <N>" on its own line, proving the
+        # "Page "-prefixed rule fires on the real document, not just in
+        # test_clean.py.
         assert not any(
             line.startswith("Page ") and line[5:].isdigit() for line in chunk_lines
         )
@@ -341,9 +301,7 @@ def test_rtp_chunk_locators_pair_a_real_heading_with_a_page_number():
         _entry_for(entries, RTP_FILENAME), CORPUS_DIR
     )
 
-    # "Introduction" is a real, single-line heading confirmed by direct
-    # inspection of the PDF (page 4) -- proving the strategy found a real
-    # bold heading and decorated it with a page number (ADR-0015).
+    # "Introduction" is a real single-line heading on page 4 (ADR-0015).
     introduction_chunk = next(
         c for c in chunks if c["locator"] == "Introduction (p. 4)"
     )
@@ -357,11 +315,10 @@ def test_rtp_a_heading_wrapped_across_two_bold_lines_is_joined_in_the_real_pdf()
         _entry_for(entries, RTP_FILENAME), CORPUS_DIR
     )
 
-    # Appendix A's heading is genuinely two consecutive bold lines in this
-    # PDF ("A Sources and Construction of Variables Used in Panel" /
-    # "Regressions") -- confirming academic_sections' join behaviour
-    # (module-level docstring) fires correctly against the real document,
-    # not just the synthetic fixture in test_academic_sections.py.
+    # Appendix A's heading is two consecutive bold lines ("A Sources and
+    # Construction of Variables Used in Panel" / "Regressions"), confirming
+    # academic_sections' join fires on the real document, not just the
+    # synthetic fixture.
     appendix_chunk = next(c for c in chunks if c["locator"].startswith("A Sources"))
     assert appendix_chunk["locator"] == (
         "A Sources and Construction of Variables Used in Panel Regressions (p. 26)"
@@ -370,17 +327,12 @@ def test_rtp_a_heading_wrapped_across_two_bold_lines_is_joined_in_the_real_pdf()
 
 @requires_rtp
 def test_rtp_extracted_text_recovers_ligatured_words_cleanly():
-    # pypdf previously corrupted this document's text (garbled
-    # glyphs/ligatures -- see extract.py's module comment); pymupdf's fix is
-    # what unblocked this ticket (#7 was blocked by #5). pymupdf represents
-    # an "fi" pair as a single ligature codepoint (U+FB01) rather than
-    # corrupting it, so a plain substring search for "certificates" won't
-    # match directly -- unicodedata.normalize("NFKC", ...) is the standard
-    # decomposition that turns a compatibility ligature character back into
-    # its component letters, the same way "①" normalizes to "1". Doing that
-    # here and finding the real word proves the extracted text is genuine,
-    # recoverable Unicode -- not corrupted -- confirming the fix holds
-    # inside the real pipeline, not just the earlier scratch check.
+    # pypdf corrupted this document's glyphs/ligatures (see extract.py);
+    # pymupdf's fix is what unblocked #7. pymupdf keeps an "fi" pair as one
+    # ligature codepoint (U+FB01), so a plain search for "certificates" won't
+    # match; NFKC normalization decomposes it back to letters. Finding the
+    # word proves the text is recoverable Unicode, not corrupted, inside the
+    # real pipeline.
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(
         _entry_for(entries, RTP_FILENAME), CORPUS_DIR
@@ -419,12 +371,9 @@ def test_dp7_navigation_chrome_footer_is_stripped_from_every_chunk():
         _entry_for(entries, DP7_FILENAME), CORPUS_DIR
     )
 
-    # The real DP7 PDF's Annex pages carry a nav-breadcrumb footer like
-    # "Annex 1 page 1 of 3 >  | Annex 2  | Annex 3  | Annex 4" -- confirmed
-    # by direct inspection of the extracted text. If the navigation_chrome
-    # flag (declared on this document's manifest entry) is working, no
-    # chunk should ever contain the "page X of Y" fragment that's specific
-    # to that footer, on any Annex.
+    # DP7's Annex pages carry a nav-breadcrumb footer ("Annex 1 page 1 of 3 >
+    # | Annex 2  | Annex 3  | Annex 4"). If the navigation_chrome flag works,
+    # no chunk contains its "page X of Y" fragment on any Annex.
     for one_chunk in chunks:
         for total in (2, 3):
             for page_number in range(1, total + 1):
@@ -433,10 +382,8 @@ def test_dp7_navigation_chrome_footer_is_stripped_from_every_chunk():
 
 @requires_dp7
 def test_dp7_a_real_annex_toc_entry_survives_the_navigation_chrome_flag():
-    # The navigation_chrome flag must be specific to the nav footer, not so
-    # broad it deletes legitimate content that happens to mention an Annex
-    # -- DP7's own Table of Contents lists "Annex 2" as one of its entries,
-    # confirmed by direct inspection of the real PDF.
+    # The flag must be specific to the nav footer, not delete legitimate
+    # content like DP7's Table of Contents entry "Annex 2".
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(
         _entry_for(entries, DP7_FILENAME), CORPUS_DIR
@@ -470,11 +417,9 @@ def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
         _entry_for(entries, FSR_FILENAME), CORPUS_DIR
     )
 
-    # "Réamhrá"/"Forbhreathnú" (Irish for "Preface"/"Overview") are the real
-    # section headings the Irish duplicate content sits under in the source
-    # PDF -- confirmed by direct inspection. If the duplicate_section_removal
-    # flag is working (this document's manifest entry sets its start_heading
-    # to "Réamhrá"), neither should survive as a locator of its own.
+    # "Réamhrá"/"Forbhreathnú" (Irish for "Preface"/"Overview") head the Irish
+    # duplicate content. If duplicate_section_removal works (start_heading is
+    # "Réamhrá"), neither survives as a locator.
     locators = [one_chunk["locator"] for one_chunk in chunks]
     assert not any(locator.startswith("Réamhrá") for locator in locators)
     assert not any(locator.startswith("Forbhreathnú") for locator in locators)
@@ -482,10 +427,8 @@ def test_fsr_irish_duplicate_sections_produce_no_chunks_of_their_own():
 
 @requires_fsr
 def test_fsr_english_content_either_side_of_the_irish_section_survives():
-    # The flag must remove only the Irish duplicate span, not the real
-    # English content immediately before it ("Preface") or after it
-    # ("Global risk assessment") -- both real headings confirmed by direct
-    # inspection of the real PDF.
+    # Only the Irish span goes: the English content before ("Preface") and
+    # after ("Global risk assessment") it survives.
     entries = load_manifest(MANIFEST_PATH)
     document, chunks = build_document_and_chunks(
         _entry_for(entries, FSR_FILENAME), CORPUS_DIR
@@ -498,12 +441,10 @@ def test_fsr_english_content_either_side_of_the_irish_section_survives():
 
 # ---- full 20-document corpus (issue #10) ----
 #
-# Everything above already exercises one representative document per
-# chunking strategy/cleanup flag; these tests instead check the corpus as a
-# *whole* -- every real document actually makes it through the pipeline
-# (the acceptance criteria's "no document silently fails or is skipped
-# without a surfaced reason"), and the two supersedes links resolve
-# correctly end to end.
+# Everything above exercises one document per strategy/cleanup flag; these
+# check the corpus as a *whole*: every document makes it through (the
+# acceptance criterion "no document silently fails or is skipped without a
+# surfaced reason"), and the supersedes links resolve end to end.
 
 
 @requires_full_corpus
@@ -513,11 +454,8 @@ def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path)
     manifest_entries = load_manifest(MANIFEST_PATH)
     results = run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
 
-    # run_pipeline returns one (document, chunks) pair per entry it
-    # successfully ingested (ADR-0019) -- its length matching the
-    # manifest's own entry count is the strongest available proof every one
-    # of the 20 real corpus documents actually made it through, not just
-    # that *some* number of documents did.
+    # run_pipeline returns one pair per successfully ingested entry
+    # (ADR-0019), so matching the manifest's count proves all 20 got through.
     assert len(results) == len(manifest_entries) == 20
 
     document_schema = load_schema("document.schema.json")
@@ -544,16 +482,10 @@ def test_run_pipeline_writes_validated_output_files_for_every_document(tmp_path)
 def test_run_pipeline_surfaces_no_silent_failures_across_the_full_corpus(
     tmp_path, caplog
 ):
-    # ADR-0019/issue #8's per-document failure isolation exists precisely so
-    # one bad document can't take down the batch -- but issue #10's own
-    # acceptance criterion runs the other direction: against the *real*
-    # 20-document corpus, nothing should actually trigger that isolation.
-    # run_pipeline only ever logs at ERROR level when it skips an entry
-    # (pipeline.py's except block), so asserting no ERROR records were
-    # emitted during a full real run is a direct check against "no document
-    # silently fails" -- caplog is pytest's built-in fixture for asserting
-    # on logging output, the same idea as asserting on a captured
-    # ILogger<T> in a .NET test.
+    # Failure isolation (ADR-0019, issue #8) exists so one bad document can't
+    # take down the batch, but against the *real* corpus nothing should
+    # trigger it. run_pipeline logs at ERROR only when it skips an entry, so
+    # no ERROR records is a direct check against "no document silently fails".
     output_dir = tmp_path / "output"
     with caplog.at_level(logging.ERROR):
         run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)
@@ -580,13 +512,10 @@ def test_run_pipeline_writes_the_supersedes_link_for_cp54(tmp_path):
 
 @requires_full_corpus
 def test_run_pipeline_writes_no_supersedes_key_for_cp158(tmp_path):
-    # CP158's manifest entry deliberately has no supersedes link (see
-    # test_load_manifest_reads_all_twenty_entries for why) -- pipeline.py's
-    # build_document_and_chunks only adds the "supersedes" key to a Document
-    # when entry.get("supersedes") is truthy, so the written JSON should
-    # never contain the key at all, not the key set to null (document.schema
-    # .json's "supersedes" field isn't in "required", and null wouldn't pass
-    # its "type": "string" validation anyway).
+    # CP158 deliberately has no supersedes link (see
+    # test_load_manifest_reads_all_twenty_entries). The key must be absent
+    # from the written JSON, not null, which the schema's "type": "string"
+    # would reject.
     output_dir = tmp_path / "output"
 
     run_pipeline(MANIFEST_PATH, CORPUS_DIR, output_dir)

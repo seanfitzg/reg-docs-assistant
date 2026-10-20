@@ -1,78 +1,50 @@
 # The academic_sections chunking strategy (ADR-0014): splits a Research
-# Technical Paper into Chunks at bold heading lines, with the locator
-# pairing the heading text with the page it starts on (ADR-0015) -- e.g.
-# "Literature Review (p. 7)". It shares heading_sections' underlying
-# signal -- a section title is the only fully-bold line, the same way DP8's
-# headings are -- because that's genuinely what pymupdf's extraction shows
-# for this document too (see the module-level exploration that produced
-# this ticket): despite the issue's "1 Introduction" example, this PDF's
-# main section titles don't carry a leading digit as extractable text at
-# all; only its appendices do ("A Sources...", "B Figures", "C Tables").
+# Technical Paper into Chunks at bold heading lines, with the locator pairing
+# the heading text with its starting page (ADR-0015) -- e.g.
+# "Literature Review (p. 7)". It shares heading_sections' signal (a section
+# title is a fully-bold line) because that's what pymupdf shows for this
+# document: despite the issue's "1 Introduction" example, the main section
+# titles carry no leading digit as extractable text; only the appendices do
+# ("A Sources...", "B Figures", "C Tables").
 #
-# One real difference from heading_sections, found by inspecting the actual
-# RTP07/19 PDF rather than assumed up front: a heading here can wrap across
-# more than one bold line with nothing in between -- this document's own
-# two-line title on page 2, and its "A Sources and Construction of
-# Variables Used in Panel" / "Regressions" appendix heading on page 26, are
-# both a single heading split across two consecutive bold lines, not two
-# separate sections. heading_sections' rule for back-to-back heading lines
-# (drop the first as empty, keep the second) was written for DP8, where a
-# spurious bold cover-page/ToC line can sit directly before a real heading
-# -- exactly the opposite shape. Applying that rule here would silently
-# lose the first half of the Appendix A locator. So this module instead
-# *joins* consecutive heading lines into one heading, using the page the
-# first line started on.
+# Difference from heading_sections, found by inspecting the RTP07/19 PDF: a
+# heading can wrap across more than one bold line (the two-line title on page
+# 2, the Appendix A heading on page 26). heading_sections drops the first of
+# two back-to-back heading lines as empty, which was written for DP8, where a
+# spurious bold cover-page/ToC line can sit directly before a real heading --
+# the opposite shape. Applying that here would lose half the Appendix A
+# locator, so this module *joins* consecutive heading lines into one heading,
+# anchored to the first line's page.
 #
-# This is its own trade-off, not a strictly better rule: if this document
-# ever contained a genuinely empty heading directly followed by a real,
-# unrelated one (DP8's shape), this would wrongly merge them into one
-# locator instead of dropping the empty one. Every back-to-back heading
-# pair actually found in RTP07/19 was a wrapped title, never that DP8
-# shape, so the join rule is what was implemented -- flagged here rather
-# than silently assumed to generalize to some other academic paper.
+# Trade-off: if this document ever had a genuinely empty heading directly
+# before an unrelated real one (DP8's shape), they'd be wrongly merged. Every
+# back-to-back pair found in RTP07/19 was a wrapped title, so the join rule
+# was implemented; it may not generalize to other academic papers.
 #
-# The same join rule also fires on a case that isn't a wrapped title at
-# all: page 9's top-level "Money Market Funds" section heading is directly
-# followed by its own first subsection heading, "Regulation and
-# Institutional Setting" (a smaller font, but still a fully-bold line),
-# with no lead-in paragraph between them. There's no signal available here
-# (extract_pages_with_headings exposes is_heading as a plain bool, not font
-# size) to tell "a section with no preamble, going straight into its first
-# subsection" apart from "one heading wrapped across two lines" -- both are
-# just two consecutive bold lines with nothing between them. The result is
-# a merged, slightly odd-looking locator ("Money Market Funds Regulation
-# and Institutional Setting (p. 9)") rather than two separate ones. Still a
-# valid, citable page anchor, just not a granularity split -- distinguishing
-# heading levels would mean extract_pages_with_headings starting to expose
-# font size too, a real design decision of its own, not something to add
-# unreviewed mid-ticket.
+# The join also fires where a title isn't wrapped: page 9's "Money Market
+# Funds" heading is directly followed by its first subsection heading,
+# "Regulation and Institutional Setting" (smaller font, still fully bold).
+# extract_pages_with_headings exposes is_heading as a bool, not font size, so
+# that can't be told apart from a wrapped heading. The result is a merged
+# locator ("Money Market Funds Regulation and Institutional Setting (p. 9)"):
+# still a valid page anchor, just coarser. Distinguishing heading levels would
+# mean exposing font size, a design decision of its own.
 #
-# A heading run is only allowed to continue within a single page (see the
-# same-page check in chunk() below). This matters because chunk() never
-# sees the *raw* pages -- chunk_document() strips boilerplate (running
-# headers/footers, bare page numbers, ADR-0016) first. A footer stripped
-# from the bottom of page N and a header stripped from the top of page
-# N+1 would otherwise make two genuinely unrelated headings either side of
-# a page break look exactly like one back-to-back run, the same shape as a
-# real wrapped heading -- and get wrongly joined into one bogus locator.
-# Both real wraps actually found in this document (the title on page 2,
-# the Appendix A heading on page 26) wrap within a single page, so this
-# restriction closes that hole without losing either real case; it would
-# only cost a heading that genuinely wraps *across* a page boundary, which
-# this document never does.
+# A heading run may only continue within a single page (see the same-page
+# check in chunk()). chunk() sees pages after boilerplate stripping
+# (ADR-0016), so a footer stripped from the bottom of page N and a header
+# stripped from the top of page N+1 would make two unrelated headings across a
+# page break look like one wrapped heading and get joined. Both real wraps
+# found are within a page, so this loses nothing; it would only miss a heading
+# that wraps across a page boundary, which this document never does.
 #
-# Known, not fixed here: a title-page line that's bold for styling reasons
-# (this document's own title, e.g.) still gets mistaken for a real section
-# heading the same way heading_sections documents for DP8's cover page --
-# sweeping the author/affiliation blurb into that heading's chunk text.
-# Separately, clean.py's boilerplate-line stripping (shared with
-# heading_sections, ADR-0016) treats any line repeated on 3+ pages as a
-# running header/footer; this document's regression-result tables repeat
-# short column labels ("CORP-SPREAD", "(1)", "Yes", ...) across many pages,
-# so those get stripped from chunk text as if they were boilerplate. Both
-# are pre-existing heuristics being applied to a document shape they
-# weren't designed against -- real limitations, not something to patch
-# with an unreviewed heuristic mid-ticket.
+# Known, not fixed here: a title-page line that's bold for styling is still
+# mistaken for a section heading, as heading_sections documents for DP8's
+# cover page, sweeping the author/affiliation blurb into that chunk. Also,
+# clean.py's boilerplate stripping (any line repeated on 3+ pages) removes
+# this document's repeated regression-table labels ("CORP-SPREAD", "(1)",
+# "Yes", ...) from chunk text. Both are existing heuristics applied to a
+# document shape they weren't designed for.
 
 from pathlib import Path
 
@@ -86,15 +58,11 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
     current_locator = None
     current_lines: list[str] = []
 
-    # Bold lines accumulate here until it's known whether the *next* line
-    # continues the same heading (another bold line) or starts the
-    # section's body (a non-bold line) -- a heading isn't complete, and
-    # can't be turned into a locator, until that's known.
+    # Bold lines accumulate here until it's known whether the next line
+    # continues the heading (another bold line) or starts the body (a
+    # non-bold line); only then can the heading become a locator.
     pending_heading_lines: list[str] = []
-    # "int | None" is a union type hint: this variable is either an int or
-    # None -- Python's built-in spelling of C#'s "int?" (Nullable<int>).
-    # It starts out None (no heading run open yet) and gets set to a real
-    # page number once the first heading line of a run is seen.
+    # None until the first line of a heading run is seen.
     pending_heading_page: int | None = None
 
     def flush_current_section():
@@ -108,20 +76,16 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
         for line in lines:
             if line["is_heading"]:
                 if not pending_heading_lines or page_number != pending_heading_page:
-                    # Starting a fresh heading run -- either this is the
-                    # very first heading line seen, or a run was left open
-                    # on an *earlier* page (module comment: a run may only
-                    # continue within a single page). In that second case
-                    # the open run never reached a body line, so it holds
-                    # no real section -- there's nothing to flush for it,
-                    # only whatever *finished* section came before it.
+                    # A fresh heading run: the first one seen, or a run left
+                    # open on an earlier page (a run may only continue within
+                    # a page). That open run never reached a body line, so it
+                    # holds no section; only the section that finished before
+                    # it needs flushing.
                     #
-                    # Clearing current_locator here (not just flushing it)
-                    # matters: if *this* new run never reaches a body line
-                    # either (e.g. it's the last thing in the document), the
-                    # final flush_current_section() call after the loop must
-                    # find nothing left to re-flush, rather than emitting
-                    # the just-flushed previous section a second time.
+                    # current_locator is cleared, not just flushed: if this
+                    # new run never reaches a body line either (e.g. it ends
+                    # the document), the final flush must not emit the
+                    # previous section a second time.
                     flush_current_section()
                     current_locator = None
                     current_lines = []
@@ -130,10 +94,9 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
                 pending_heading_lines.append(line["text"])
             else:
                 if pending_heading_lines:
-                    # A non-heading line arriving means the heading run
-                    # that came before it is complete -- join its line(s)
-                    # with a space into one locator, anchored to the page
-                    # the *first* of those lines was on.
+                    # A body line completes the preceding heading run: join
+                    # its lines into one locator, anchored to the page of the
+                    # first line.
                     current_locator = (
                         f"{' '.join(pending_heading_lines)} (p. {pending_heading_page})"
                     )
@@ -142,11 +105,9 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
                 if current_locator is not None:
                     current_lines.append(line["text"])
 
-    # A heading run still "pending" when the document ends -- the very
-    # last lines on the last page were all bold, with no body text ever
-    # following -- never got turned into a locator above, so there's
-    # nothing to flush for it; only a *finished* section (one that reached
-    # at least one non-heading line) can produce a chunk.
+    # A heading run still pending at the end (the last lines were all bold)
+    # never became a locator, so there's nothing to flush for it; only a
+    # finished section (one with a body line) produces a chunk.
     flush_current_section()
 
     return chunks
@@ -155,11 +116,9 @@ def chunk(pages: list[list[dict]]) -> list[dict]:
 def chunk_document(
     pdf_path: Path, cleanup_flags: list[dict] | None = None
 ) -> list[dict]:
-    # cleanup_flags (ADR-0016, issue #9) is accepted here purely for the
-    # uniform chunk_document(pdf_path, cleanup_flags) shape every strategy
-    # exposes (see clause_numbered.chunk_document) -- no manifest entry
-    # using academic_sections declares any cleanup_flags yet, so this
-    # strategy doesn't act on it.
+    # cleanup_flags (ADR-0016, issue #9) is accepted only for the uniform
+    # strategy signature; no academic_sections manifest entry declares any, so
+    # it isn't acted on.
     raw_pages = extract_pages_with_headings(pdf_path)
     cleaned_pages = strip_headers_footers_and_page_numbers_from_layout(raw_pages)
     return chunk(cleaned_pages)

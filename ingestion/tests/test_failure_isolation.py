@@ -4,12 +4,9 @@
 # batch still ingests, and the failing document is never persisted as a
 # Document with zero Chunks.
 #
-# Every fixture PDF here is built from scratch with pymupdf (the same
-# approach test_extract.py uses), or is deliberately not a real PDF at all
-# -- these tests run unconditionally, without needing the real (not
-# committed to git) corpus, because failure isolation is exactly the kind
-# of behaviour that must be provable without waiting on a real document to
-# happen to be broken.
+# Fixture PDFs are built with pymupdf (as in test_extract.py) or deliberately
+# aren't PDFs, so these run without the real corpus: failure isolation must
+# be provable without waiting for a real document to happen to be broken.
 
 import json
 import logging
@@ -30,20 +27,10 @@ MANIFEST_ENTRY_DEFAULTS = {
 
 
 def _write_clause_numbered_pdf(path, *, with_clauses: bool):
-    # A minimal PDF built purely in-memory, saved straight to `path` --
-    # mirrors test_extract.py's pattern for a throwaway fixture PDF, so no
-    # real corpus file is needed to exercise either the "extracted fine,
-    # strategy just found nothing" path or the "extracted fine, strategy
-    # found real clauses" path.
-    #
-    # Three pages, each with its own distinct text, not one page repeated
-    # -- clean.py's boilerplate rule (ADR-0016) treats a line as a running
-    # header/footer once it repeats on min(3, page_count) pages; for a
-    # single-page document that threshold is 1, so *every* line on it would
-    # count as "repeated" and get stripped, silently wiping real content
-    # before chunk() ever saw it. Three pages of genuinely different text
-    # keeps every line's repeat count at 1, below the 3-page threshold, so
-    # nothing here gets mistaken for boilerplate.
+    # Three pages of distinct text, not one: clean.py's boilerplate rule
+    # (ADR-0016) strips a line repeated on min(3, page_count) pages, which for
+    # a single page is 1, so every line would be stripped before chunk() saw
+    # it. Distinct text keeps every line's repeat count at 1.
     document = pymupdf.open()
     if with_clauses:
         page_texts = [
@@ -92,10 +79,6 @@ def test_a_document_whose_strategy_finds_nothing_is_skipped_but_the_batch_contin
         ],
     )
 
-    # caplog is a built-in pytest fixture that captures everything logged
-    # through Python's standard `logging` module during the test -- the
-    # equivalent of asserting against a captured ILogger in .NET tests,
-    # without needing to inject a fake logger by hand.
     with caplog.at_level(logging.ERROR):
         results = run_pipeline(manifest_path, corpus_dir, tmp_path / "output")
 
@@ -121,8 +104,8 @@ def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "good.pdf", with_clauses=True)
-    # Not a real PDF at all -- pymupdf raises FileDataError trying to open
-    # it, the same failure a genuinely corrupt downloaded file would cause.
+    # Not a PDF: pymupdf raises FileDataError, as for a genuinely corrupt
+    # download.
     (corpus_dir / "corrupt.pdf").write_bytes(b"not a real pdf file, just garbage bytes")
 
     manifest_path = tmp_path / "manifest.json"
@@ -150,14 +133,12 @@ def test_a_document_that_fails_extraction_is_skipped_but_the_batch_continues(
 def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(
     tmp_path, monkeypatch, caplog
 ):
-    # /code-review (issue #8) caught this: the document JSON and chunks
-    # JSON are two separate write_text() calls, not one atomic operation.
-    # If the second one fails after the first succeeded (a locked file, a
-    # full disk -- realistic on Windows, where an antivirus can briefly
-    # lock a just-created file), the old code would still log a clean
-    # "skip" while leaving a Document file on disk with no matching Chunks
-    # file -- exactly the "silently persisted" outcome ADR-0019 forbids,
-    # just as an orphaned file instead of a zero-Chunk Document.
+    # /code-review (issue #8) caught this: the document and chunks JSON are
+    # two separate writes. If the second fails after the first succeeded (a
+    # locked file or full disk -- realistic on Windows, where antivirus can
+    # briefly lock a new file), the old code logged a clean "skip" but left a
+    # Document file with no Chunks file: the "silently persisted" outcome
+    # ADR-0019 forbids, as an orphaned file.
     corpus_dir = tmp_path / "corpus"
     corpus_dir.mkdir()
     _write_clause_numbered_pdf(corpus_dir / "good.pdf", with_clauses=True)
@@ -165,16 +146,6 @@ def test_a_failed_second_write_does_not_leave_an_orphaned_document_file(
     manifest_path = tmp_path / "manifest.json"
     _write_manifest(manifest_path, [_entry("good.pdf", "clause_numbered")])
 
-    # monkeypatch is a built-in pytest fixture: it replaces an attribute
-    # for the duration of this test only, restoring the original
-    # automatically afterwards -- pytest's version of temporarily swapping
-    # in a test double, without needing a mocking library or a manual
-    # try/finally to undo the swap.
-    #
-    # Path.write_text is an *unbound* method here (accessed on the class,
-    # not an instance), so calling it takes the Path instance as its first
-    # argument explicitly ("self") -- the same shape any instance method
-    # has in Python once you go through the class rather than an object.
     original_write_text = Path.write_text
 
     def flaky_write_text(self, *args, **kwargs):

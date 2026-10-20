@@ -19,8 +19,6 @@ def _chunks():
 def test_match_is_case_insensitive_and_returns_document_and_locator():
     matches = search(_chunks(), "KEY INFORMATION")
 
-    # A list comprehension -- the list equivalent of the set comprehension
-    # in test_check_dataset.py, like matches.Select(m => ...).ToList().
     found = [(m.document_id, m.locator) for m in matches]
     assert found == [("doc-a", "3.12")]
 
@@ -36,9 +34,9 @@ def test_every_term_must_appear_but_not_necessarily_adjacent():
 
 
 def test_inactive_generation_chunks_are_never_returned():
-    # This word only appears in doc-a's inactive gen-1 "9.9" Chunk (which
-    # also mentions "key information document" -- the first test above
-    # only finds 3.12, so it proves the same thing from the other side).
+    # Appears only in doc-a's inactive gen-1 "9.9" Chunk, which also mentions
+    # "key information document"; the first test only finds 3.12, proving the
+    # same thing from the other side.
     matches = search(_chunks(), "inactive-generation")
 
     assert matches == []
@@ -55,9 +53,7 @@ def test_document_filter_restricts_results_to_one_document():
 
 
 def test_snippet_shows_the_match_with_whitespace_collapsed():
-    # Destructuring: [match] = ... unpacks a one-item list into one
-    # variable, and raises ValueError if the list has any other length --
-    # so this line also asserts "exactly one result".
+    # Unpacking also asserts "exactly one result".
     [match] = search(_chunks(), "comprehensive")
 
     # PDF line breaks and double spaces flattened to single spaces, so the
@@ -72,10 +68,8 @@ def test_no_match_returns_empty_list():
 
 @pytest.mark.parametrize("blank", ["", "   "])
 def test_blank_terms_are_rejected(blank):
-    # Caught by /code-review: "".split() is [], and all() over an empty
-    # sequence is True (nothing failed the test -- "vacuous truth"), so
-    # every Chunk "matched" and then indexing the first term crashed.
-    # pytest.raises(..., match=...) also checks the message, by regex.
+    # Caught by /code-review: with no terms, all() is vacuously True, so every
+    # Chunk "matched" and indexing the first term crashed.
     with pytest.raises(ValueError, match="at least one search term"):
         search(_chunks(), blank)
 
@@ -84,9 +78,7 @@ def test_blank_terms_are_rejected(blank):
 
 
 def test_cli_rejects_blank_terms_with_a_usage_error():
-    # parser.error() exits via SystemExit rather than returning -- Python's
-    # sys.exit() is an exception, so pytest.raises can catch it. Exit code
-    # 2 is argparse's convention for a usage error.
+    # Exit code 2 is argparse's convention for a usage error.
     with pytest.raises(SystemExit) as exit_info:
         main(["   ", "--output-dir", str(FIXTURE_OUTPUT)])
 
@@ -94,8 +86,6 @@ def test_cli_rejects_blank_terms_with_a_usage_error():
 
 
 def test_cli_reports_an_unknown_document_id(capsys):
-    # capsys is a built-in pytest fixture: naming it as a parameter makes
-    # pytest inject it, and it captures what the code under test printed.
     exit_code = main(
         ["consumer", "--doc", "doc-typo", "--output-dir", str(FIXTURE_OUTPUT)]
     )

@@ -1,10 +1,7 @@
 # Single-seam integration test for embed.py's embed_chunks, mirroring
 # test_loader.py: real (isolated) Postgres, no Ollama. The embedding call
-# goes through an injectable client (EmbeddingClient), so these tests hand
-# embed_chunks a *fake* client instead of a real Ollama-backed one -- the
-# same idea as injecting an interface implementation in a .NET test instead
-# of the real service, just without needing a mocking library: Python's
-# "duck typing" means any object with an `embed(text)` method qualifies.
+# goes through an injectable client (EmbeddingClient), so these tests pass
+# embed_chunks a fake client instead of an Ollama-backed one.
 
 import psycopg
 import pytest
@@ -12,14 +9,12 @@ import pytest
 from embed import DOCUMENT_PREFIX, EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, embed_chunks
 from loader import load_store
 
-# Reused (not redefined) from test_loader.py: the same isolated
-# regdocs_test database, skip-if-Postgres-is-down decorator, per-test
-# cleanup fixture (extended to clear chunk_embeddings), and the fixture
-# corpus with one Document that has TWO Chunking Generations (gen-1
-# inactive with 1 chunk, gen-2 active with 2 chunks) -- exactly the shape
-# the active-generation-only rule (ADR-0025) needs to be exercised.
-# `clean_db` looks unused here but pytest finds fixtures by *name in the
-# module namespace*, so importing it is what makes it available.
+# Reused from test_loader.py: the isolated regdocs_test database, the skip
+# decorator, the cleanup fixture, and the fixture corpus with one Document
+# with TWO Chunking Generations (gen-1 inactive with 1 chunk, gen-2 active
+# with 2) -- the shape the active-generation-only rule (ADR-0025) needs.
+# `clean_db` looks unused but pytest finds fixtures by name in the module
+# namespace, so importing it makes it available.
 from test_loader import DB_URL, _write_fixture_corpus, clean_db, requires_postgres  # noqa: F401
 
 ACTIVE_CHUNK_TEXTS = [
@@ -29,18 +24,15 @@ ACTIVE_CHUNK_TEXTS = [
 
 
 class RecordingClient:
-    # A test double that records every text it was asked to embed, so tests
-    # can assert on the *exact* string embed_chunks sent -- not merely that
-    # some embedding came back. Returns a fixed-length vector of the right
-    # dimensionality, because the database column is vector(768) and would
-    # reject anything else.
+    # Records every text it was asked to embed, so tests can assert on the
+    # *exact* string sent. Returns a vector of the right dimensionality,
+    # since the column is vector(768).
     def __init__(self, fail_on_call: int | None = None):
         self.texts: list[str] = []
         self._fail_on_call = fail_on_call
 
     def embed(self, text: str) -> list[float]:
-        # len(self.texts) + 1 is this call's 1-based number, counted before
-        # the text is recorded.
+        # len + 1 is this call's 1-based number.
         if self._fail_on_call == len(self.texts) + 1:
             raise RuntimeError("simulated Ollama failure")
         self.texts.append(text)

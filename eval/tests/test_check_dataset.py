@@ -18,12 +18,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 FIXTURE_OUTPUT = FIXTURES / "ingestion-output"
 
 
-# The leading underscore marks a helper as private to this module by
-# convention only -- Python has no access modifiers, so nothing enforces it.
-# pytest also ignores it as a test, since it doesn't start with "test_".
 def _valid_dataset() -> dict:
-    # A fresh copy per test, so one test mutating it can't leak into
-    # another -- json.loads always builds new objects, so no shared state.
+    # A fresh copy per test, so one test mutating it can't leak into another.
     return json.loads((FIXTURES / "valid-dataset.json").read_text(encoding="utf-8"))
 
 
@@ -33,9 +29,6 @@ def _valid_dataset() -> dict:
 def test_only_active_generation_chunks_are_loaded():
     chunks = load_active_chunks(FIXTURE_OUTPUT)
 
-    # A set comprehension: {expression for item in iterable} builds a set
-    # in one expression -- like chunks.Select(c => (c.DocumentId, c.Locator))
-    # .ToHashSet(), with each element a (document_id, locator) tuple.
     pairs = {(c["document_id"], c["locator"]) for c in chunks}
 
     # doc-a's "9.9" only exists in its inactive gen-1, so it must not be
@@ -56,9 +49,6 @@ def test_valid_dataset_has_no_problems():
 
 def test_duplicate_case_id_is_reported():
     dataset = _valid_dataset()
-    # copy.deepcopy clones the whole nested dict, so editing the copy's id
-    # doesn't also change the original case (a plain assignment would just
-    # be a second reference to the same object, as in C#).
     duplicate = copy.deepcopy(dataset["cases"][0])
     dataset["cases"].append(duplicate)
 

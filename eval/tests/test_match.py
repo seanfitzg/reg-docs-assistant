@@ -14,8 +14,6 @@ from match import case_hit, locator_matches
 # ---- clause_numbered: compare by numbering segment, not string prefix ----
 
 
-# @pytest.mark.parametrize runs the test once per tuple, unpacking each
-# into the named arguments -- like NUnit's [TestCase("3.12", "3.12")].
 @pytest.mark.parametrize(
     ("gold", "retrieved"),
     [
@@ -112,10 +110,6 @@ def test_heading_whitespace_from_pdf_extraction_is_part_of_the_heading():
 
 
 def test_unknown_strategy_raises():
-    # pytest.raises is NUnit's Assert.Throws<ValueError>: the test fails
-    # unless the "with" block raises that exception. match= is a regex
-    # searched for in the exception's message. A "with" block runs setup
-    # and guaranteed teardown around its body -- C#'s "using" statement.
     with pytest.raises(ValueError, match="unknown chunking strategy"):
         locator_matches("3.12", "3.12", "fixed_window")
 

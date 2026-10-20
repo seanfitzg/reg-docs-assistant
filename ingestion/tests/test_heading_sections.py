@@ -1,15 +1,12 @@
 # Tests for the heading_sections chunking strategy (ADR-0014): splitting a
 # narrative document's text at bold heading lines, with the locator pairing
 # the heading text with the page it starts on (ADR-0015) -- e.g.
-# "Purpose (p. 5)", not just "Purpose" (which isn't unique or locatable on
-# its own in a long document) or a bare page number (which would throw
-# away the heading, defeating the point of a *heading*-based strategy).
+# "Purpose (p. 5)", not just "Purpose" (not unique in a long document) or a
+# bare page number (which would discard the heading).
 #
-# Unlike clause_numbered.chunk(), which works over a single joined string,
-# this works over the list[list[dict]] shape extract_pages_with_headings()
-# (via clean.py's layout-aware variant) produces -- each page's list of
-# {"text", "is_heading"} lines -- because it needs to know both which lines
-# are headings and which page each one is on.
+# Unlike clause_numbered.chunk(), which takes one joined string, this takes
+# the list[list[dict]] layout shape because it needs to know both which lines
+# are headings and which page each is on.
 
 from strategies.heading_sections import chunk
 
@@ -65,10 +62,9 @@ def test_locator_uses_the_page_the_heading_starts_on_not_page_one():
 
 
 def test_a_section_can_continue_across_a_page_boundary_with_no_new_heading():
-    # A heading on page 1 whose body text runs onto page 2 (no heading
-    # there) must still produce one chunk, locator anchored at page 1 --
-    # not silently truncated at the page break, and not treated as a
-    # second, headingless chunk.
+    # A heading on page 1 whose body runs onto page 2 must produce one chunk
+    # anchored at page 1, not be truncated at the page break or split into a
+    # headingless second chunk.
     pages = [
         [
             {"text": "Overview", "is_heading": True},

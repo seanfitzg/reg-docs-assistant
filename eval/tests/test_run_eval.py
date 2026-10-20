@@ -22,10 +22,9 @@ import pytest
 from embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
 from run_eval import K, QUERY_PREFIX, run_eval, write_report
 
-# Reused from /store's tests rather than redefined: the isolated
-# regdocs_test URL, the skip-if-Postgres-is-down marker, and the per-test
-# table-clearing fixture. As in test_embed.py, `clean_db` must be imported
-# by name for pytest to find it, even though nothing calls it directly.
+# Reused from /store's tests: the isolated regdocs_test URL, the skip marker,
+# and the table-clearing fixture. `clean_db` must be imported by name for
+# pytest to find it.
 from test_loader import DB_URL, clean_db, requires_postgres  # noqa: F401
 
 CLAUSE_DOC = "doc-fixture-clauses"
@@ -33,18 +32,15 @@ HEADING_DOC = "doc-fixture-headings"
 
 
 def basis(index: int, scale: float = 1.0) -> list[float]:
-    # A 768-long vector that points purely along one axis. The database
-    # column is vector(768), so every fixture vector must be exactly that
-    # long or Postgres rejects the INSERT.
+    # Points purely along one axis. The column is vector(768), so every
+    # fixture vector must be exactly that long.
     vector = [0.0] * EMBEDDING_DIMENSIONS
     vector[index] = scale
     return vector
 
 
 def add(*vectors: list[float]) -> list[float]:
-    # Element-wise sum: zip(*vectors) walks the vectors in lockstep, one
-    # tuple of same-position values at a time (like LINQ's Zip, but over
-    # any number of sequences).
+    # Element-wise sum.
     return [sum(values) for values in zip(*vectors)]
 
 
@@ -172,20 +168,15 @@ QUERY_VECTORS = {
 
 @pytest.fixture
 def fixture_run(clean_db):
-    # Loads the fixture store and runs the harness once per test. Returns a
-    # (report, client) tuple -- the client too, so the prefix test can
-    # inspect exactly what was sent without a second run. Tests that only
-    # need the report unpack it as `report, _ = fixture_run` (`_` is the
-    # conventional name for a value you're deliberately ignoring, like C#'s
-    # discard `_`).
+    # Loads the fixture store and runs the harness once per test. Returns the
+    # client too, so the prefix test can inspect what was sent without a
+    # second run.
     _load_fixture_store()
     client = FakeClient(QUERY_VECTORS)
     return run_eval(DB_URL, client, DATASET), client
 
 
 def _case_result(report, case_id):
-    # next(<generator>) returns the first item the generator produces --
-    # here, the first case with this id (like LINQ's First(predicate)).
     return next(case for case in report["cases"] if case["id"] == case_id)
 
 
@@ -263,9 +254,8 @@ def test_report_pins_its_configuration(fixture_run):
     config = report["config"]
     assert config["embedding_model"] == EMBEDDING_MODEL
     assert config["query_prefix"] == QUERY_PREFIX
-    # A chained comparison: `a == b == c` means `a == b and b == c` (C# has
-    # no equivalent). It checks both that the report recorded K and that K
-    # is still the 10 the spec asked for.
+    # Checks both that the report recorded K and that K is still the 10 the
+    # spec asked for.
     assert config["k"] == K == 10
     assert config["dataset_version"] == 7
     assert config["active_chunking_generations"] == {
@@ -278,19 +268,17 @@ def test_report_pins_its_configuration(fixture_run):
 def test_an_unembedded_store_fails_loudly_instead_of_scoring_every_case_a_miss(
     clean_db,
 ):
-    # clean_db leaves regdocs_test empty: no Chunks, no embeddings. Every
-    # search would return nothing, and without a guard every case would
-    # quietly score a miss -- a plausible-looking recall of 0.0 caused by
-    # a setup mistake (store/embed.py never run), not by retrieval.
+    # clean_db leaves regdocs_test empty. Without a guard every case would
+    # quietly score a miss -- a plausible recall of 0.0 caused by a setup
+    # mistake (store/embed.py never run), not by retrieval.
     with pytest.raises(RuntimeError, match="store/embed.py"):
         run_eval(DB_URL, FakeClient(QUERY_VECTORS), DATASET)
 
 
 @requires_postgres
 def test_a_dataset_with_no_answerable_cases_is_rejected(fixture_run):
-    # Recall and MRR are averages over answerable cases; with none there is
-    # nothing to average. That's a broken dataset, so it's refused with a
-    # clear message rather than crashing on a division by zero.
+    # With no answerable cases there's nothing to average: refused with a
+    # clear message rather than a division by zero.
     only_unanswerable = {"dataset_version": 1, "cases": [DATASET["cases"][3]]}
     with pytest.raises(ValueError, match="no answerable"):
         run_eval(DB_URL, FakeClient(QUERY_VECTORS), only_unanswerable)
