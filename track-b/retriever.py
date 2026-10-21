@@ -1,10 +1,8 @@
 # Track B's retriever (ADR-0032): a LangChain retriever over the existing
 # chunk_embeddings table, not LangChain's own PGVector integration.
 #
-# A LangChain *retriever* is anything that turns a question string into a list
-# of `Document`s. Downstream pieces (the later draft Step, LangGraph nodes)
-# depend only on that interface, so swapping in a hybrid keyword-plus-vector
-# retriever later changes this one class.
+# Downstream code sees only LangChain's retriever interface, so a later hybrid
+# retriever changes this one class.
 #
 # Pure vector search on purpose: it must reproduce the baseline run report in
 # eval/runs (ADR-0030), so any difference is a porting bug, not a changed
@@ -30,9 +28,7 @@ from embed import (  # noqa: E402
     vector_literal,
 )
 
-# The *query* half of nomic-embed-text's asymmetric convention (ADR-0026);
-# store/embed.py stored every Chunk with "search_document: ". Omitting it
-# still returns results, just quietly worse ones.
+# Query half of nomic-embed-text's asymmetric prefixes (ADR-0026).
 QUERY_PREFIX = "search_query: "
 
 # The recorded default for how many Chunks a question retrieves (ADR-0032).
@@ -40,11 +36,9 @@ DEFAULT_K = 5
 
 # Same query as eval/run_eval.py's RETRIEVAL_SQL, plus chunks.id and
 # chunks.text (a Document needs content, and the Event's retrieve Step needs
-# the Chunk id). `<=>` is pgvector's cosine distance; 1 - distance is the
-# similarity reported as the score. The join to documents on
-# active_chunking_generation_id is what restricts candidates to each
-# Document's active Chunking Generation (ADR-0025). chunks.id breaks ties so
-# equal distances always come back in the same order.
+# the Chunk id). The join to documents on active_chunking_generation_id
+# restricts candidates to active Chunking Generations (ADR-0025); chunks.id
+# breaks ties so equal distances keep a stable order.
 RETRIEVAL_SQL = """
     SELECT chunks.id,
            chunks.document_id,

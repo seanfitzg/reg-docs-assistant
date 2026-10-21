@@ -46,4 +46,5 @@ def test_recall_at_10_matches_baseline_run_report():
         if case_hit(case["gold_locators"], chunks):
             hits += 1
 
-    assert hits / answerable == baseline["summary"]["overall"]["recall@10"]
+    k = baseline["config"]["k"]
+    assert hits / answerable == baseline["summary"]["overall"][f"recall@{k}"]
