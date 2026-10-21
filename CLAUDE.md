@@ -41,6 +41,8 @@ Issues labeled `epic` are never implemented directly — they're a parent ticket
 
 ### `/implement --learn`
 
-When `/implement`'s prompt includes `--learn`, produce a learning writeup once implementation is done: a self-contained HTML file under `/learning`, named `issue-<N>-<slug>.html`, explaining what was built and the concepts behind it (matching the style of existing files there — concept callouts, the actual commands/queries run, any bugs `/code-review` caught and how they were fixed). Commit it to the same branch as the implementation, so it ships in the same PR. Without `--learn`, skip this — don't produce one unasked.
+When `/implement`'s prompt includes `--learn`, produce a learning writeup once implementation is done: a self-contained HTML file under `/learning`, named `issue-<N>-<slug>.html`, explaining what was built and the concepts behind it (matching the style of existing files there — concept callouts, the actual commands/queries run, any bugs `/code-review` caught and how they were fixed). It lives on the same branch as the implementation (uncommitted, see below), so it ships in the same PR. Without `--learn`, skip this — don't produce one unasked.
+
+With `--learn`, do not commit anything, neither the implementation nor the writeup. This overrides `/implement`'s own "commit your work" step. Leave all changes uncommitted on the issue's branch so the owner can review them as a diff in VS Code, and say so at the end. The owner commits (or asks for `/ship`) after reviewing. Review fixes, the writeup and any later edits stay uncommitted too.
 
 Write (or revise) the doc *after* `/code-review`'s findings are fixed, not before — never describe a pre-review draft. If review changed the design (not just cosmetics), update the doc to match the final code, and fold in what was actually caught: a wrong-but-plausible first approach and why it was wrong is better teaching material than a doc that only shows the polished result.
