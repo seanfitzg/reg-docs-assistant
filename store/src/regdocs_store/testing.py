@@ -47,6 +47,8 @@ def clean_db():
             with conn.cursor() as cur:
                 # chunk_embeddings references chunks (003), so it has to go
                 # first or DELETE FROM chunks hits a foreign-key error.
+                # events rejects DELETE (004); TRUNCATE skips row triggers.
+                cur.execute("TRUNCATE events")
                 cur.execute("DELETE FROM chunk_embeddings")
                 cur.execute("DELETE FROM chunks")
                 cur.execute("UPDATE documents SET active_chunking_generation_id = NULL")

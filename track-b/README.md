@@ -66,11 +66,23 @@ RUN_BASELINE_PARITY=1 python -m pytest track-b/tests
 RUN_REAL_DRAFT=1 python -m pytest track-b/tests/test_real_draft.py
 ```
 
+## Storing Events
+
+`events.py` has `write_event(event, db_url)`: it validates the Event against the schema for its `event_type`, then appends it to the `events` table (`store/init/004_events.sql`, ADR-0031). An Event that fails validation, or has an unknown `event_type`, raises and writes nothing. `recorded_at` is stamped by the database. The table rejects `UPDATE` and `DELETE`, so Redaction must already have happened: pass the Event `answer_question` returns, never a hand-built one with raw user text.
+
+```python
+event = answer_question(graph, "My email is jane@x.ie, how much notice?")
+write_event(event, DB_URL)  # stores "My email is [REDACTED:EMAIL], ..."
+```
+
+`test_events.py` needs the Postgres container and skips itself otherwise.
+
 ## Layout
 
-Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
+Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `events.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
 
 - `graph.py` — the four-node graph, Citation resolution and Event assembly.
+- `events.py` — `write_event`: schema validation, then the append-only insert.
 - `pii.py` — PII detection rules and the two redaction functions.
 - `prompts/` — versioned prompt files (`draft-v1.txt`); a new version is a new file.
 - `retriever.py` — `ChunkRetriever` and its search SQL.
