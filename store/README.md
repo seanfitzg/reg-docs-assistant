@@ -69,6 +69,16 @@ python -m regdocs_store.embed
 docker compose exec postgres psql -U regdocs -d regdocs -f /docker-entrypoint-initdb.d/003_chunk_embeddings.sql
 ```
 
+## Events
+
+`init/004_events.sql` creates `events`, the append-only log of every Event (`QueryAnswered`, `EventFlagged`, `AnswerOverridden`; ADR-0031): `id`, `event_type`, `recorded_at` (stamped by the database, not the caller) and `payload`, the full Event as JSONB. A trigger rejects any `UPDATE` or `DELETE`, so a correction is always a new Event. It does not block `TRUNCATE` or dropping the table, so that remains a privileged, deliberate act; the test suite relies on it to clear `regdocs_test`. The table is written by `track-b/src/regdocs_track_b/events.py`, which validates each Event against its JSON Schema first; the database does not re-check the payload's shape.
+
+Like `003`, it applies to both databases on an empty volume. An existing container needs it applied by hand:
+
+```
+docker compose exec postgres psql -U regdocs -d regdocs -f /docker-entrypoint-initdb.d/004_events.sql
+```
+
 ## Running the tests
 
 ```
@@ -85,9 +95,10 @@ Python modules live in `src/regdocs_store/` (so `loader.py` below is `regdocs_st
 - `init/001_schema.sql` — the schema: `documents`, `chunking_generations`, `chunks`, with foreign keys and indexes. Plain SQL, no migration framework (see ADR-0020/0021/0022).
 - `init/002_test_database.sql` — creates `regdocs_test`, schema-identical to `regdocs`, for test isolation.
 - `init/003_chunk_embeddings.sql` — the `chunk_embeddings` table (keyed by chunk + embedding model), applied to both databases.
+- `init/004_events.sql` — the append-only `events` table and its immutability trigger, applied to both databases.
 - `db.py` — shared Postgres helpers (`DEFAULT_DB_URL`, `upsert_immutable`) used by `loader.py` and `embed.py`.
 - `embed.py` — embeds active-generation Chunks via Ollama into `chunk_embeddings`. Standalone, like `loader.py`.
 - `loader.py` — reads `ingestion/output` + `ingestion/manifest.json`, loads into the schema above. Standalone (ADR-0020) — not a step inside `ingestion/pipeline.py`.
-- `tests/` — one integration test file per script (`test_loader.py`, `test_embed.py`), each exercising its script's single seam (`load_store`, `embed_chunks`) end-to-end against a real (but isolated) Postgres database.
+- `tests/` — one integration test file per script (`test_loader.py`, `test_embed.py`), plus `test_events_table.py`, which checks the `events` trigger and `recorded_at` directly in SQL, each exercising its script's single seam (`load_store`, `embed_chunks`) end-to-end against a real (but isolated) Postgres database.
 
 Not built yet: a vector-similarity index (`hnsw`/`ivfflat`) and a retrieval/query API against the embeddings — follow-up work.

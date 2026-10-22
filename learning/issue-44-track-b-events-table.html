@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #44: The events table and writer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #44 — A permanent record that can't be edited, and the code that writes to it</h1>
+<p class="subtitle">Every answer the assistant gives is recorded as an "Event". This issue builds the place those Events live: a database table that only ever accepts new rows, plus a small writer that checks each Event is well-formed before saving it. Follows <a href="issue-43-track-b-pii-redaction.html">issue #43's writeup</a>.</p>
+
+<h2>What the project is, and where we were</h2>
+<p>RegDocs Assistant answers questions about regulatory documents. Each time it answers, it should leave behind a record of what was asked, what it said, which source text it used and which warning flags it raised. That record is an <strong>Event</strong>. Until now an Event was only a Python dictionary returned by <code>answer_question</code>: validated against a JSON Schema in tests, then thrown away. Nothing was stored anywhere. Issue #43 had already made sure that dictionary holds placeholders like <code>[REDACTED:EMAIL]</code> instead of real personal data.</p>
+
+<h2>The problem, and the core idea</h2>
+<p>An audit trail is only trustworthy if nobody can quietly change it. If someone can edit an old Event, the trail proves nothing. The usual answer is "we agree not to edit rows". That holds until one buggy query, or one hand-typed <code>UPDATE</code> in a console, breaks it silently.</p>
+<p>The idea here: make the <strong>database itself</strong> refuse. A trigger runs before any <code>UPDATE</code> or <code>DELETE</code> on the table and raises an error. A correction is not an edit; it is a <em>new</em> Event that points at the old one (ADR-0001).</p>
+
+<div class="box concept">
+  <span class="label">Concept: append-only log (event sourcing, again)</span>
+  <p>You know this from event sourcing: state is a sequence of facts that are only ever appended, and history is never rewritten. The <code>events</code> table is the same thing, with the guarantee moved out of application discipline and into the storage engine. In .NET terms, think of an event store with no <code>Update</code> or <code>Delete</code> operation. Postgres allows both by default, so we had to add a trigger that takes them away.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why Redaction had to come first</span>
+  <p>Because the table is immutable, a leaked email address could <em>never</em> be removed once written. That is why issue #43 (Redaction) was built before this one. The writer relies on being handed an Event that <code>answer_question</code> already redacted. It deliberately does not scan the answer for PII itself: ADR-0034 explains that scanning answers would wrongly redact public text quoted from source documents, such as a regulator's contact email.</p>
+</div>
+
+<h2>What the code now does</h2>
+<h3>The table (<code>store/init/004_events.sql</code>)</h3>
+<pre><code>events
+  id           TEXT PRIMARY KEY           -- the Event's own id
+  event_type   TEXT                       -- QueryAnswered / EventFlagged / AnswerOverridden
+  recorded_at  TIMESTAMPTZ DEFAULT now()  -- stamped by the database
+  payload      JSONB                      -- the full Event</code></pre>
+<p><code>recorded_at</code> comes from the database's clock because the Event has no timestamp field, and a database clock can't be skewed or forged by the application. <code>payload</code> is JSONB because the three Event types have different shapes (ADR-0031); <code>event_type</code> is a real column so "show me every override" needs no JSON digging.</p>
+<p>The trigger is a tiny function that raises <code>events is append-only: UPDATE is not allowed</code> (or <code>DELETE</code>). One honest limit: row triggers don't fire on <code>TRUNCATE</code>, so wiping the whole table remains a deliberate, privileged act. The tests use that to clean up <code>regdocs_test</code>.</p>
+<p>Like the previous migration, the file applies itself to both <code>regdocs</code> and <code>regdocs_test</code> using a psql variable guard. Existing containers need it applied by hand (the store README gives the command).</p>
+
+<h3>The writer (<code>track-b/src/regdocs_track_b/events.py</code>)</h3>
+<pre><code>write_event(event, db_url)
+  1. look up the schema for event["event_type"]  (unknown type -> ValueError)
+  2. validate the Event against it               (invalid -> ValidationError)
+  3. INSERT id, event_type, payload              (database stamps recorded_at)</code></pre>
+<p>Validation runs before the database connection is even opened, so a bad Event writes nothing. The database doesn't re-check the payload's shape; that is the application's job (ADR-0031).</p>
+
+<div class="box did">
+  <span class="label">Example</span>
+  <p>Input: <code>answer_question(graph, "My email is jane@x.ie, how much notice?")</code>. The returned Event has query <code>My email is [REDACTED:EMAIL], how much notice?</code>. After <code>write_event(event, DB_URL)</code>, the stored row's query is exactly that string, and <code>jane@x.ie</code> appears nowhere in the row.</p>
+</div>
+
+<h2>Files changed</h2>
+<table>
+<tr><th>File</th><th>What</th></tr>
+<tr><td><code>store/init/004_events.sql</code></td><td>New: table, index on <code>event_type</code>, immutability trigger, test-database replication.</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/events.py</code></td><td>New: <code>write_event</code>.</td></tr>
+<tr><td><code>store/src/regdocs_store/testing.py</code></td><td><code>clean_db</code> now truncates <code>events</code> between tests.</td></tr>
+<tr><td><code>store/README.md</code>, <code>track-b/README.md</code></td><td>Document the table, the migration step and the writer.</td></tr>
+<tr><td><code>store/tests/test_events_table.py</code>, <code>track-b/tests/test_events.py</code></td><td>New tests.</td></tr>
+</table>
+
+<h2>Try it yourself</h2>
+<p>Needs the Postgres container running (<code>docker compose up -d</code> in <code>/store</code>, with migration 004 applied). Neither test needs Ollama.</p>
+<p><strong>1. The idea in one test:</strong> <code>test_delete_on_events_is_rejected</code> in <code>store/tests/test_events_table.py</code>.</p>
+<pre><code>python -m pytest store/tests/test_events_table.py::test_delete_on_events_is_rejected</code></pre>
+<p>It inserts a row, tries a raw SQL <code>DELETE</code>, and checks both that Postgres raised the error and that the row is still there. To see why it matters, drop the trigger in <code>regdocs_test</code> (<code>DROP TRIGGER events_are_immutable ON events;</code>) and rerun: the test fails because the delete succeeds. Restore it by re-running the trigger statement from <code>004_events.sql</code> in that database.</p>
+<p><strong>2. The end-to-end one:</strong> <code>test_a_pipeline_event_is_stored_with_redacted_query_and_answer</code> in <code>track-b/tests/test_events.py</code>.</p>
+<pre><code>python -m pytest track-b/tests/test_events.py::test_a_pipeline_event_is_stored_with_redacted_query_and_answer</code></pre>
+<p>It runs a whole fake pipeline with an email in the question, writes the Event, reads the row back and checks the stored text. Add <code>print(payload)</code> before the asserts and run with <code>-s</code> to see what is actually persisted. Change the question to contain no PII and watch the placeholders disappear.</p>
+<p>These two were chosen because between them they cover the two promises: the database refuses edits, and what gets stored is already redacted. The other tests (schema rejection, unknown type, each Event type) are variations on the writer's validation step.</p>
+
+<footer>
+<p><strong>Summary.</strong> Events now have a permanent home: an <code>events</code> table whose trigger makes Postgres itself refuse any <code>UPDATE</code> or <code>DELETE</code>, with the database stamping when each row was recorded. A small writer validates each Event against its JSON Schema before inserting, so malformed Events never land. Redaction stays where issue #43 put it, upstream in <code>answer_question</code>, so what the writer receives and stores already has placeholders instead of personal data.</p>
+</footer>
+</main>
+</body>
+</html>
