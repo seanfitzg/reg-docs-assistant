@@ -6,7 +6,7 @@
 
 import pytest
 
-from clean import (
+from regdocs_ingestion.clean import (
     apply_cleanup_flags,
     strip_headers_footers_and_page_numbers,
     strip_headers_footers_and_page_numbers_from_layout,

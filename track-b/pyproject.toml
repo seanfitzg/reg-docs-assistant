@@ -10,13 +10,19 @@ dependencies = [
     "langgraph>=1.0",
     # ChatOllama, the real chat model (opt-in tests; local, so cost 0).
     "langchain-ollama>=1.0",
-    # The retriever reuses /store's db.py and embed.py, so it needs the same
-    # drivers.
-    "psycopg[binary]>=3.2",
-    "ollama>=0.4",
-    # The graph's Events are validated against /schema's Event schema in tests.
-    "jsonschema[format]>=4.23",
+    # The retriever reuses store's db and embed modules.
+    "regdocs-store",
+    # The tests validate Events against schema's Event schema, and the
+    # parity test reuses eval's match rule.
+    "regdocs-schema",
+    "regdocs-eval",
 ]
 
-[tool.uv]
-package = false
+[tool.uv.sources]
+regdocs-store = { workspace = true }
+regdocs-schema = { workspace = true }
+regdocs-eval = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"

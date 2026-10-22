@@ -22,3 +22,9 @@ dev = [
     # Formatter (see ruff.toml).
     "ruff>=0.16",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["schema/tests", "ingestion/tests", "store/tests", "eval/tests", "track-b/tests"]
+# Test files live outside the packages and aren't packages themselves, so
+# importlib mode stops same-named test modules in different folders clashing.
+addopts = "--import-mode=importlib"

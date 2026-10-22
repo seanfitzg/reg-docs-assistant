@@ -11,8 +11,8 @@ import copy
 import json
 from pathlib import Path
 
-from check_dataset import find_problems
-from corpus import load_active_chunks
+from regdocs_eval.check_dataset import find_problems
+from regdocs_eval.corpus import load_active_chunks
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FIXTURE_OUTPUT = FIXTURES / "ingestion-output"

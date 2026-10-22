@@ -6,42 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from langchain_core.documents import Document
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-from langchain_core.retrievers import BaseRetriever
 
-from graph import answer_question, build_graph
-from retriever import EMBEDDING_MODEL
-from support import load_json, validate
+from regdocs_schema.testing import load_json, validate
+from regdocs_store.embed import EMBEDDING_MODEL
+from regdocs_track_b.graph import answer_question, build_graph
+from regdocs_track_b.testing import CHUNKS, FakeRetriever
 
 EVENT_SCHEMA = load_json(
     Path(__file__).parent.parent.parent / "schema" / "event.schema.json"
 )
-
-
-class FakeRetriever(BaseRetriever):
-    documents: list[Document]
-
-    def _get_relevant_documents(self, query, *, run_manager):
-        return self.documents
-
-
-def _chunk(chunk_id, document_id, locator, text, score):
-    return Document(
-        page_content=text,
-        metadata={
-            "chunk_id": chunk_id,
-            "document_id": document_id,
-            "locator": locator,
-            "score": score,
-        },
-    )
-
-
-CHUNKS = [
-    _chunk("c-1", "doc-a", "3.1", "Firms must give 30 days' notice.", 0.91),
-    _chunk("c-2", "doc-b", "Introduction (p. 2)", "Fees must be disclosed.", 0.74),
-]
 
 
 class FakeClock:

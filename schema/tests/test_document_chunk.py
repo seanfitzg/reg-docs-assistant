@@ -9,7 +9,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
-from support import load_json, validate
+from regdocs_schema.testing import load_json, validate
 
 SCHEMA_DIR = Path(__file__).parent.parent
 DOCUMENT_SCHEMA = SCHEMA_DIR / "document.schema.json"

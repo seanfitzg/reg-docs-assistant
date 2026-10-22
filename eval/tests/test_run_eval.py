@@ -19,13 +19,16 @@ import json
 import psycopg
 import pytest
 
-from embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
-from run_eval import K, QUERY_PREFIX, run_eval, write_report
+from regdocs_eval.run_eval import K, QUERY_PREFIX, run_eval, write_report
+from regdocs_store.embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
 
-# Reused from /store's tests: the isolated regdocs_test URL, the skip marker,
-# and the table-clearing fixture. `clean_db` must be imported by name for
-# pytest to find it.
-from test_loader import DB_URL, clean_db, requires_postgres  # noqa: F401
+# Reused from regdocs_store.testing: the isolated regdocs_test URL, the skip
+# marker, and the table-clearing fixture (imported by name so pytest finds it).
+from regdocs_store.testing import (
+    DB_URL,
+    clean_db,  # noqa: F401
+    requires_postgres,
+)
 
 CLAUSE_DOC = "doc-fixture-clauses"
 HEADING_DOC = "doc-fixture-headings"
@@ -270,8 +273,8 @@ def test_an_unembedded_store_fails_loudly_instead_of_scoring_every_case_a_miss(
 ):
     # clean_db leaves regdocs_test empty. Without a guard every case would
     # quietly score a miss -- a plausible recall of 0.0 caused by a setup
-    # mistake (store/embed.py never run), not by retrieval.
-    with pytest.raises(RuntimeError, match="store/embed.py"):
+    # mistake (regdocs_store.embed never run), not by retrieval.
+    with pytest.raises(RuntimeError, match="regdocs_store.embed"):
         run_eval(DB_URL, FakeClient(QUERY_VECTORS), DATASET)
 
 

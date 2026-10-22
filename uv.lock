@@ -967,24 +967,22 @@ dev = [
 [[package]]
 name = "regdocs-eval"
 version = "0.0.0"
-source = { virtual = "eval" }
+source = { editable = "eval" }
 dependencies = [
     { name = "jsonschema", extra = ["format"] },
-    { name = "ollama" },
-    { name = "psycopg", extra = ["binary"] },
+    { name = "regdocs-store" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "jsonschema", extras = ["format"], specifier = ">=4.23" },
-    { name = "ollama", specifier = ">=0.4" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "regdocs-store", editable = "store" },
 ]
 
 [[package]]
 name = "regdocs-ingestion"
 version = "0.0.0"
-source = { virtual = "ingestion" }
+source = { editable = "ingestion" }
 dependencies = [
     { name = "jsonschema", extra = ["format"] },
     { name = "pymupdf" },
@@ -999,7 +997,7 @@ requires-dist = [
 [[package]]
 name = "regdocs-schema"
 version = "0.0.0"
-source = { virtual = "schema" }
+source = { editable = "schema" }
 dependencies = [
     { name = "jsonschema", extra = ["format"] },
 ]
@@ -1010,7 +1008,7 @@ requires-dist = [{ name = "jsonschema", extras = ["format"], specifier = ">=4.23
 [[package]]
 name = "regdocs-store"
 version = "0.0.0"
-source = { virtual = "store" }
+source = { editable = "store" }
 dependencies = [
     { name = "ollama" },
     { name = "psycopg", extra = ["binary"] },
@@ -1025,24 +1023,24 @@ requires-dist = [
 [[package]]
 name = "regdocs-track-b"
 version = "0.0.0"
-source = { virtual = "track-b" }
+source = { editable = "track-b" }
 dependencies = [
-    { name = "jsonschema", extra = ["format"] },
     { name = "langchain-core" },
     { name = "langchain-ollama" },
     { name = "langgraph" },
-    { name = "ollama" },
-    { name = "psycopg", extra = ["binary"] },
+    { name = "regdocs-eval" },
+    { name = "regdocs-schema" },
+    { name = "regdocs-store" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "jsonschema", extras = ["format"], specifier = ">=4.23" },
     { name = "langchain-core", specifier = ">=1.0" },
     { name = "langchain-ollama", specifier = ">=1.0" },
     { name = "langgraph", specifier = ">=1.0" },
-    { name = "ollama", specifier = ">=0.4" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "regdocs-eval", editable = "eval" },
+    { name = "regdocs-schema", editable = "schema" },
+    { name = "regdocs-store", editable = "store" },
 ]
 
 [[package]]

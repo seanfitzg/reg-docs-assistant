@@ -8,8 +8,8 @@ import os
 import pytest
 from langchain_ollama import ChatOllama
 
-from graph import build_graph
-from test_graph import FakeRetriever, _chunk
+from regdocs_track_b.graph import build_graph
+from regdocs_track_b.testing import FakeRetriever, make_chunk
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("RUN_REAL_DRAFT"),
@@ -19,15 +19,15 @@ pytestmark = pytest.mark.skipif(
 MODEL = "qwen2.5:7b-instruct"
 
 CHUNKS = [
-    _chunk("c-1", "doc-a", "4.2", "A firm must keep records for six years.", 0.80),
-    _chunk(
+    make_chunk("c-1", "doc-a", "4.2", "A firm must keep records for six years.", 0.80),
+    make_chunk(
         "c-2",
         "doc-b",
         "7.1",
         "A firm must give 30 days' written notice before applying a fee waiver.",
         0.78,
     ),
-    _chunk(
+    make_chunk(
         "c-3", "doc-c", "9.3", "Complaints must be acknowledged in five days.", 0.70
     ),
 ]

@@ -49,6 +49,18 @@ CONTEXT.md   domain glossary
 
 Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md), [`store/README.md`](./store/README.md) and [`eval/README.md`](./eval/README.md).
 
+## Python workspace
+
+The Python folders share one [uv](https://docs.astral.sh/uv/) workspace and one `.venv` at the repo root (ADR-0033). From the root:
+
+```
+uv sync --all-packages        # create/update .venv from uv.lock
+uv run pytest                 # every folder's tests in one session
+uv run pytest eval            # or just one folder
+```
+
+Each folder's README has its own run commands (`python -m regdocs_store.loader`, and so on). Tests that need Postgres or Ollama skip themselves when those aren't running.
+
 ## About me
 
 Sean Fitzgerald - full-stack engineer, 25+ years, currently at Mars Capital (Dublin). [LinkedIn](https://www.linkedin.com/in/seanfitzg/)

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from strategies.clause_numbered import chunk, chunk_document
+from regdocs_ingestion.strategies.clause_numbered import chunk, chunk_document
 
 CORPUS_DIR = Path(__file__).parent.parent.parent / "corpus"
 CP54_PDF = CORPUS_DIR / "04-cp54-second-consultation-consumer-protection-code.pdf"

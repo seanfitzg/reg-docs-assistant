@@ -4,10 +4,13 @@
 
 import psycopg
 
-from embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
-from retriever import QUERY_PREFIX, ChunkRetriever
-
-from test_loader import DB_URL, clean_db, requires_postgres  # noqa: F401
+from regdocs_store.embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
+from regdocs_store.testing import (
+    DB_URL,
+    clean_db,  # noqa: F401
+    requires_postgres,
+)
+from regdocs_track_b.retriever import QUERY_PREFIX, ChunkRetriever
 
 CLAUSE_DOC = "doc-fixture-clauses"
 

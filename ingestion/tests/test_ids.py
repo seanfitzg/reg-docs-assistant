@@ -1,7 +1,7 @@
 # Tests for ids.py: the id-derivation functions that keep any id from being
 # hand-typed (ADR-0017 for Document, extended to Generation and Chunk ids).
 
-from ids import chunk_id, document_id_from_filename, generation_id
+from regdocs_ingestion.ids import chunk_id, document_id_from_filename, generation_id
 
 
 # ---- Document id ----

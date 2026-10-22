@@ -1,7 +1,7 @@
 # Fast unit tests for how a database row becomes a LangChain Document. No
 # Postgres, no Ollama.
 
-from retriever import DEFAULT_K, ChunkRetriever, row_to_document
+from regdocs_track_b.retriever import DEFAULT_K, ChunkRetriever, row_to_document
 
 
 class UnusedClient:
