@@ -1,11 +1,12 @@
 {
   // Multi-root workspace: each Python subproject is its own root folder so
-  // VS Code's Python extension can give each one its own interpreter
-  // (schema/.venv, ingestion/.venv, store/.venv, eval/.venv, track-b/.venv). The interpreter and pytest
-  // settings live in each subfolder's .vscode/settings.json. "repo root"
-  // is included so docs/, CLAUDE.md, CONTEXT.md, etc. stay visible in the
-  // Explorer. Open THIS file (File > Open Workspace from File...) instead
-  // of the bare folder.
+  // each gets its own pytest rootdir (the folders still share flat module
+  // names, so their tests can't run in one session yet). They all use the one
+  // uv-managed .venv at the repo root: see the root pyproject.toml, and each
+  // subfolder's .vscode/settings.json for the interpreter and pytest settings.
+  // "repo root" is included so docs/, CLAUDE.md, CONTEXT.md, etc. stay visible
+  // in the Explorer. Open THIS file (File > Open Workspace from File...)
+  // instead of the bare folder.
   "folders": [
     {
       "name": "repo root",

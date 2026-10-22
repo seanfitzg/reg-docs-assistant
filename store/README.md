@@ -27,10 +27,9 @@ docker compose up -d
 ## Loading data
 
 ```
-python -m venv store/.venv
-store/.venv/Scripts/activate      # Windows
-# source store/.venv/bin/activate # macOS/Linux
-pip install -r store/requirements.txt
+uv sync --all-packages              # once, from the repo root: one shared .venv for every folder
+.venv/Scripts/activate              # Windows
+# source .venv/bin/activate         # macOS/Linux
 ```
 
 With the container up and `ingestion/output` already generated (see `ingestion/README.md`):

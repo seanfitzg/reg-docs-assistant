@@ -5,10 +5,9 @@ Turns corpus PDFs into `Document`/`Chunk` records validated against the shared s
 ## Setup
 
 ```
-python -m venv ingestion/.venv
-ingestion/.venv/Scripts/activate      # Windows
-# source ingestion/.venv/bin/activate # macOS/Linux
-pip install -r ingestion/requirements.txt
+uv sync --all-packages              # once, from the repo root: one shared .venv for every folder
+.venv/Scripts/activate              # Windows
+# source .venv/bin/activate         # macOS/Linux
 ```
 
 Requires the corpus PDFs to be present locally (`corpus/*.pdf` — see `corpus/SOURCES.md`; not committed to git).

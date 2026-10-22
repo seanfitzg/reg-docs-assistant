@@ -1,0 +1,13 @@
+[project]
+name = "regdocs-eval"
+version = "0.0.0"
+requires-python = ">=3.14"
+# run_eval.py reuses /store's db.py and embed.py, so it needs the same drivers.
+dependencies = [
+    "jsonschema[format]>=4.23",
+    "psycopg[binary]>=3.2",
+    "ollama>=0.4",
+]
+
+[tool.uv]
+package = false

@@ -7,10 +7,9 @@ This directory is a shared contract both Track A (.NET) and Track B (Python) imp
 ## Setup
 
 ```
-python -m venv schema/.venv
-schema/.venv/Scripts/activate      # Windows
-# source schema/.venv/bin/activate # macOS/Linux
-pip install -r schema/requirements.txt
+uv sync --all-packages              # once, from the repo root: one shared .venv for every folder
+.venv/Scripts/activate              # Windows
+# source .venv/bin/activate         # macOS/Linux
 ```
 
 ## Running the tests
