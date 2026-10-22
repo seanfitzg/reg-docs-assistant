@@ -16,6 +16,11 @@ dependencies = [
     # parity test reuses eval's match rule.
     "regdocs-schema",
     "regdocs-eval",
+    # The HTTP API (api.py), the server that runs it, and the HTTP client
+    # FastAPI's in-process TestClient is built on.
+    "fastapi>=0.159.1",
+    "uvicorn>=0.54.0",
+    "httpx>=0.28.1",
 ]
 
 [tool.uv.sources]

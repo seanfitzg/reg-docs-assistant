@@ -77,12 +77,37 @@ write_event(event, DB_URL)  # stores "My email is [REDACTED:EMAIL], ..."
 
 `test_events.py` needs the Postgres container and skips itself otherwise.
 
+`test_api.py` drives the whole API through FastAPI's in-process `TestClient` against `regdocs_test`, with a fake retriever and scripted fake chat model. It needs Postgres but not Ollama, and skips itself without it.
+
+## Running the API
+
+`api.py` is a FastAPI app with two endpoints, both synchronous, with no streaming and no authentication:
+
+- `POST /query` with `{"question": "..."}` runs the graph, stores the Event and returns `{event_id, answer, citations, flags}`. The answer is the stored (Redacted) one. An empty question is a 422.
+- `GET /events/{id}` returns the stored Event, or 404 for an unknown id. Citations are not part of the Event (the shared schema has no field for them), so only the POST response carries them.
+
+To run it locally you need the Postgres container loaded and embedded (see `store/README.md`) and Ollama serving `nomic-embed-text` and `qwen2.5:7b-instruct` (`ollama pull qwen2.5:7b-instruct`). From the repo root, with the venv active:
+
+```
+uvicorn regdocs_track_b.api:create_default_app --factory
+```
+
+Then try it at `http://127.0.0.1:8000/docs` (FastAPI's interactive page) or:
+
+```
+curl -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json" -d '{"question": "What must a firm disclose?"}'
+curl http://127.0.0.1:8000/events/<event_id>
+```
+
+`STORE_DATABASE_URL` points it at a different database (default: `regdocs`). `create_app(graph, db_url)` takes an already-built graph, which is how the tests inject fakes.
+
 ## Layout
 
-Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `events.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
+Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `events.py`, `api.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
 
 - `graph.py` — the four-node graph, Citation resolution and Event assembly.
-- `events.py` — `write_event`: schema validation, then the append-only insert.
+- `api.py` — the FastAPI app: `create_app` (injectable, used by tests) and `create_default_app` (real local models, used by uvicorn).
+- `events.py` — `write_event` (schema validation, then the append-only insert) and `read_event`.
 - `pii.py` — PII detection rules and the two redaction functions.
 - `prompts/` — versioned prompt files (`draft-v1.txt`); a new version is a new file.
 - `retriever.py` — `ChunkRetriever` and its search SQL.

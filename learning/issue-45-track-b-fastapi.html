@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #45: The HTTP API</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #45 — Putting the pipeline behind a web address</h1>
+<p class="subtitle">Until now the assistant could only be driven from Python code and tests. This issue wraps it in a small web service: send it a question over HTTP and get back an answer, its citations and any warning flags; look up the stored record of any past answer by id. Follows <a href="issue-44-track-b-events-table.html">issue #44's writeup</a>.</p>
+
+<h2>What the project is, and where we were</h2>
+<p>RegDocs Assistant answers questions about regulatory documents. Behind the scenes a four-step pipeline (classify, retrieve, draft, verify) finds relevant passages ("Chunks"), has a language model write an answer that cites them, and builds an <strong>Event</strong>: the permanent record of the question, answer and what happened along the way. Issue #43 made that record redact personal data; issue #44 gave Events a permanent, edit-proof database table and a writer. But there was still no way for anyone to <em>use</em> the thing except by writing Python.</p>
+
+<h2>The problem, and the core idea</h2>
+<p>A demo needs an address you can send a question to. The core idea is two endpoints and almost no logic of their own:</p>
+<div class="flow"><span class="step">POST /query</span><span class="arrow">→</span><span class="step">run the graph</span><span class="arrow">→</span><span class="step">write the Event</span><span class="arrow">→</span><span class="step">return id, answer, citations, flags</span></div>
+<div class="flow"><span class="step">GET /events/{id}</span><span class="arrow">→</span><span class="step">read the row</span><span class="arrow">→</span><span class="step">return it, or 404</span></div>
+<p>All the interesting work already existed. The API is a thin layer that connects HTTP to it.</p>
+
+<div class="box concept">
+  <span class="label">Concept: FastAPI (the ASP.NET Core of Python)</span>
+  <p>FastAPI is a Python web framework. If you know ASP.NET Core minimal APIs, it is very close: you write a function, decorate it with the route (<code>@app.post("/query")</code>), and the framework handles routing and JSON. The request body is described by a <code>pydantic</code> class (<code>QueryRequest</code>), which plays the role of a DTO with validation attributes: an empty question is rejected with a 422 before your code runs. The return type (<code>QueryResponse</code>) describes the response and also drives the auto-generated docs page at <code>/docs</code>, the same job Swagger does in .NET.</p>
+  <p>One detail worth knowing: the handlers are plain <code>def</code>, not <code>async def</code>. The graph does blocking work (database calls, a model call). FastAPI runs plain-<code>def</code> handlers on a pool of worker threads, so a slow question doesn't freeze other requests. An <code>async def</code> handler that blocked would stall the whole server.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: a seam you can inject fakes into</span>
+  <p>The app is built by <code>create_app(graph, db_url)</code>, which takes the already-built graph and database URL as arguments. This is constructor injection, the way you would register services in a .NET <code>WebApplicationFactory</code> test. Tests pass a graph built from a fake retriever and a scripted fake chat model, so they run offline and deterministically. Production uses <code>create_default_app()</code>, which builds the real local models (Ollama's <code>qwen2.5:7b-instruct</code> for drafting, <code>nomic-embed-text</code> for retrieval). Language models are non-deterministic, so putting the model behind an injectable seam is what makes the API testable at all.</p>
+</div>
+
+<h2>What the code now does</h2>
+<h3>POST /query</h3>
+<pre><code>request:   {"question": "How much notice must a firm give?"}
+response:  {"event_id": "3f1c...",
+            "answer": "Thirty days' notice. [1]",
+            "citations": [{"marker": 1, "chunk_id": "c-1",
+                           "document_id": "doc-a", "locator": "3.1"}],
+            "flags": []}</code></pre>
+<p>Citations are resolved by code, never written by the model (ADR-0010). They are not part of the stored Event, because the shared Event schema has no field for them. So the pipeline's <code>run_question</code> now returns the Event and its citations side by side. The older <code>answer_question</code> still exists and returns only the Event.</p>
+<p>The answer in the response is the <em>stored</em> answer, so if the model echoed back an email address the user typed, it appears as <code>[REDACTED:EMAIL]</code> in the response too. That keeps the response from containing anything the permanent record doesn't.</p>
+
+<h3>GET /events/{id}</h3>
+<p>Reads the row from the <code>events</code> table (<code>read_event</code>) and returns the stored Event, or HTTP 404 if the id is unknown. Because citations aren't stored, only the POST response carries them.</p>
+
+<h2>Files changed</h2>
+<table>
+<tr><th>File</th><th>What</th></tr>
+<tr><td><code>track-b/src/regdocs_track_b/api.py</code></td><td>New: <code>create_app</code>, <code>create_default_app</code>, and the request/response models.</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/graph.py</code></td><td><code>run_question</code> returns the Event plus Citations; <code>answer_question</code> wraps it.</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/events.py</code></td><td>New <code>read_event</code>.</td></tr>
+<tr><td><code>track-b/pyproject.toml</code>, <code>uv.lock</code></td><td>Add <code>fastapi</code>, <code>uvicorn</code> (the server) and <code>httpx</code> (what the test client uses).</td></tr>
+<tr><td><code>track-b/README.md</code></td><td>"Running the API" section.</td></tr>
+<tr><td><code>track-b/tests/test_api.py</code></td><td>New API tests.</td></tr>
+</table>
+
+<h2>Try it yourself</h2>
+<p>Needs the Postgres container running. No Ollama needed for the test.</p>
+<p><strong>The one test that teaches the whole flow:</strong> <code>test_the_event_a_query_names_is_stored_and_retrievable</code> in <code>track-b/tests/test_api.py</code>.</p>
+<pre><code>python -m pytest track-b/tests/test_api.py::test_the_event_a_query_names_is_stored_and_retrievable</code></pre>
+<p>It POSTs a question through FastAPI's in-process <code>TestClient</code> (no real server, no network), takes the <code>event_id</code> from the response, GETs that id back, and checks the stored Event matches the schema. To poke at it: add <code>print(posted)</code> and <code>print(event)</code> and run with <code>-s</code> to see exactly what the API returns versus what is stored (notice the stored Event has no citations). Change the scripted answer in <code>_client()</code> to <code>"Thirty days. [9]"</code> and watch the unresolvable marker be stripped and the citations list come back empty.</p>
+<p>It was chosen over the others because it exercises both endpoints and the database in one go; the remaining tests (404, PII redaction, empty question) are variations on it.</p>
+<p>To run it for real, follow "Running the API" in <code>track-b/README.md</code> and open <code>http://127.0.0.1:8000/docs</code>.</p>
+
+<footer>
+<p><strong>Summary.</strong> The pipeline now has a front door: <code>POST /query</code> runs a question through the graph, stores the resulting Event with the issue-44 writer, and returns its id, answer, citations and flags; <code>GET /events/{id}</code> reads a stored Event back or returns 404. The app is built from an injected graph, so tests drive it in-process with fakes against the test database, while <code>create_default_app</code> wires the real local models for running it locally.</p>
+</footer>
+</main>
+</body>
+</html>

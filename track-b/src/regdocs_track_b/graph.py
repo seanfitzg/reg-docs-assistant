@@ -24,8 +24,8 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.retrievers import BaseRetriever
 from langgraph.graph import END, START, StateGraph
-
 from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
+
 from regdocs_track_b.pii import PiiMatch, detect_pii, redact_answer, redact_query
 
 STUB_MODEL = "stub"
@@ -189,13 +189,16 @@ def build_graph(
     return graph.compile()
 
 
-def answer_question(graph, question: str) -> dict:
-    """Run `question` through the graph and assemble the finished run's Event."""
+def run_question(graph, question: str) -> tuple[dict, list[dict]]:
+    """Run `question` through the graph; return its Event and its Citations.
+
+    The Event schema has no Citations field, so they come back beside it.
+    """
     final = graph.invoke({"question": question, "flags": [], "steps": []})
     # Redaction runs here, after every Step has seen the original text, so
     # only what is stored changes (ADR-0008). Both fields use classify's
     # matches, the same ones that raised the Flag.
-    return {
+    event = {
         "id": str(uuid.uuid4()),
         "event_type": "QueryAnswered",
         "query": redact_query(question, final["pii"]),
@@ -203,3 +206,10 @@ def answer_question(graph, question: str) -> dict:
         "flags": final["flags"],
         "steps": final["steps"],
     }
+    return event, final["citations"]
+
+
+def answer_question(graph, question: str) -> dict:
+    """Run `question` through the graph and assemble the finished run's Event."""
+    event, _ = run_question(graph, question)
+    return event
