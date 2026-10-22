@@ -2,245 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Issue #41: graph skeleton</title>
+<title>Issue #41 explained simply</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
-    --bg: #ffffff;
-    --bg-raised: #f6f7f9;
-    --bg-code: #f0f1f4;
-    --text: #1a1d23;
-    --text-dim: #565d6b;
-    --border: #dfe2e8;
-    --accent: #2f5fd6;
-    --accent-bg: #eaf0ff;
-    --good: #1d7a4c;
-    --good-bg: #e8f7ee;
-    --bug: #b3261e;
-    --bug-bg: #fdeceb;
+    --bg: #ffffff; --bg-raised: #f6f7f9; --bg-code: #f0f1f4;
+    --text: #1a1d23; --text-dim: #565d6b; --border: #dfe2e8;
+    --accent: #2f5fd6; --accent-bg: #eaf0ff;
+    --good: #1d7a4c; --good-bg: #e8f7ee;
     --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #14161a;
-      --bg-raised: #1b1e24;
-      --bg-code: #1e2129;
-      --text: #e7e9ee;
-      --text-dim: #9aa1ad;
-      --border: #2b2f38;
-      --accent: #7ea2ff;
-      --accent-bg: #1c2740;
-      --good: #6fd39a;
-      --good-bg: #14261d;
-      --bug: #ff8a80;
-      --bug-bg: #2c1917;
+      --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+      --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+      --accent: #7ea2ff; --accent-bg: #1c2740;
+      --good: #6fd39a; --good-bg: #14261d;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #14161a;
-    --bg-raised: #1b1e24;
-    --bg-code: #1e2129;
-    --text: #e7e9ee;
-    --text-dim: #9aa1ad;
-    --border: #2b2f38;
-    --accent: #7ea2ff;
-    --accent-bg: #1c2740;
-    --good: #6fd39a;
-    --good-bg: #14261d;
-    --bug: #ff8a80;
-    --bug-bg: #2c1917;
+    --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+    --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+    --accent: #7ea2ff; --accent-bg: #1c2740;
+    --good: #6fd39a; --good-bg: #14261d;
   }
   * { box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.65;
-    margin: 0;
-    padding: 2.5rem 1.25rem 6rem;
-  }
-  main { max-width: 46rem; margin: 0 auto; }
-  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
-  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
-  h2 {
-    font-size: 1.25rem;
-    margin-top: 3rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.7; margin: 0; padding: 2.5rem 16px 6rem; }
+  main { max-width: 44rem; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); margin-bottom: 2.5rem; }
+  h2 { font-size: 1.25rem; margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
   p { margin: 0.9rem 0; }
-  code {
-    font-family: var(--mono);
-    background: var(--bg-code);
-    padding: 0.12em 0.4em;
-    border-radius: 4px;
-    font-size: 0.88em;
-  }
-  pre {
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem 1.1rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-  }
-  pre code { background: none; padding: 0; font-size: inherit; }
-  .box {
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin: 1.25rem 0;
-    border: 1px solid var(--border);
-  }
-  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
-  .concept .label { color: var(--accent); }
-  .did { background: var(--bg-raised); }
-  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
-  .bug .label { color: var(--bug); }
-  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
-  .verified .label { color: var(--good); }
-  .label {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-  }
-  .box p:first-child { margin-top: 0; }
-  .box p:last-child { margin-bottom: 0; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1.25rem 0;
-    font-size: 0.9rem;
-  }
-  th, td {
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  .flow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-    margin: 1.25rem 0;
-    font-family: var(--mono);
-    font-size: 0.85rem;
-  }
-  .flow .step {
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.4rem 0.7rem;
-  }
-  .flow .arrow { color: var(--text-dim); }
-  footer {
-    margin-top: 4rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
-    color: var(--text-dim);
-    font-size: 0.85rem;
-  }
-  a { color: var(--accent); }
+  code { font-family: var(--mono); background: var(--bg-code); padding: 0.12em 0.4em; border-radius: 4px; font-size: 0.88em; }
+  pre { background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .box { border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; border: 1px solid var(--border); background: var(--bg-raised); }
+  .box p:first-child { margin-top: 0; } .box p:last-child { margin-bottom: 0; }
+  .label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .idea { background: var(--accent-bg); } .idea .label { color: var(--accent); }
+  .good { background: var(--good-bg); } .good .label { color: var(--good); }
+  .flow { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.25rem 0; }
+  .flow div { border: 1px solid var(--border); background: var(--bg-raised); border-radius: 8px; padding: 0.6rem 1rem; }
+  .flow small { display: block; color: var(--text-dim); }
+  table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  ol, ul { padding-left: 1.4rem; } li { margin: 0.4rem 0; }
 </style>
 </head>
 <body>
 <main>
 
-<h1>Issue #41 — A four-node LangGraph that assembles a valid Event</h1>
-<p class="subtitle">Track B's first orchestration code. A LangGraph state graph runs classify → retrieve → draft → verify, times each node, and assembles an Event that validates against the shared <code>event.schema.json</code>. Two nodes are honest stubs, the retriever is the real one from #40 (ADR-0032), and the tests run offline against a scripted fake chat model.</p>
+<h1>Issue #41, explained from the start</h1>
+<p class="subtitle">Building the empty "shape" of the question-answering pipeline before filling in the clever parts. No prior AI knowledge needed.</p>
 
-<h2>Where this fits</h2>
+<h2>1. What is this project?</h2>
+<p>RegDocs Assistant answers questions about Irish financial-regulation documents, and keeps a permanent, auditable record of every answer. You ask a question, it finds relevant passages in the real documents, has an AI model write an answer from them, and stores a record of exactly what happened.</p>
+
+<div class="box idea">
+  <span class="label">Concept: RAG (Retrieval-Augmented Generation)</span>
+  <p>An AI language model (an "LLM") doesn't know your documents, and when it doesn't know something it tends to make up a plausible answer. RAG fixes this in two moves:</p>
+  <ol>
+    <li><strong>Retrieve:</strong> search your documents for the few passages most relevant to the question.</li>
+    <li><strong>Generate:</strong> put those passages in the prompt and tell the model "answer using only these."</li>
+  </ol>
+  <p>It's an open-book exam: the model gets the relevant pages instead of answering from memory.</p>
+</div>
+
+<p>Vocabulary used in this project (from <code>CONTEXT.md</code>): a <strong>Chunk</strong> is one passage cut from a regulatory <strong>Document</strong>; a <strong>Step</strong> is one stage of the pipeline; an <strong>Event</strong> is the permanent record of one question and its whole answer, including all its Steps.</p>
+
+<h2>2. Where we were before this issue</h2>
+<p>Issue #40 built the <strong>retriever</strong>: give it a question, it searches the database and returns the best-matching Chunks. That is the "retrieve" half of RAG, on its own. Nothing yet connected it to a model, and nothing produced an Event.</p>
+
+<h2>3. The problem this issue solves</h2>
+<p>The full pipeline has four stages, each of which will eventually be sophisticated. Building all four properly in one go would be a big, risky change. So this issue builds the <strong>whole pipeline with only the plumbing real</strong>: all four stages exist, run in order, and produce a valid Event. Two are honest placeholders.</p>
+
 <div class="flow">
-  <span class="step">#40 retriever</span>
-  <span class="arrow">→</span>
-  <span class="step"><strong>#41 graph skeleton</strong></span>
-  <span class="arrow">→</span>
-  <span class="step">real classify / draft / verify</span>
-  <span class="arrow">→</span>
-  <span class="step">write Events to the store</span>
-</div>
-<p>The point of building the whole shape first, with fake insides, is that every later change plugs into a pipeline that already produces a schema-valid Event. Replacing the <code>verify</code> stub with a real groundedness score changes one function and one number, and the Event stays valid throughout.</p>
-
-<h2>The concepts</h2>
-
-<div class="box concept">
-  <span class="label">Concept: a LangGraph state graph is a typed state machine</span>
-  <p>You define a <strong>state</strong> (here a <code>TypedDict</code> holding the question, the retrieved Chunks, the answer and the list of Steps), a set of <strong>nodes</strong> (plain functions that take the state and return a <em>partial update</em>), and <strong>edges</strong> saying which node runs after which. <code>graph.compile()</code> turns that into something you can <code>invoke</code>. If you've hand-rolled state machines, this is the same idea: what a node returns is a patch merged into the state, and the edges are the transition table. Here the transitions are a straight line, which is what makes it a good skeleton. Later, a <em>conditional</em> edge can route straight to the end when <code>no_chunks_retrieved</code> halts the pipeline (ADR-0009).</p>
+  <div>1. classify <small>placeholder ("stub"): later it will check the question for personal data or tricks</small></div>
+  <div>2. retrieve <small>real: uses the retriever from #40</small></div>
+  <div>3. draft <small>asks an AI model to write the answer from the retrieved Chunks (a simple prompt for now)</small></div>
+  <div>4. verify <small>placeholder ("stub"): later it will score how well the answer is supported</small></div>
 </div>
 
-<div class="box concept">
-  <span class="label">Concept: reducers decide how a node's update merges</span>
-  <p>By default a node's returned key <em>overwrites</em> that key in the state. That would be wrong for <code>steps</code>: each node would erase the previous node's Step. Annotating the field as <code>Annotated[list[dict], operator.add]</code> tells LangGraph to <em>combine</em> old and new with <code>+</code>, so each node returns <code>{"steps": [its_own_step]}</code> and the list grows in run order. It's the same shape as event sourcing: nodes append facts, nothing edits an earlier one, and the final Event is a fold over what was appended.</p>
+<p>You've done this before as a "walking skeleton" or tracer bullet: get a thin end-to-end slice working, then replace each fake part one at a time. Each later change swaps one function, and the pipeline keeps producing valid Events throughout.</p>
+
+<h2>4. The tool: LangGraph</h2>
+<p>The pipeline is built with <strong>LangGraph</strong>, a Python library for running a flowchart of steps. You describe three things:</p>
+<ul>
+  <li><strong>State:</strong> a shared bag of data (question, retrieved Chunks, answer, list of Steps).</li>
+  <li><strong>Nodes:</strong> plain functions. Each reads the state and returns only the bits it wants to change.</li>
+  <li><strong>Edges:</strong> which node runs after which. Here it's a straight line.</li>
+</ul>
+
+<div class="box idea">
+  <span class="label">Concept: it's a state machine</span>
+  <p>If you've hand-rolled state machines (as in your thesis work), this is the same thing: the state is the context, nodes are transitions, and what a node returns is a patch merged into the state. A straight line is the simplest case. Later, an edge can branch, for example "if nothing was retrieved, skip straight to the end."</p>
 </div>
 
-<div class="box concept">
-  <span class="label">Concept: why stubs say "stub", and why verify's confidence is 0.0</span>
-  <p>An audit trail that records a placeholder as if it were a real judgment is worse than a gap. So classify and verify are recorded under the model name <code>"stub"</code>, and verify reports <code>confidence: 0.0</code>. Nothing downstream can mistake that for a real groundedness score (CONTEXT.md: Confidence is verify's score, never a model's self-report). Stub Steps are the honest version of "not built yet".</p>
+<div class="box idea">
+  <span class="label">Concept: reducers, or how updates merge</span>
+  <p>Normally a node's returned value <em>overwrites</em> that part of the state. That would be wrong for the list of Steps, because each node would erase the one before. So the list is marked to <em>append</em> instead (<code>operator.add</code>). Each node returns <code>{"steps": [my_step]}</code> and the list grows in run order. It's event-sourcing in miniature: nodes append facts and nothing edits an earlier one.</p>
 </div>
 
-<div class="box concept">
-  <span class="label">Concept: a scripted fake chat model</span>
-  <p>LLM output is non-deterministic, so a test can't assert on what a real model says. LangChain ships <code>FakeListChatModel</code>: you give it the responses it will return, in order, and it returns them. The draft node is then exercised through the real <code>invoke</code> call with a known answer, offline. The graph is built exactly as in production, with the real model swapped for the scripted one at the boundary.</p>
+<h2>5. What the code does</h2>
+<p>Everything is in <a href="../track-b/graph.py">track-b/graph.py</a>. There are two entry points:</p>
+<ul>
+  <li><code>build_graph(retriever, chat_model, draft_model_name, clock)</code> wires up the four nodes and returns the runnable graph. The retriever, the chat model and the clock are passed in rather than hard-coded, so tests can swap them for fakes. This is dependency injection, as in .NET.</li>
+  <li><code>answer_question(graph, question)</code> runs the graph and assembles the final <strong>Event</strong>: a fresh UUID, <code>event_type: "QueryAnswered"</code>, no flags, and the Steps in order.</li>
+</ul>
+
+<p>Each node records a <strong>Step</strong> describing itself: its name, which model it used, its cost, and how long it took.</p>
+
+<table>
+  <tr><th>Step</th><th>Model recorded</th><th>Notes</th></tr>
+  <tr><td>classify</td><td><code>"stub"</code></td><td>Does nothing yet.</td></tr>
+  <tr><td>retrieve</td><td><code>nomic-embed-text</code></td><td>Also saves each Chunk's id, document id, <em>text</em> and similarity score.</td></tr>
+  <tr><td>draft</td><td>whatever model is passed in</td><td>Sends the Chunk text plus the question to the chat model.</td></tr>
+  <tr><td>verify</td><td><code>"stub"</code></td><td>Confidence is <code>0.0</code>.</td></tr>
+</table>
+
+<div class="box idea">
+  <span class="label">Concept: placeholders say they're placeholders</span>
+  <p>An audit trail that records a placeholder as if it were a real judgment is worse than a gap. So the stubs are recorded under the model name <code>"stub"</code>, and verify reports confidence <code>0.0</code>, so nothing downstream can mistake it for a real score. (In this project, Confidence is always a score computed by verify, never the model's own claim about how sure it is.)</p>
 </div>
 
-<div class="box concept">
-  <span class="label">Concept: monotonic clocks</span>
-  <p>Latency is measured with <code>time.perf_counter</code>, a <strong>monotonic</strong> clock: it only moves forward and ignores wall-clock changes. <code>datetime.now()</code> can jump (NTP sync, daylight saving) and give a negative or wildly wrong duration. It's the same reason .NET has <code>Stopwatch</code> next to <code>DateTime.UtcNow</code>. The clock is injectable, so the test passes a fake that advances 0.25 s per reading and asserts each Step took exactly 250 ms.</p>
+<div class="box idea">
+  <span class="label">Concept: why retrieve saves the Chunk <em>text</em>, not just ids</span>
+  <p>The project has a feature called <strong>Replay</strong>: re-run an old question later and compare the new answer with the stored one. For that to be fair, the new run must see exactly the same passages as the original. The documents or chunking might change in the meantime, so the Step stores the actual text it retrieved.</p>
 </div>
 
-<h2>What was built</h2>
-<div class="box did">
-  <span class="label">What I did</span>
-  <p><code>track-b/graph.py</code>: <code>build_graph(retriever, chat_model, draft_model_name, clock)</code> returns the compiled graph, and <code>answer_question(graph, question)</code> runs it and assembles the Event (fresh UUID id, <code>event_type: "QueryAnswered"</code>, empty flags, the Steps in order). Each node reads the clock before and after its work, and every Step costs 0 because everything runs locally. The retrieve node pins each Chunk's id, document id, <em>text</em> and score into its Step, so Replay can re-run against exactly what was retrieved (ADR-0005). Draft builds a plain "answer using only this context" prompt from the retrieved text. The test seam, agreed up front, is <code>answer_question</code> only.</p>
+<div class="box idea">
+  <span class="label">Concept: timing with a monotonic clock</span>
+  <p>Latency is measured with <code>time.perf_counter</code>, a clock that only moves forward. The normal wall clock (<code>datetime.now()</code>) can jump (time sync, daylight saving) and give a negative or wrong duration. It's the same reason .NET has <code>Stopwatch</code> alongside <code>DateTime.UtcNow</code>. The clock is injectable, so a test can pass a fake clock and check exact timings.</p>
 </div>
 
-<h3>Built test-first</h3>
-<p>The first test asserted only that the Event validates against the schema. A deliberately crude first cut passed it, with hard-coded zero latencies and an empty <code>retrieved_chunks</code>. The next three tests (order, cost and latency; "stub" models; pinned chunks) then failed for the right reasons, and the real implementation made them pass.</p>
-
-<h2>A real run</h2>
-<p>The real <code>ChunkRetriever</code> over the real store, with a scripted fake model for draft (text trimmed):</p>
+<h2>6. What a run looks like</h2>
+<p>This is a real run against the real database, with a fake model for draft (text trimmed):</p>
 <pre><code>"steps": [
   { "step_type": "classify", "model": "stub", "cost": 0, "latency_ms": 0.0009 },
   { "step_type": "retrieve", "model": "nomic-embed-text", "cost": 0, "latency_ms": 4538.4,
     "retrieved_chunks": [
-      { "chunk_id": "doc-02-cp08-...-gen-1-chunk-133", "document_id": "doc-02-cp08-...",
-        "text": "1\nThe Administrative Sanctions Procedure will only apply to...", "score": 0.7585 },
-      { "chunk_id": "doc-02-cp08-...-gen-1-chunk-128", ..., "score": 0.7542 } ] },
+      { "chunk_id": "doc-02-cp08-...-chunk-133",
+        "text": "1\nThe Administrative Sanctions Procedure will only apply to...",
+        "score": 0.7585 },
+      ... ] },
   { "step_type": "draft",  "model": "fake-chat", "cost": 0, "latency_ms": 0.99 },
   { "step_type": "verify", "model": "stub", "cost": 0, "latency_ms": 0.0015, "confidence": 0.0 }
 ]</code></pre>
-<p>Retrieve dominates the latency (4.5 s, probably the first Ollama call loading the model); the stubs take microseconds.</p>
+<p>Retrieve takes about 4.5 seconds, probably the first call loading the embedding model into memory. The stubs take microseconds. Cost is <code>0</code> everywhere because every model runs locally.</p>
 
-<h2>What code review caught</h2>
-<div class="box bug">
-  <span class="label">Bug: a blank answer silently produced an invalid Event</span>
-  <p>My first draft node returned <code>response.content</code> unchecked. The schema requires <code>answer</code> to be a non-empty string, so a model that returned <code>""</code> (or, for some chat models, a <em>list</em> of content blocks rather than a string) would yield an Event that fails validation later, far from the cause. The fix: draft raises a <code>ValueError</code> naming the bad value, and a test pins it. Failing at the node that produced the problem is the same fail-loudly stance as ADR-0019.</p>
-</div>
-<div class="box bug">
-  <span class="label">Also: a comment that taught instead of explaining why</span>
-  <p>Review flagged a comment describing how the <code>operator.add</code> reducer works. The repo's rule is that comments carry the non-obvious <em>why</em> and library mechanics are explained in conversation, so it moved into the concept box above. The monotonic-clock note moved to the <code>clock</code> parameter it actually justifies.</p>
-</div>
-<div class="box did">
-  <span class="label">Known gap, deliberately left</span>
-  <p>If retrieval returns nothing, the graph still runs draft and verify and raises no <code>no_chunks_retrieved</code> Flag. The Event is schema-valid, but it contradicts the domain rule that this Flag halts the pipeline at retrieve (ADR-0009). Halting is later work, and the header comment in <code>graph.py</code> says so, so it isn't a silent omission.</p>
-</div>
+<h2>7. Testing without a real AI model</h2>
+<p>A real model gives different wording every time, so a test can't check "the answer equals X." Instead the tests use a <strong>scripted fake chat model</strong> (LangChain's <code>FakeListChatModel</code>): you give it the replies it should return, and it returns them in order. The graph is built exactly as in production, with only the model swapped at the edge. The same trick covers the retriever (a fake that returns fixed Chunks), so the tests need no database and no Ollama.</p>
 
-<h2>Verified</h2>
-<div class="box verified">
-  <span class="label">Commands run</span>
-<pre><code>cd track-b
-.venv/Scripts/python.exe -m pytest tests/test_graph.py -q           # offline
-RUN_BASELINE_PARITY=1 .venv/Scripts/python.exe -m pytest tests -q   # whole track-b suite</code></pre>
-  <p>The five graph tests cover: schema validity (plus a <code>json.dumps</code> round-trip), Step order with cost 0 and measured latency, "stub" models and verify's 0.0, pinned chunk ids/text/scores, and the blank-answer failure.</p>
+<p>The tests check that the Event matches the shared JSON schema (<code>schema/event.schema.json</code>), that Steps come in order with the right cost and latency, that the stubs say "stub", and that retrieved Chunks are pinned with their text and score. The work was done test-first: write a failing test, then just enough code to pass it.</p>
+
+<p>One extra rule: if the model returns a blank answer, <code>draft</code> raises an error. The schema requires a non-empty answer, so it's better to fail loudly at the step that caused the problem than to store a broken Event.</p>
+
+<h2>8. A gap left on purpose</h2>
+<p>If retrieval finds nothing, the graph still runs draft and verify. The project's rules say that situation should stop the pipeline and raise a <code>no_chunks_retrieved</code> flag. That is later work, and a comment at the top of <code>graph.py</code> says so, so it is a known gap rather than a hidden one.</p>
+
+<h2>9. Try it yourself</h2>
+<div class="box good">
+  <span class="label">One test teaches the whole process</span>
+  <p><code>test_steps_run_in_order_with_zero_cost_and_measured_latency</code> in <a href="../track-b/tests/test_graph.py">track-b/tests/test_graph.py</a>. It asks one question, runs the entire four-step pipeline (with a fake retriever, fake model and fake clock), then checks that the Steps came out as classify, retrieve, draft, verify, each costing 0 and taking 250 ms. From the repo root, with nothing else running:</p>
+<pre><code>python -m pytest track-b/tests/test_graph.py::test_steps_run_in_order_with_zero_cost_and_measured_latency -v</code></pre>
+  <p>To see the Event the pipeline builds, add <code>print(json.dumps(event, indent=2))</code> as the first line after <code>event = _run()</code> in that test and rerun with <code>-s</code>. You will see the same shape as the real run in section 6. Remove the print afterwards.</p>
+  <p>Why this one: the other tests each check a single rule (schema, "stub" names, pinned Chunks, blank answers). This one shows the pipeline running end to end, which is the whole point of the issue.</p>
 </div>
 
-<footer>Issue #41, Track B. Next: real classify (guardrails), the halting flags, and a real draft model.</footer>
+<h2>10. The whole thing in one paragraph</h2>
+<p>Issue #41 builds the complete question-to-Event pipeline as a LangGraph flowchart of four steps: classify, retrieve, draft, verify. Retrieve is real (from #40) and draft calls a model with a simple prompt. Classify and verify are labelled placeholders. Every step records its model, cost and timing, and the result is a valid Event. It lets every later improvement be a small swap into a pipeline that already works end to end.</p>
+
 </main>
 </body>
 </html>

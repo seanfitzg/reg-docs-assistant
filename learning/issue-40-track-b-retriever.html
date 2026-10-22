@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #40 explained simply</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff; --bg-raised: #f6f7f9; --bg-code: #f0f1f4;
+    --text: #1a1d23; --text-dim: #565d6b; --border: #dfe2e8;
+    --accent: #2f5fd6; --accent-bg: #eaf0ff;
+    --good: #1d7a4c; --good-bg: #e8f7ee;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+      --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+      --accent: #7ea2ff; --accent-bg: #1c2740;
+      --good: #6fd39a; --good-bg: #14261d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+    --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+    --accent: #7ea2ff; --accent-bg: #1c2740;
+    --good: #6fd39a; --good-bg: #14261d;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.7; margin: 0; padding: 2.5rem 16px 6rem; }
+  main { max-width: 44rem; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); margin-bottom: 2.5rem; }
+  h2 { font-size: 1.25rem; margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  p { margin: 0.9rem 0; }
+  code { font-family: var(--mono); background: var(--bg-code); padding: 0.12em 0.4em; border-radius: 4px; font-size: 0.88em; }
+  pre { background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .box { border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; border: 1px solid var(--border); background: var(--bg-raised); }
+  .box p:first-child { margin-top: 0; } .box p:last-child { margin-bottom: 0; }
+  .label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .idea { background: var(--accent-bg); } .idea .label { color: var(--accent); }
+  .good { background: var(--good-bg); } .good .label { color: var(--good); }
+  table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  ol, ul { padding-left: 1.4rem; } li { margin: 0.4rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #40, explained from the start</h1>
+<p class="subtitle">The "retrieve" half of the app: given a question, find the most relevant passages. No prior AI knowledge needed.</p>
+
+<h2>1. What is this project?</h2>
+<p>RegDocs Assistant answers questions about Irish financial-regulation documents, showing where in the real documents each answer came from. It's built in two parallel versions so you can compare approaches; <strong>Track B</strong> is the one using Python and the LangChain/LangGraph libraries. This issue creates Track B's folder and its first real component: the <strong>retriever</strong>.</p>
+
+<div class="box idea">
+  <span class="label">Concept: RAG (Retrieval-Augmented Generation)</span>
+  <p>An AI language model (an "LLM") doesn't know your documents, and when it doesn't know something it tends to invent a plausible answer. RAG fixes this in two moves:</p>
+  <ol>
+    <li><strong>Retrieve:</strong> search your documents for the few passages most relevant to the question.</li>
+    <li><strong>Generate:</strong> put those passages in the prompt and tell the model "answer using only these."</li>
+  </ol>
+  <p>It's an open-book exam. This issue builds move 1 only.</p>
+</div>
+
+<p>Vocabulary (from <code>CONTEXT.md</code>): a <strong>Document</strong> is one regulatory publication, and a <strong>Chunk</strong> is one passage cut from it (a clause or numbered section) with a <strong>locator</strong> like "4.2" saying where it lives.</p>
+
+<h2>2. Where we were before this issue</h2>
+<p>Earlier issues (the <code>/store</code> folder) already did the hard preparation work:</p>
+<ul>
+  <li>Documents were split into Chunks and loaded into a Postgres database.</li>
+  <li>Each Chunk was turned into an <strong>embedding</strong> and stored in the database (explained next).</li>
+  <li>An eval harness (<code>eval/run_eval.py</code>) already ran a search query over those embeddings and measured how often the right passage was found. That measurement is saved as the "baseline run report".</li>
+</ul>
+<p>What didn't exist was any Python folder for Track B, or a retriever that LangChain, the AI library, can plug into.</p>
+
+<h2>3. The key idea: embeddings</h2>
+
+<div class="box idea">
+  <span class="label">Concept: embeddings and vector search</span>
+  <p>A computer can't compare meanings directly, so an <strong>embedding model</strong> (here <code>nomic-embed-text</code>, running locally in Ollama) converts a piece of text into a long list of numbers, a <strong>vector</strong>. The model is trained so that texts with similar <em>meaning</em> get vectors that point in similar directions, even with no words in common. "How long must records be kept?" lands near "A firm must retain files for six years."</p>
+  <p>To search: embed the question, then ask the database for the stored Chunk vectors <em>closest</em> to it. A plain SQL <code>LIKE</code> or keyword search can't do that.</p>
+  <p>The database is Postgres with the <strong>pgvector</strong> extension. Its <code>&lt;=&gt;</code> operator measures <em>cosine distance</em> (the angle between two vectors; smaller means more similar). The code turns that into a similarity score with <code>1 - distance</code>, so higher is better.</p>
+</div>
+
+<h2>4. What was built</h2>
+
+<h3>The Track B folder</h3>
+<p>A new <code>track-b/</code> folder following the repo's per-folder conventions: its own Python virtual environment, <code>requirements.txt</code>, a README, pytest tests and Ruff formatting. A virtual environment is like a per-project NuGet package folder, so its dependencies don't leak into other projects.</p>
+
+<h3>The retriever: <a href="../track-b/retriever.py">track-b/retriever.py</a></h3>
+<p><code>ChunkRetriever</code> is a class that plugs into LangChain's standard retriever interface. You use it like this:</p>
+<pre><code>retriever = ChunkRetriever(embedding_client=client)   # k defaults to 5
+documents = retriever.invoke("What must a firm disclose?")</code></pre>
+
+<p>Inside, <code>invoke</code> does three things:</p>
+<ol>
+  <li><strong>Embed the question</strong> with the same model used for the Chunks. It adds the prefix <code>"search_query: "</code> first. <code>nomic-embed-text</code> was trained with different prefixes for stored passages and for questions, and using the matching one gives better matches.</li>
+  <li><strong>Run one SQL query</strong> that finds the closest Chunk embeddings and returns the top <code>k</code>.</li>
+  <li><strong>Convert each database row into a LangChain <code>Document</code></strong>: the Chunk's text becomes the content, and its details become metadata.</li>
+</ol>
+
+<p>Each result looks like this:</p>
+<pre><code>Document(
+  page_content = "Firms must act.",
+  metadata = {
+    "chunk_id": "c-1.1",
+    "document_id": "doc-a",
+    "locator": "1.1",
+    "score": 0.83,
+    "chunking_strategy": "clause_numbered"
+  })</code></pre>
+
+<h3>Three rules in the SQL</h3>
+<table>
+  <tr><th>Rule</th><th>How</th></tr>
+  <tr><td><strong>Top-k only</strong></td><td><code>ORDER BY</code> distance, <code>LIMIT k</code>. <code>k</code> is the number of passages returned. It's a setting, default 5 (<code>DEFAULT_K</code>), so it can be changed and recorded.</td></tr>
+  <tr><td><strong>Only active Chunks</strong></td><td>A Document can be re-chunked with a new strategy, producing a new "Chunking Generation" while the old Chunks stay in the database (needed for Replay). The query joins on <code>active_chunking_generation_id</code> so old-generation Chunks can never be returned.</td></tr>
+  <tr><td><strong>Stable order</strong></td><td>Ties in distance are broken by Chunk id, so results never shuffle between runs.</td></tr>
+</table>
+
+<h2>5. Key decisions</h2>
+
+<div class="box idea">
+  <span class="label">Decision: write our own retriever, not LangChain's PGVector (ADR-0032)</span>
+  <p>LangChain ships a ready-made Postgres vector store, but it creates and manages its own tables. Using it would mean copying every embedding into a second table or bending the existing schema to fit it, which clashes with earlier decisions (embeddings keyed by Chunk and model, only active Chunks searchable). It would also hide the search SQL, the part worth understanding. A custom retriever reuses the existing tables and the existing <code>store/db.py</code> and embedding client. Think of it as writing a thin adapter over your own repository rather than adopting an ORM that wants its own schema.</p>
+</div>
+
+<div class="box idea">
+  <span class="label">Decision: pure vector search, so the numbers must match the baseline (ADR-0030)</span>
+  <p>The search SQL is deliberately the same as the one the eval harness already used. That gives a strong check: run the new retriever over the eval questions and the results must match the saved baseline report. If they don't, the cause can only be a bug in the port, not a changed algorithm. Better searches (such as mixing in keyword search) come later and are measured separately.</p>
+  <p>Because downstream code only sees LangChain's retriever interface, a later hybrid retriever changes this one class.</p>
+</div>
+
+<h2>6. Testing</h2>
+<table>
+  <tr><th>Test file</th><th>Needs</th><th>Checks</th></tr>
+  <tr><td><code>test_retriever_mapping.py</code></td><td>Nothing</td><td>A database row becomes the right <code>Document</code>; <code>k</code> defaults to 5 and can be changed.</td></tr>
+  <tr><td><code>test_retriever.py</code></td><td>Postgres container</td><td>Top-k ordering, metadata, inactive-generation Chunks never returned, default cap of 5. Uses a fake embedding client, so Ollama isn't needed.</td></tr>
+  <tr><td><code>test_baseline_parity.py</code></td><td>Postgres loaded + Ollama; opt-in with <code>RUN_BASELINE_PARITY=1</code></td><td>Recall at k=10 over the whole eval set equals the baseline report.</td></tr>
+</table>
+<p>The Postgres tests use a fake embedding client: it returns hand-made vectors (a "1" in one position, zeros elsewhere), so you can know exactly which Chunk should be closest without running a real model.</p>
+
+<h2>7. Try it yourself</h2>
+<div class="box good">
+  <span class="label">Two tests teach the whole process</span>
+  <ol>
+    <li><code>test_row_becomes_document_with_chunk_text_and_metadata</code> in <a href="../track-b/tests/test_retriever_mapping.py">test_retriever_mapping.py</a>. It shows the shape of what the retriever hands to the rest of the app. No dependencies.</li>
+    <li><code>test_inactive_generation_chunk_is_never_returned</code> in <a href="../track-b/tests/test_retriever.py">test_retriever.py</a>. It shows vector search in action: the query vector points <em>straight at</em> an old-generation Chunk, and the retriever still doesn't return it. This one needs the Postgres container running; it skips itself if it isn't.</li>
+  </ol>
+<pre><code>python -m pytest track-b/tests/test_retriever_mapping.py::test_row_becomes_document_with_chunk_text_and_metadata -v
+python -m pytest track-b/tests/test_retriever.py::test_inactive_generation_chunk_is_never_returned -v</code></pre>
+  <p>To poke at them: in the first, change <code>0.83</code> in the row and watch the assertion fail on <code>score</code>. In the second, delete the <code>AND documents.active_chunking_generation_id = ...</code> line from <code>RETRIEVAL_SQL</code> in <a href="../track-b/retriever.py">retriever.py</a> and rerun, and <code>c-old</code> will appear in the results and fail the test. Undo the change afterwards.</p>
+  <p>Why these two: together they cover the two halves of the retriever, "what comes out" and "which Chunks are allowed to come out". The remaining tests are variations (top-k ordering, the default cap), and the parity test is a heavy full-dataset check.</p>
+</div>
+
+<h2>8. The whole thing in one paragraph</h2>
+<p>Issue #40 creates the Track B Python project and a <code>ChunkRetriever</code>: it embeds the user's question, runs one SQL query against the existing embeddings to find the closest active Chunks (default 5), and returns them as LangChain <code>Document</code>s carrying the Chunk id, document id, locator and similarity score. It reuses the existing database and embedding code, and it is deliberately plain vector search so its results can be checked against the saved baseline. Issues #41 and #42 then plug it into the question-answering pipeline.</p>
+
+</main>
+</body>
+</html>

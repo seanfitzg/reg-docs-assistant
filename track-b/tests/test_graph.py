@@ -26,16 +26,21 @@ class FakeRetriever(BaseRetriever):
         return self.documents
 
 
-def _chunk(chunk_id, document_id, text, score):
+def _chunk(chunk_id, document_id, locator, text, score):
     return Document(
         page_content=text,
-        metadata={"chunk_id": chunk_id, "document_id": document_id, "score": score},
+        metadata={
+            "chunk_id": chunk_id,
+            "document_id": document_id,
+            "locator": locator,
+            "score": score,
+        },
     )
 
 
 CHUNKS = [
-    _chunk("c-1", "doc-a", "Firms must give 30 days' notice.", 0.91),
-    _chunk("c-2", "doc-b", "Fees must be disclosed.", 0.74),
+    _chunk("c-1", "doc-a", "3.1", "Firms must give 30 days' notice.", 0.91),
+    _chunk("c-2", "doc-b", "Introduction (p. 2)", "Fees must be disclosed.", 0.74),
 ]
 
 
