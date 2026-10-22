@@ -15,6 +15,7 @@ from regdocs_track_b.testing import (
     FakeRetriever,
     RecordingModel,
     make_chunk,
+    safe_classifier,
 )
 
 EVENT_SCHEMA = load_json(
@@ -29,6 +30,8 @@ def _graph(answer="Thirty days.", chunks=CHUNKS, model=None):
         retriever=FakeRetriever(documents=chunks),
         chat_model=model or FakeListChatModel(responses=[answer]),
         draft_model_name="fake-chat",
+        classifier_model=safe_classifier(),
+        classifier_model_name="fake-classifier",
     )
 
 
@@ -108,5 +111,5 @@ def test_a_query_without_pii_is_stored_unchanged_with_no_flags():
 def test_classify_is_recorded_as_rule_based_not_a_model():
     classify = _event(EMAIL_QUERY)["steps"][0]
 
-    assert classify["model"] == "rules"
+    assert classify["model"] == "fake-classifier"
     assert classify["cost"] == 0

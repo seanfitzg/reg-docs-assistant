@@ -18,6 +18,7 @@ from regdocs_track_b.graph import build_graph, run_question
 from regdocs_track_b.retriever import ChunkRetriever
 
 DRAFT_MODEL = "qwen2.5:7b-instruct"
+CLASSIFIER_MODEL = "qwen2.5:7b-instruct"
 
 
 class QueryRequest(BaseModel):
@@ -78,5 +79,7 @@ def create_default_app() -> FastAPI:
         ),
         chat_model=ChatOllama(model=DRAFT_MODEL, temperature=0),
         draft_model_name=DRAFT_MODEL,
+        classifier_model=ChatOllama(model=CLASSIFIER_MODEL, temperature=0),
+        classifier_model_name=CLASSIFIER_MODEL,
     )
     return create_app(graph, db_url)

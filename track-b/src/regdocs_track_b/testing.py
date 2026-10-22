@@ -19,6 +19,10 @@ class RecordingModel(FakeListChatModel):
         return super()._call(messages, stop, run_manager, **kwargs)
 
 
+def safe_classifier():
+    return FakeListChatModel(responses=["NO"])
+
+
 def make_chunk(chunk_id, document_id, locator, text, score):
     return Document(
         page_content=text,

@@ -6,7 +6,12 @@ import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 from regdocs_track_b.graph import build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever, RecordingModel
+from regdocs_track_b.testing import (
+    CHUNKS,
+    FakeRetriever,
+    RecordingModel,
+    safe_classifier,
+)
 
 
 def _invoke(answer):
@@ -14,6 +19,8 @@ def _invoke(answer):
         retriever=FakeRetriever(documents=CHUNKS),
         chat_model=FakeListChatModel(responses=[answer]),
         draft_model_name="fake-chat",
+        classifier_model=safe_classifier(),
+        classifier_model_name="fake-classifier",
     )
     return graph.invoke({"question": "How much notice?", "steps": []})
 
@@ -66,6 +73,8 @@ def test_prompt_comes_from_a_file_and_numbers_chunks_in_rank_order(tmp_path):
         retriever=FakeRetriever(documents=CHUNKS),
         chat_model=model,
         draft_model_name="fake-chat",
+        classifier_model=safe_classifier(),
+        classifier_model_name="fake-classifier",
         draft_prompt_path=prompt_file,
     )
 
@@ -85,6 +94,8 @@ def test_a_missing_prompt_file_fails_when_the_graph_is_built(tmp_path):
             retriever=FakeRetriever(documents=CHUNKS),
             chat_model=FakeListChatModel(responses=["x"]),
             draft_model_name="fake-chat",
+            classifier_model=safe_classifier(),
+            classifier_model_name="fake-classifier",
             draft_prompt_path=tmp_path / "absent.txt",
         )
 

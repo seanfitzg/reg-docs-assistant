@@ -5,13 +5,12 @@ import json
 from pathlib import Path
 
 import pytest
-
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 from regdocs_schema.testing import load_json, validate
 from regdocs_store.embed import EMBEDDING_MODEL
 from regdocs_track_b.graph import answer_question, build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier
 
 EVENT_SCHEMA = load_json(
     Path(__file__).parent.parent.parent / "schema" / "event.schema.json"
@@ -34,6 +33,8 @@ def _run(question="How much notice?", answer="Thirty days."):
         retriever=FakeRetriever(documents=CHUNKS),
         chat_model=FakeListChatModel(responses=[answer]),
         draft_model_name="fake-chat",
+        classifier_model=safe_classifier(),
+        classifier_model_name="fake-classifier",
         clock=FakeClock(),
     )
     return answer_question(graph, question)
@@ -62,7 +63,7 @@ def test_steps_run_in_order_with_zero_cost_and_measured_latency():
 def test_steps_are_recorded_under_the_model_that_produced_them():
     classify, retrieve, draft, verify = _run()["steps"]
 
-    assert classify["model"] == "rules"
+    assert classify["model"] == "fake-classifier"
     assert verify["model"] == "stub"
     assert verify["confidence"] == 0.0
     assert retrieve["model"] == EMBEDDING_MODEL

@@ -8,6 +8,7 @@ import jsonschema
 import psycopg
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
 from regdocs_schema.testing import load_json
 from regdocs_store.testing import (
     DB_URL,
@@ -16,7 +17,7 @@ from regdocs_store.testing import (
 )
 from regdocs_track_b.events import write_event
 from regdocs_track_b.graph import answer_question, build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier
 
 pytestmark = requires_postgres
 
@@ -81,6 +82,8 @@ def test_a_pipeline_event_is_stored_with_redacted_query_and_answer(
         retriever=FakeRetriever(documents=CHUNKS),
         chat_model=FakeListChatModel(responses=["We will reply to jane@x.ie."]),
         draft_model_name="fake-chat",
+        classifier_model=safe_classifier(),
+        classifier_model_name="fake-classifier",
     )
     event = answer_question(graph, "My email is jane@x.ie, how much notice?")
 
