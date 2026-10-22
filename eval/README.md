@@ -7,10 +7,9 @@ This folder holds the dataset, the tooling for authoring it (#29), the match rul
 ## Setup
 
 ```
-python -m venv eval/.venv
-eval/.venv/Scripts/activate      # Windows
-# source eval/.venv/bin/activate # macOS/Linux
-pip install -r eval/requirements.txt
+uv sync --all-packages              # once, from the repo root: one shared .venv for every folder
+.venv/Scripts/activate              # Windows
+# source .venv/bin/activate         # macOS/Linux
 ```
 
 Authoring and validating cases reads `ingestion/output/`, not Postgres, so Docker isn't needed for that. That folder is gitignored, so run the ingestion pipeline first (`ingestion/README.md`). Only the harness (`run_eval.py`) needs Postgres and Ollama.

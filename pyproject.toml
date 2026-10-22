@@ -1,0 +1,24 @@
+# The uv workspace root: the .sln to each folder's .csproj. `uv sync
+# --all-packages` installs every member's dependencies into the one .venv here
+# and pins them all in uv.lock.
+[project]
+name = "reg-docs-assistant"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.uv]
+# The root only hosts the workspace; there's no code to build or install.
+package = false
+
+[tool.uv.workspace]
+members = ["schema", "ingestion", "store", "eval", "track-b"]
+
+# Shared by every member, so declared once instead of in five requirements.txt
+# files. uv installs the dev group by default.
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    # Formatter (see ruff.toml).
+    "ruff>=0.16",
+]

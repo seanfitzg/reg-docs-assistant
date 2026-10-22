@@ -17,10 +17,9 @@ for document in retriever.invoke("What must a firm disclose?"):
 ## Setup
 
 ```
-python -m venv track-b/.venv
-track-b/.venv/Scripts/activate      # Windows
-# source track-b/.venv/bin/activate # macOS/Linux
-pip install -r track-b/requirements.txt
+uv sync --all-packages              # once, from the repo root: one shared .venv for every folder
+.venv/Scripts/activate              # Windows
+# source .venv/bin/activate         # macOS/Linux
 ```
 
 The retriever reuses `/store`'s `db.py` and `embed.py` (by path, not as a package) and needs the same prerequisites as the eval harness (`eval/README.md`): Postgres up, store loaded, Chunks embedded, and Ollama running with `nomic-embed-text` pulled.
