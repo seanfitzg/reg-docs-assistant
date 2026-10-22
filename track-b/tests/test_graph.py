@@ -59,10 +59,10 @@ def test_steps_run_in_order_with_zero_cost_and_measured_latency():
     assert step_types == ["classify", "retrieve", "draft", "verify"]
 
 
-def test_stub_steps_are_recorded_under_the_model_name_stub():
+def test_steps_are_recorded_under_the_model_that_produced_them():
     classify, retrieve, draft, verify = _run()["steps"]
 
-    assert classify["model"] == "stub"
+    assert classify["model"] == "rules"
     assert verify["model"] == "stub"
     assert verify["confidence"] == 0.0
     assert retrieve["model"] == EMBEDDING_MODEL

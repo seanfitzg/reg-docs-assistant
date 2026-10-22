@@ -34,7 +34,7 @@ A marker from a closed vocabulary, attached to an Event to signal a concern requ
 _Avoid_: Warning, alert — too generic, don't imply the closed vocabulary
 
 **Redaction**:
-Removing PII from a query or answer before an Event is persisted, triggered by `classify`'s `pii_detected` flag. Redaction doesn't stop the pipeline — `retrieve`/`draft`/`verify` still run normally against the original text; only what gets written to storage is affected.
+Removing PII from a query or answer before an Event is persisted, driven by the same detections that make `classify` raise the `pii_detected` flag. Redaction doesn't stop the pipeline — `retrieve`/`draft`/`verify` still run normally against the original text; only what gets written to storage is affected.
 _Avoid_: Scrubbing, masking — Redaction is this project's specific term for the pre-persistence step
 
 **Citation**:

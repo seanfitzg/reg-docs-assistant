@@ -6,15 +6,7 @@ import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 from regdocs_track_b.graph import build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever
-
-
-class RecordingModel(FakeListChatModel):
-    prompts: list[str]
-
-    def _call(self, messages, stop=None, run_manager=None, **kwargs):
-        self.prompts.append(messages[-1].content)
-        return super()._call(messages, stop, run_manager, **kwargs)
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, RecordingModel
 
 
 def _invoke(answer):
