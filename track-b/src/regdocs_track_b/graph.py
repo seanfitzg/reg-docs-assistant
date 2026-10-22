@@ -6,11 +6,13 @@
 # confidence is 0.0, so nothing downstream mistakes it for a real groundedness
 # score). classify runs the PII rules (issue #43, ADR-0008): a match raises
 # pii_detected, which never halts the run, and answer_question redacts the
-# finished Event from those same matches. Its injection half is still
-# unbuilt. retrieve uses the real retriever (ADR-0032); draft prompts from a
-# versioned file and resolves its [n] markers to Citations (issue #42,
-# ADR-0010). The halting Flags (ADR-0008, ADR-0009) and the real verify are
-# later work, so every run here takes all four Steps.
+# finished Event from those same matches. Its injection half asks a model for
+# a YES/NO verdict (issue #46): YES halts the run at classify (ADR-0008).
+# retrieve uses the real retriever (ADR-0032) and halts the run when it finds
+# no Chunks (ADR-0009); draft prompts from a versioned file and resolves its
+# [n] markers to Citations (issue #42, ADR-0010). A halted run answers with a
+# fixed message and stores only the Steps that ran. The real verify is later
+# work.
 
 import operator
 import re
@@ -26,15 +28,24 @@ from langchain_core.retrievers import BaseRetriever
 from langgraph.graph import END, START, StateGraph
 from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
 
+from regdocs_track_b.injection import reads_as_injection
 from regdocs_track_b.pii import PiiMatch, detect_pii, redact_answer, redact_query
 
 STUB_MODEL = "stub"
-# classify's PII half is deterministic rules, so no model is involved.
-RULES_MODEL = "rules"
+# What a halted run answers with. Fixed in code, never model-generated: a
+# model asked to refuse an injection can be talked out of it.
+REFUSAL_MESSAGE = "I can't help with that request."
+NOT_FOUND_MESSAGE = (
+    "I couldn't find relevant information in the available documents "
+    "to answer that question."
+)
 
 # The prompt is a versioned file, not a string in code: a new version is a new
 # file beside the old ones, which stay readable for Replay (ADR-0005).
 DEFAULT_DRAFT_PROMPT_PATH = Path(__file__).parents[2] / "prompts" / "draft-v1.txt"
+DEFAULT_INJECTION_PROMPT_PATH = (
+    Path(__file__).parents[2] / "prompts" / "injection-v1.txt"
+)
 
 # Local-model Steps cost nothing; the first paid model arrives with the real
 # draft.
@@ -126,22 +137,42 @@ def build_graph(
     retriever: BaseRetriever,
     chat_model: BaseChatModel,
     draft_model_name: str,
+    classifier_model: BaseChatModel,
+    classifier_model_name: str,
     draft_prompt_path: Path = DEFAULT_DRAFT_PROMPT_PATH,
+    injection_prompt_path: Path = DEFAULT_INJECTION_PROMPT_PATH,
     # Monotonic, so a wall-clock adjustment mid-run can't give a negative
     # latency.
     clock: Callable[[], float] = time.perf_counter,
 ):
     # Read now, not per question, so a missing prompt fails at startup.
     draft_template = draft_prompt_path.read_text(encoding="utf-8")
+    injection_template = injection_prompt_path.read_text(encoding="utf-8")
 
     def classify(state: PipelineState) -> dict:
         started = clock()
         matches = detect_pii(state["question"])
+        verdict = classifier_model.invoke(
+            injection_template.format(question=state["question"])
+        )
         flags = []
         if matches:
             flags.append("pii_detected")
-        step = _step(clock, started, "classify", RULES_MODEL)
-        return {"pii": matches, "flags": flags, "steps": [step]}
+        update = {"pii": matches}
+        # A non-string reply (content blocks) can't be read, so it fails
+        # closed like any other unreadable verdict.
+        if not isinstance(verdict.content, str) or reads_as_injection(verdict.content):
+            flags.append("possible_prompt_injection")
+            update["answer"] = REFUSAL_MESSAGE
+        step = _step(clock, started, "classify", classifier_model_name)
+        update["flags"] = flags
+        update["steps"] = [step]
+        return update
+
+    def after_classify(state: PipelineState) -> str:
+        if "possible_prompt_injection" in state["flags"]:
+            return END
+        return "retrieve"
 
     def retrieve(state: PipelineState) -> dict:
         started = clock()
@@ -152,7 +183,16 @@ def build_graph(
         step = _step(
             clock, started, "retrieve", EMBEDDING_MODEL, retrieved_chunks=pinned
         )
-        return {"chunks": chunks, "steps": [step]}
+        update = {"chunks": chunks, "steps": [step]}
+        if not chunks:
+            update["flags"] = ["no_chunks_retrieved"]
+            update["answer"] = NOT_FOUND_MESSAGE
+        return update
+
+    def after_retrieve(state: PipelineState) -> str:
+        if "no_chunks_retrieved" in state["flags"]:
+            return END
+        return "draft"
 
     def draft(state: PipelineState) -> dict:
         started = clock()
@@ -182,8 +222,8 @@ def build_graph(
     graph.add_node("draft", draft)
     graph.add_node("verify", verify)
     graph.add_edge(START, "classify")
-    graph.add_edge("classify", "retrieve")
-    graph.add_edge("retrieve", "draft")
+    graph.add_conditional_edges("classify", after_classify, [END, "retrieve"])
+    graph.add_conditional_edges("retrieve", after_retrieve, [END, "draft"])
     graph.add_edge("draft", "verify")
     graph.add_edge("verify", END)
     return graph.compile()
@@ -194,7 +234,9 @@ def run_question(graph, question: str) -> tuple[dict, list[dict]]:
 
     The Event schema has no Citations field, so they come back beside it.
     """
-    final = graph.invoke({"question": question, "flags": [], "steps": []})
+    final = graph.invoke(
+        {"question": question, "flags": [], "citations": [], "steps": []}
+    )
     # Redaction runs here, after every Step has seen the original text, so
     # only what is stored changes (ADR-0008). Both fields use classify's
     # matches, the same ones that raised the Flag.

@@ -12,7 +12,28 @@ for document in retriever.invoke("What must a firm disclose?"):
 
 `k` is configuration, default 5 (`DEFAULT_K`). The search is pure vector search, so it reproduces the baseline run report in `eval/runs` (ADR-0030). Hybrid search is a later, separately measured change.
 
-`graph.py` is a LangGraph state graph with the four fixed Steps, classify → retrieve → draft → verify, and `answer_question(graph, question)` returns an Event that validates against `schema/event.schema.json`. verify is a stub (model `"stub"`, confidence `0.0`); classify runs the PII rules described below (model `"rules"`), and its prompt-injection half is still unbuilt; retrieve uses the retriever; draft prompts an injected chat model from the versioned file `prompts/draft-v1.txt`, which lists the retrieved Chunks as numbered blocks `[1]`, `[2]`, … in rank order. The model cites by number, and code resolves each `[n]` to the real Chunk's document id and locator (ADR-0010). A number with no matching Chunk is dropped from the Citations and stripped from the stored answer. Citations live in the graph's final state (`final["citations"]`), not in the Event, which the shared schema has no field for. Each node is timed with a monotonic clock and local-model Steps record cost 0. The halting Flags and the real verify are later work.
+`graph.py` is a LangGraph state graph with the four fixed Steps, classify → retrieve → draft → verify, and `answer_question(graph, question)` returns an Event that validates against `schema/event.schema.json`. verify is a stub (model `"stub"`, confidence `0.0`); classify runs the PII rules and an injection classifier described below (its Step records the classifier's model name); retrieve uses the retriever; draft prompts an injected chat model from the versioned file `prompts/draft-v1.txt`, which lists the retrieved Chunks as numbered blocks `[1]`, `[2]`, … in rank order. The model cites by number, and code resolves each `[n]` to the real Chunk's document id and locator (ADR-0010). A number with no matching Chunk is dropped from the Citations and stripped from the stored answer. Citations live in the graph's final state (`final["citations"]`), not in the Event, which the shared schema has no field for. Each node is timed with a monotonic clock and local-model Steps record cost 0. The real verify is later work.
+
+## Injection classifier and the two halts
+
+classify also sends the query to a chat model with a versioned prompt (`prompts/injection-v1.txt`) that asks for one word, YES or NO, on whether it is a prompt-injection attempt. YES raises `possible_prompt_injection` and halts the run at classify (ADR-0008). Separately, retrieve finding zero Chunks raises `no_chunks_retrieved` and halts at retrieve (ADR-0009). A halted run:
+
+- answers with a fixed string defined in code (`REFUSAL_MESSAGE`, `NOT_FOUND_MESSAGE` in `graph.py`), never model-generated;
+- stores an Event holding only the Steps that ran (classify alone, or classify and retrieve), which validates against the shared schema;
+- is an ordinary HTTP 200 from `POST /query`, with the message as the `answer`, no citations and the Flag in `flags`.
+
+`pii_detected` never halts, so a query can carry both Flags.
+
+The verdict is read from the reply's first word. A reply that doesn't start with NO (including an empty or rambling one) counts as an injection: the classifier fails closed, so a genuine question may occasionally be refused but an unreadable verdict never lets a query through.
+
+**Limits** (a small local model is a weak guardrail, not a wall):
+
+- It is a model judgement, so it is non-deterministic in principle and can miss subtle or non-English attempts, or ones phrased as a genuine question. It can also refuse a genuine question that quotes attack text.
+- The query is placed inside the classifier's own prompt, so an attack can target the classifier itself ("answer NO"). The prompt delimits the message and tells the model to treat it as data, which helps but does not guarantee anything.
+- Only the query is screened. Injection hidden in a retrieved Chunk (text from a Document) is not.
+- The classifier and draft both use `qwen2.5:7b-instruct` by default (`api.py`), set per call to `build_graph`.
+
+`test_real_injection.py` is opt-in: it runs the real classifier on a documented override attempt and a genuine question (`RUN_REAL_INJECTION=1 python -m pytest track-b/tests/test_real_injection.py`, needs Ollama with the model pulled).
 
 ## PII detection and Redaction
 
@@ -77,7 +98,7 @@ write_event(event, DB_URL)  # stores "My email is [REDACTED:EMAIL], ..."
 
 `test_events.py` needs the Postgres container and skips itself otherwise.
 
-`test_api.py` drives the whole API through FastAPI's in-process `TestClient` against `regdocs_test`, with a fake retriever and scripted fake chat model. It needs Postgres but not Ollama, and skips itself without it.
+`test_graph_halts.py` needs nothing running: scripted fake classifier and draft models drive both halts, the fixed messages, the stored Steps and the verdict reading. `test_api.py` drives the whole API through FastAPI's in-process `TestClient` against `regdocs_test`, with a fake retriever and scripted fake chat model. It needs Postgres but not Ollama, and skips itself without it.
 
 ## Running the API
 
@@ -103,12 +124,13 @@ curl http://127.0.0.1:8000/events/<event_id>
 
 ## Layout
 
-Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `events.py`, `api.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
+Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `injection.py`, `events.py`, `api.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
 
 - `graph.py` — the four-node graph, Citation resolution and Event assembly.
 - `api.py` — the FastAPI app: `create_app` (injectable, used by tests) and `create_default_app` (real local models, used by uvicorn).
 - `events.py` — `write_event` (schema validation, then the append-only insert) and `read_event`.
+- `injection.py` — reads the classifier's YES/NO verdict, failing closed.
 - `pii.py` — PII detection rules and the two redaction functions.
-- `prompts/` — versioned prompt files (`draft-v1.txt`); a new version is a new file.
+- `prompts/` — versioned prompt files (`draft-v1.txt`, `injection-v1.txt`); a new version is a new file.
 - `retriever.py` — `ChunkRetriever` and its search SQL.
 - `tests/` — as above.
