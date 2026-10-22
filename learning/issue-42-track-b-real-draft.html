@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #42: real draft and Citations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #42 — The real draft, with Citations resolved by lookup</h1>
+<p class="subtitle">The placeholder draft becomes the real thing (ADR-0010). A versioned prompt file shows the model the retrieved Chunks as numbered blocks, the model cites by number, and plain code turns each <code>[n]</code> into the real Document and locator. The model never writes a locator. A real <code>qwen2.5:7b-instruct</code> was pulled and run to see whether it actually follows the format. Follows <a href="issue-41-track-b-graph-skeleton.html">issue #41's writeup</a>.</p>
+
+<h2>Where this fits</h2>
+<div class="flow">
+  <span class="step">#40 retriever</span>
+  <span class="arrow">→</span>
+  <span class="step">#41 graph skeleton</span>
+  <span class="arrow">→</span>
+  <span class="step"><strong>#42 real draft + Citations</strong></span>
+  <span class="arrow">→</span>
+  <span class="step">real verify / classify</span>
+</div>
+
+<h2>The concepts</h2>
+
+<div class="box concept">
+  <span class="label">Concept: the prompt is how retrieval reaches the model</span>
+  <p>In RAG, "retrieval-augmented" is literal: the retrieved text is pasted into the prompt. The model has no access to your database. It sees one string made of instructions, the Chunk text and the question. Whatever the prompt contains is the model's entire world for that call, which is why the instruction "use only the excerpts below" matters, and why the Chunks are laid out as numbered blocks (<code>[1] …</code>, <code>[2] …</code>) in rank order, best match first.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: cite by number, resolve by lookup (ADR-0010)</span>
+  <p>LLMs are unreliable at reproducing exact identifiers from memory. Ask one to write "section 7.1" and it will sometimes write a plausible "7.2". So the model is only asked for something easy and checkable: write the <em>number</em> of the excerpt that supports each claim. Code then does the part that must be exact:</p>
+<pre><code>marker 2  →  chunks[2 - 1]  →  { document_id: "doc-b", locator: "7.1" }</code></pre>
+  <p>This is a <em>database fact</em>, not a model claim. A wrong number can only point at a Chunk that was genuinely retrieved, so every Citation shown is real. It's the same move as a foreign key: the model supplies a reference, and the system validates and dereferences it. A number that points at nothing (<code>[0]</code>, or <code>[9]</code> when five Chunks came back) is dropped from the Citations and stripped from the stored answer, because an obviously missing citation is better than a plausible wrong one.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: a prompt is a versioned artifact</span>
+  <p>The prompt lives in <code>track-b/prompts/draft-v1.txt</code>, not in a Python string. It's loaded when the graph is built, so a missing file fails at startup and not on the first user question. Changing the wording means a new file, <code>draft-v2.txt</code>, beside the old one. That fits the audit-trail goal: Replay (ADR-0005) deliberately runs the <em>current</em> prompt, and old versions stay readable so you can see what changed when answers drift. The plan's example Event even carries a <code>prompt_version</code>. The current Event schema has no such field, so the version is the file name for now.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why the real-model test is opt-in</span>
+  <p>The scripted fake model proves the <em>graph</em> resolves markers correctly. It can't prove a <em>real</em> model writes them. Only a real model can show that, and a real model is slow (a 7B model on CPU took about 85 s for one call here), needs 4.7 GB of weights, and isn't strictly deterministic. So that test runs only with <code>RUN_REAL_DRAFT=1</code>, with <code>temperature=0</code> to make the output as repeatable as it gets. It's the same split as the parity test from #40: fast, offline tests by default, and slow checks against real components on demand.</p>
+</div>
+
+<h2>What was built</h2>
+<div class="box did">
+  <span class="label">What I did</span>
+  <p><code>prompts/draft-v1.txt</code> (a template with <code>{context}</code> and <code>{question}</code>), and in <code>graph.py</code> a <code>_draft_prompt</code> that numbers the Chunks, plus <code>_resolve_citations(answer, chunks)</code>. That function finds each <code>[n]</code> with a regex and substitutes it through a callback: an in-range marker stays in the text and becomes a Citation (once, however many times it's used), and an out-of-range one is removed. A Citation is <code>{marker, chunk_id, document_id, locator}</code> and lives in the graph's final state (<code>final["citations"]</code>). We agreed up front that the shared Event schema doesn't change, because it has no field for Citations, and they can be recomputed from the stored answer's markers and the pinned chunks. The test seam, also agreed, is the graph itself: <code>graph.invoke</code> and <code>answer_question</code>, with a scripted <code>FakeListChatModel</code> and a recording fake that captures the exact prompt sent.</p>
+</div>
+
+<h2>A real model, run for real</h2>
+<p><code>qwen2.5:7b-instruct</code> at temperature 0, with three hand-written Chunks (4.2 records, 7.1 fee-waiver notice, 9.3 complaints):</p>
+<pre><code>Q: How much notice must a firm give before applying a fee waiver?
+A: A firm must give 30 days' written notice before applying a fee waiver. [2]
+C: [(2, '7.1')]
+
+Q: How long must records be kept and how fast must complaints be acknowledged?
+A: Records must be kept for six years, and complaints must be acknowledged in five days. [1][3]
+C: [(1, '4.2'), (3, '9.3')]
+
+Q: What is the maximum penalty for a data breach?
+A: The provided excerpts do not contain information regarding penalties for data
+   breaches. Therefore, I cannot answer the question based on the given information. [1][2][3]
+C: [(1, '4.2'), (2, '7.1'), (3, '9.3')]</code></pre>
+<div class="box bug">
+  <span class="label">Finding: the model refused, but still cited everything</span>
+  <p>The third question isn't in the excerpts. The model correctly declines, then adds <code>[1][2][3]</code> anyway, so the system faithfully resolves three Citations for an answer that says nothing the excerpts support. Resolution by lookup guarantees the Citations point at <em>real retrieved</em> Chunks. It doesn't guarantee those Chunks <em>support</em> the claim. That second guarantee is exactly the job of the verify Step (<code>no_supporting_context</code>), which is still a stub. This is the clearest reason verify exists, and nothing in this ticket should hide it.</p>
+</div>
+
+<h2>What code review caught</h2>
+<div class="box bug">
+  <span class="label">Bug: an answer of only a bad marker became a blank answer</span>
+  <p>The blank-answer check from #41 ran <em>before</em> stripping. A model reply of just <code>"[9]"</code> passed the check, then stripping left <code>""</code>, which breaks the schema's non-empty <code>answer</code>. Found by reading the code, then pinned by a test that failed first. The check now runs after resolution.</p>
+</div>
+<div class="box bug">
+  <span class="label">Bug: a plausible first regex merged paragraphs</span>
+  <p>My first stripping regex was <code>\s*\[(\d+)\]</code>, which "tidily" ate the whitespace before a bad marker. But <code>\s</code> includes newlines, so <code>"First point [1].\n\n[9] Second point."</code> lost its paragraph break and became <code>"First point [1]. Second point."</code>. The fix handles spaces and tabs only, never newlines. It also swallows the spacing on both sides of a marker that starts a line, so no stray leading space is left behind. Worth remembering: <code>\s</code> is rarely what you mean when only spaces are the target.</p>
+</div>
+<div class="box did">
+  <span class="label">Smaller review fixes</span>
+  <p>Inline comprehensions in <code>assert</code>s moved into a named helper (a repo rule), a comment was rewrapped, and the duplicated "no usable answer" check was collapsed into one.</p>
+</div>
+
+<h2>Known limits, deliberately left</h2>
+<div class="box did">
+  <span class="label">Not handled</span>
+  <p><strong>Grouped markers</strong> such as <code>[1, 2]</code> or <code>[1-3]</code> don't match the <code>[n]</code> pattern, so they stay in the answer text and produce no Citations. The prompt teaches <code>[1][2]</code> and the real model followed it, but a drifting model could write the grouped form. <strong>Legal text containing its own bracketed numbers</strong> (footnotes like <code>[2]</code>) is indistinguishable from a citation if the model echoes it. And a prompt template with literal braces would fail at question time rather than at startup. Each is a candidate for a later hardening ticket, not this one.</p>
+</div>
+
+<h2>Verified</h2>
+<div class="box verified">
+  <span class="label">Commands run</span>
+<pre><code>ollama pull qwen2.5:7b-instruct
+cd track-b
+.venv/Scripts/python.exe -m pytest tests -q                                  # offline
+RUN_BASELINE_PARITY=1 RUN_REAL_DRAFT=1 .venv/Scripts/python.exe -m pytest tests -q   # 20 passed</code></pre>
+  <p>The citation tests cover: good markers resolve to the right Document and locator, out-of-range markers are dropped and stripped, a repeated marker cites once, the prompt comes from a file with numbered Chunks in rank order, a missing prompt file fails at build time, an answer of only a bad marker fails loudly, and stripping preserves paragraph breaks.</p>
+</div>
+
+<footer>Issue #42, Track B. Next: a real verify Step, so a refusal with citations gets flagged.</footer>
+</main>
+</body>
+</html>

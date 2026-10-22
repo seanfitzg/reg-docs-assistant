@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #42 explained simply</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff; --bg-raised: #f6f7f9; --bg-code: #f0f1f4;
+    --text: #1a1d23; --text-dim: #565d6b; --border: #dfe2e8;
+    --accent: #2f5fd6; --accent-bg: #eaf0ff;
+    --good: #1d7a4c; --good-bg: #e8f7ee;
+    --bad: #b3261e; --bad-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+      --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+      --accent: #7ea2ff; --accent-bg: #1c2740;
+      --good: #6fd39a; --good-bg: #14261d;
+      --bad: #ff8a80; --bad-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --bg-raised: #1b1e24; --bg-code: #1e2129;
+    --text: #e7e9ee; --text-dim: #9aa1ad; --border: #2b2f38;
+    --accent: #7ea2ff; --accent-bg: #1c2740;
+    --good: #6fd39a; --good-bg: #14261d;
+    --bad: #ff8a80; --bad-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.7; margin: 0; padding: 2.5rem 16px 6rem; }
+  main { max-width: 44rem; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); margin-bottom: 2.5rem; }
+  h2 { font-size: 1.25rem; margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  p { margin: 0.9rem 0; }
+  code { font-family: var(--mono); background: var(--bg-code); padding: 0.12em 0.4em; border-radius: 4px; font-size: 0.88em; }
+  pre { background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .box { border-radius: 10px; padding: 1rem 1.25rem; margin: 1.25rem 0; border: 1px solid var(--border); background: var(--bg-raised); }
+  .box p:first-child { margin-top: 0; } .box p:last-child { margin-bottom: 0; }
+  .label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .idea { background: var(--accent-bg); } .idea .label { color: var(--accent); }
+  .good { background: var(--good-bg); } .good .label { color: var(--good); }
+  .bad { background: var(--bad-bg); } .bad .label { color: var(--bad); }
+  .flow { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.25rem 0; }
+  .flow div { border: 1px solid var(--border); background: var(--bg-raised); border-radius: 8px; padding: 0.6rem 1rem; }
+  .flow div.changed { border-color: var(--accent); background: var(--accent-bg); }
+  .flow small { display: block; color: var(--text-dim); }
+  table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  ol, ul { padding-left: 1.4rem; } li { margin: 0.4rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #42, explained from the start</h1>
+<p class="subtitle">What the app is, what was missing, and what these changes add. No prior AI knowledge needed.</p>
+
+<h2>1. What is this project?</h2>
+<p>RegDocs Assistant answers questions about Irish financial-regulation documents. You ask <em>"What must a firm disclose?"</em> and it replies with an answer <strong>and shows where in the real documents the answer came from</strong>. In a regulated setting, an answer you can't check is worthless.</p>
+
+<div class="box idea">
+  <span class="label">Concept: RAG (Retrieval-Augmented Generation)</span>
+  <p>An AI language model (an "LLM") writes fluent text but doesn't know your documents. If you just ask it, it may invent a plausible answer. RAG fixes that with two moves:</p>
+  <ol>
+    <li><strong>Retrieve:</strong> search your documents for the few passages most relevant to the question.</li>
+    <li><strong>Generate:</strong> paste those passages into the prompt and tell the model "answer using only these."</li>
+  </ol>
+  <p>It's like an open-book exam: the model gets the relevant pages put in front of it instead of answering from memory.</p>
+</div>
+
+<p>A <strong>Chunk</strong> is one of those passages: a clause or numbered section cut out of a regulatory <strong>Document</strong>. Each Chunk has a <strong>locator</strong>, like "Section 4.2", that says where it lives in the original.</p>
+
+<h2>2. Where we were before this issue</h2>
+<p>Earlier issues built a pipeline of four steps. It's a "graph" (a flowchart that code runs) built with a library called LangGraph:</p>
+
+<div class="flow">
+  <div>1. classify <small>stub (does nothing real yet)</small></div>
+  <div>2. retrieve <small>real: searches the database for relevant Chunks</small></div>
+  <div class="changed">3. draft <small>asks the AI model to write the answer. <strong>This is what issue #42 changes.</strong></small></div>
+  <div>4. verify <small>stub (does nothing real yet)</small></div>
+</div>
+
+<p>Before #42, <code>draft</code> was a placeholder. It pasted the Chunk text into a prompt and returned whatever the model said. That left two gaps:</p>
+<ul>
+  <li><strong>No citations.</strong> The answer was just text. Nothing said which Chunk supported which claim.</li>
+  <li><strong>The prompt was a string buried in code.</strong> It was hard to version, compare or reuse later.</li>
+</ul>
+
+<h2>3. The big idea: don't let the AI write citations</h2>
+
+<div class="box bad">
+  <span class="label">The tempting but wrong approach</span>
+  <p>Tell the model: "cite the section number, e.g. <em>Section 4.2</em>." Models are good at producing text that <em>looks</em> right. It might write "Section 4.7", which sounds fine and doesn't exist. A wrong citation that looks real is worse than no citation. The project's decision record (ADR-0010) rules this out.</p>
+</div>
+
+<div class="box good">
+  <span class="label">The approach used instead</span>
+  <p>Number the Chunks in the prompt: <code>[1]</code>, <code>[2]</code>, <code>[3]</code>. The model only has to write those small numbers. Then <strong>our own ordinary code</strong> looks up what <code>[2]</code> really is and attaches the real document id and locator. The model never types a section number.</p>
+</div>
+
+<p>You know this pattern: it's like the model handing back a foreign-key id, and your code doing the join to get the real row. The model can pick a wrong id, but it can't forge the content behind a valid one.</p>
+
+<h2>4. What the model sees now</h2>
+<p>The new file <code>track-b/prompts/draft-v1.txt</code> is the prompt template. After filling in the blanks, the model receives something like this:</p>
+
+<pre><code>You answer questions about Irish financial-regulation documents
+using only the numbered excerpts below.
+
+Rules:
+- Use only information in the excerpts. If they do not answer the
+  question, say so plainly.
+- After each claim, cite the excerpt that supports it with its
+  number in square brackets, like [1].
+- Cite only numbers that appear below. Never write section numbers,
+  clause numbers or document names yourself.
+
+Excerpts:
+
+[1] A firm must keep records for six years.
+
+[2] A firm must give 30 days' written notice before a fee waiver.
+
+[3] Complaints must be acknowledged in five days.
+
+Question: How long must records be kept?
+Answer:</code></pre>
+
+<p>A good reply would be: <em>"Records must be kept for six years [1]."</em></p>
+
+<div class="box idea">
+  <span class="label">Concept: prompt versioning</span>
+  <p>The prompt lives in a file, <code>draft-v1.txt</code>, not inside the Python. A new wording becomes <code>draft-v2.txt</code> next to it, and the old one stays readable. The project's "Replay" feature re-runs old questions, so you need to be able to say which prompt produced which answer. It's the same idea as database migrations: never edit history, add a new one.</p>
+</div>
+
+<p>Also, <code>build_graph</code> reads this file once at startup. If the file is missing you find out immediately, not on the first user question.</p>
+
+<h2>5. What the code does with the model's reply</h2>
+<p>The new function <code>_resolve_citations</code> in <a href="../track-b/graph.py">track-b/graph.py</a> scans the answer for markers like <code>[2]</code> using a regular expression, then handles each one:</p>
+
+<table>
+  <tr><th>Marker in the answer</th><th>What happens</th></tr>
+  <tr><td><code>[2]</code>, with 3 Chunks retrieved</td><td>Valid. Look up Chunk 2 and add a Citation holding its <code>chunk_id</code>, <code>document_id</code> and <code>locator</code>. The marker stays in the text.</td></tr>
+  <tr><td><code>[2]</code> written twice</td><td>Only one Citation is recorded. Duplicates are skipped.</td></tr>
+  <tr><td><code>[9]</code>, with only 3 Chunks</td><td>Invalid. The model made it up. The marker is <strong>removed</strong> from the text and no Citation is created. We drop it rather than guess.</td></tr>
+  <tr><td><code>[0]</code></td><td>Also invalid, because numbering starts at 1.</td></tr>
+</table>
+
+<p>A bad marker is removed along with the space next to it, so the sentence doesn't end up as <code>"six years ."</code> or start with a stray space.</p>
+
+<p>Example. The model replies <code>"Keep records for six years [1] and notify in 90 days [9]."</code> After resolution:</p>
+<pre><code>answer    = "Keep records for six years [1] and notify in 90 days."
+citations = [{ "marker": 1,
+               "chunk_id": "c-1",
+               "document_id": "doc-a",
+               "locator": "4.2" }]</code></pre>
+
+<h2>6. Two small details worth knowing</h2>
+<ul>
+  <li><strong>Empty answers are still an error.</strong> If the answer is empty after stripping (say, it was only <code>[9]</code>), or the model returned something that isn't plain text, <code>draft</code> raises an error. The Event schema requires a non-empty answer, so it's better to fail loudly than store junk.</li>
+  <li><strong>Citations aren't in the Event.</strong> The shared Event schema has no field for them yet, so they travel in the graph's final state (<code>final["citations"]</code>) instead. Adding a field is a separate decision.</li>
+</ul>
+
+<h2>7. The other files changed</h2>
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>track-b/graph.py</code></td><td>Loads the prompt file, numbers the Chunks, resolves markers into Citations, adds <code>citations</code> to the state.</td></tr>
+  <tr><td><code>track-b/prompts/draft-v1.txt</code> (new)</td><td>The versioned prompt template.</td></tr>
+  <tr><td><code>track-b/requirements.txt</code></td><td>Adds <code>langchain-ollama</code>, so the project can talk to a real local model (Ollama) in the optional test.</td></tr>
+  <tr><td><code>track-b/README.md</code></td><td>Documents the above.</td></tr>
+</table>
+
+<h2>8. Why were there tests with a real model?</h2>
+<p>Most tests use a <strong>fake</strong> model that returns a scripted answer such as <code>"...[9]"</code>. That proves <em>our code</em> handles good and bad markers correctly. But it can't prove a real model will actually write <code>[1]</code> when asked. So there's one opt-in test using a real local model, <code>qwen2.5:7b-instruct</code> (run through Ollama on your machine, so it costs nothing). It's off by default because it needs Ollama installed and the model downloaded (about 4.7 GB).</p>
+
+<div class="box idea">
+  <span class="label">Concept: why test the model separately?</span>
+  <p>Your own code is deterministic, so a fake model is enough to test it. A real model is non-deterministic and might ignore instructions. Two kinds of test answer two different questions: "is my code right?" and "does the model do what I asked?"</p>
+</div>
+
+<h2>9. Try it yourself</h2>
+<div class="box good">
+  <span class="label">Two tests teach the whole process</span>
+  <p>Both are in <a href="../track-b/tests/test_draft_citations.py">track-b/tests/test_draft_citations.py</a>, and both use a scripted fake model, so nothing else needs to be running. Together they show the good case and the bad case:</p>
+  <ol>
+    <li><code>test_markers_resolve_to_the_document_and_locator_of_the_numbered_chunk</code>: the model answers <em>"Give 30 days' notice [1] and disclose fees [2]."</em> and you see each marker turned into a Citation holding the real chunk id, document id and locator.</li>
+    <li><code>test_out_of_range_markers_are_not_cited_and_are_stripped_from_the_answer</code>: the model answers with <code>[0]</code>, <code>[9]</code> and <code>[3]</code> (only two Chunks exist). Only the valid <code>[1]</code> becomes a Citation, and the bad markers vanish from the answer text.</li>
+  </ol>
+<pre><code>python -m pytest track-b/tests/test_draft_citations.py::test_markers_resolve_to_the_document_and_locator_of_the_numbered_chunk track-b/tests/test_draft_citations.py::test_out_of_range_markers_are_not_cited_and_are_stripped_from_the_answer -v</code></pre>
+  <p>To see it for yourself, change the fake answer in the first test (for example <code>[1]</code> to <code>[7]</code>) and watch it fail, then compare the answer text with the second test. Undo the change afterwards.</p>
+  <p>Why these two: the rest of the tests cover edge cases of the same idea (duplicates, the prompt file, blank answers). These two show the core idea: valid markers become verified Citations, and made-up ones never reach the user.</p>
+</div>
+
+<h2>10. The whole thing in one paragraph</h2>
+<p>Before, <code>draft</code> sent loose text to a model and got loose text back. Now it sends <em>numbered</em> excerpts using a versioned prompt file, the model answers with <code>[n]</code> markers, and plain code turns each valid marker into a verified Citation pointing at a Chunk that was genuinely retrieved. Invalid markers are stripped. The model never writes a locator, so a made-up citation can't reach the user.</p>
+
+</main>
+</body>
+</html>

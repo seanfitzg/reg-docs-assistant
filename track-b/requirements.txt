@@ -3,6 +3,8 @@
 langchain-core>=1.0
 # The orchestration graph (graph.py).
 langgraph>=1.0
+# ChatOllama, the real chat model (opt-in tests; local, so cost 0).
+langchain-ollama>=1.0
 # The retriever reuses /store's db.py and embed.py, so it needs the same
 # drivers /store's own venv installs.
 psycopg[binary]>=3.2

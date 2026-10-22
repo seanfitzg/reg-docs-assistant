@@ -4,14 +4,18 @@
 #
 # classify and verify are honest stubs, recorded under the model name "stub"
 # (verify's confidence is 0.0, so nothing downstream mistakes it for a real
-# groundedness score). retrieve uses the real retriever (ADR-0032); draft is a
-# placeholder. Halting flags (ADR-0008, ADR-0009) and the real classify/verify
-# are later work, so every run here takes all four Steps and raises no Flags.
+# groundedness score). retrieve uses the real retriever (ADR-0032); draft
+# prompts from a versioned file and resolves its [n] markers to Citations
+# (issue #42, ADR-0010). Halting flags (ADR-0008, ADR-0009) and the real
+# classify/verify are later work, so every run here takes all four Steps and
+# raises no Flags.
 
 import operator
+import re
 import time
 import uuid
 from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated, TypedDict
 
 from langchain_core.documents import Document
@@ -24,6 +28,10 @@ from retriever import EMBEDDING_MODEL  # the retrieve Step's model
 
 STUB_MODEL = "stub"
 
+# The prompt is a versioned file, not a string in code: a new version is a new
+# file beside the old ones, which stay readable for Replay (ADR-0005).
+DEFAULT_DRAFT_PROMPT_PATH = Path(__file__).parent / "prompts" / "draft-v1.txt"
+
 # Local-model Steps cost nothing; the first paid model arrives with the real
 # draft.
 LOCAL_COST = 0
@@ -33,6 +41,7 @@ class PipelineState(TypedDict):
     question: str
     chunks: list[Document]
     answer: str
+    citations: list[dict]
     steps: Annotated[list[dict], operator.add]
 
 
@@ -60,22 +69,65 @@ def _pin_chunk(document: Document) -> dict:
     }
 
 
-def _draft_prompt(question: str, chunks: list[Document]) -> str:
-    context_lines = []
-    for chunk in chunks:
-        context_lines.append(chunk.page_content)
-    context = "\n\n".join(context_lines)
-    return f"Answer the question using only this context.\n\n{context}\n\nQuestion: {question}"
+def _draft_prompt(template: str, question: str, chunks: list[Document]) -> str:
+    blocks = []
+    for number, chunk in enumerate(chunks, start=1):
+        blocks.append(f"[{number}] {chunk.page_content}")
+    formattedTemplate = template.format(context="\n\n".join(blocks), question=question)
+    return formattedTemplate
+
+
+MARKER = re.compile(r"([ \t]*)\[(\d+)\]([ \t]*)")
+
+
+def _resolve_citations(answer: str, chunks: list[Document]) -> tuple[str, list[dict]]:
+    """Return the answer with unresolvable markers stripped, and its Citations.
+
+    Marker n is the n-th retrieved Chunk (1-based, rank order). A number that
+    maps to no Chunk is dropped rather than guessed at (ADR-0010).
+    """
+    citations = []
+    cited = set()
+
+    def keep_or_strip(match: re.Match) -> str:
+        number = int(match.group(2))
+        if not 1 <= number <= len(chunks):
+            # Drop the marker and the spacing on one side, so "a [9]." and
+            # "a [9] b" stay tidy and a paragraph-leading marker leaves no
+            # stray space.
+            before = answer[match.start() - 1 : match.start()]
+            if before in ("", "\n"):
+                return ""
+            return match.group(3)
+        if number not in cited:
+            cited.add(number)
+            chunk = chunks[number - 1]
+            citations.append(
+                {
+                    "marker": number,
+                    "chunk_id": chunk.metadata["chunk_id"],
+                    "document_id": chunk.metadata["document_id"],
+                    "locator": chunk.metadata["locator"],
+                }
+            )
+        return match.group(0)
+
+    cleaned = MARKER.sub(keep_or_strip, answer).strip()
+    return cleaned, citations
 
 
 def build_graph(
     retriever: BaseRetriever,
     chat_model: BaseChatModel,
     draft_model_name: str,
+    draft_prompt_path: Path = DEFAULT_DRAFT_PROMPT_PATH,
     # Monotonic, so a wall-clock adjustment mid-run can't give a negative
     # latency.
     clock: Callable[[], float] = time.perf_counter,
 ):
+    # Read now, not per question, so a missing prompt fails at startup.
+    draft_template = draft_prompt_path.read_text(encoding="utf-8")
+
     def classify(state: PipelineState) -> dict:
         started = clock()
         return {"steps": [_step(clock, started, "classify", STUB_MODEL)]}
@@ -93,15 +145,21 @@ def build_graph(
 
     def draft(state: PipelineState) -> dict:
         started = clock()
-        response = chat_model.invoke(_draft_prompt(state["question"], state["chunks"]))
+        response = chat_model.invoke(
+            _draft_prompt(draft_template, state["question"], state["chunks"])
+        )
         step = _step(clock, started, "draft", draft_model_name)
-        answer = response.content
-        # The Event schema needs a non-empty string; some chat models return
-        # a list of content blocks, which would otherwise surface later as an
-        # invalid Event.
-        if not isinstance(answer, str) or not answer.strip():
-            raise ValueError(f"draft produced no usable answer text: {answer!r}")
-        return {"answer": answer, "steps": [step]}
+        raw_answer = response.content
+        answer = ""
+        citations = []
+        # Some chat models return a list of content blocks, not a string.
+        if isinstance(raw_answer, str):
+            answer, citations = _resolve_citations(raw_answer, state["chunks"])
+        # The Event schema needs a non-empty answer. Checked after stripping,
+        # since an answer of only bad markers ends up blank.
+        if not answer:
+            raise ValueError(f"draft produced no usable answer text: {raw_answer!r}")
+        return {"answer": answer, "citations": citations, "steps": [step]}
 
     def verify(state: PipelineState) -> dict:
         started = clock()
