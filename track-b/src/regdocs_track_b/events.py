@@ -19,6 +19,17 @@ SCHEMA_FILES = {
 }
 
 
+def read_event(event_id: str, db_url: str) -> dict | None:
+    """Return the stored Event with this id, or None if there isn't one."""
+    with psycopg.connect(db_url) as conn:
+        row = conn.execute(
+            "SELECT payload FROM events WHERE id = %s", (event_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    return row[0]
+
+
 def write_event(event: dict, db_url: str) -> None:
     """Validate `event` and append it to the events table.
 
