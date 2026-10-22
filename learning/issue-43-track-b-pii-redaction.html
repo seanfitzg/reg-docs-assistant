@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #43: PII detection and Redaction</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #43 — Finding personal data in a question, and keeping it out of storage</h1>
+<p class="subtitle">If someone types their email address or card number into the assistant, the system should still answer them, but it must not write that personal data into its permanent record. This issue makes the pipeline notice personal data, raise a warning flag, and store placeholders such as <code>[REDACTED:EMAIL]</code> instead. Follows <a href="issue-42-track-b-real-draft.html">issue #42's writeup</a>.</p>
+
+<h2>Start here: what is this project?</h2>
+<p>RegDocs Assistant answers questions about Irish financial-regulation documents (the Central Bank's rules and consultation papers, for example). It uses a pattern called <strong>RAG</strong> (retrieval-augmented generation): when a question comes in, the system first <em>retrieves</em> the few passages of the documents most likely to contain the answer, then hands those passages and the question to a language model, which <em>generates</em> the written answer. The model is only allowed to rely on the passages it was given, and it cites them.</p>
+<p>Because this is meant to resemble a system used in a regulated industry, every question and answer is saved as an <strong>Event</strong>: a permanent record that says what was asked, what was retrieved, which model answered, and what it said. Events are append-only. They are never edited or deleted, so there is always a trustworthy audit trail.</p>
+<p>The pipeline that produces an Event has four fixed stages, called <strong>Steps</strong>:</p>
+<div class="flow">
+  <span class="step"><strong>classify</strong></span>
+  <span class="arrow">→</span>
+  <span class="step">retrieve</span>
+  <span class="arrow">→</span>
+  <span class="step">draft</span>
+  <span class="arrow">→</span>
+  <span class="step">verify</span>
+</div>
+<p>This issue is about the first Step, <code>classify</code>. Its job is to look at the question before anything else happens and raise <strong>Flags</strong>: short markers on the Event, such as <code>pii_detected</code>, that say "someone should know about this".</p>
+
+<h2>Where things stood before this issue</h2>
+<p>Issues #40 to #42 built the retriever, the four-Step graph, and a real <code>draft</code> Step with citations. But <code>classify</code> was a placeholder: it did nothing, was recorded under the model name <code>"stub"</code>, and every Event had an empty <code>flags</code> list. A question like <em>"My email is jane@x.ie, how much notice must a firm give?"</em> went straight through, and the Event saved to permanent storage contained the email address word for word.</p>
+
+<h2>The problem, and the core idea</h2>
+<p>That is a real problem. <strong>PII</strong> (personally identifiable information: email addresses, phone numbers, bank account numbers, national ID numbers, card numbers) should not sit in a permanent audit log unless there is a reason for it to. And because Events are append-only, it cannot be cleaned up afterwards. The only moment to remove it is <em>before the Event is written</em>.</p>
+<p>The core idea of the fix has three parts:</p>
+<ol>
+  <li><strong>Detect once.</strong> <code>classify</code> scans the question with a set of rules and gets back a list of matches: what kind of PII, and exactly where in the text.</li>
+  <li><strong>Use that one list twice.</strong> Any match raises the <code>pii_detected</code> Flag, and the same matches drive the redaction. The Flag and the placeholders can never disagree, because they come from the same detections.</li>
+  <li><strong>Redact late.</strong> The pipeline carries on with the original text, so the answer is just as good. Only when the finished Event is assembled are the matches swapped for placeholders.</li>
+</ol>
+
+<h2>The concepts</h2>
+
+<div class="box concept">
+  <span class="label">Concept: a guardrail that annotates instead of blocks (ADR-0008)</span>
+  <p>A guardrail is a check that runs around an AI system to catch problems the model itself won't. Some guardrails <em>stop</em> the pipeline. The project does that for suspected prompt injection (someone trying to trick the model), because letting hostile text flow further into the model only gives it more chances to cause harm. PII is different. A person asking a legitimate question with their email in it is a <em>storage</em> problem, not a <em>processing</em> problem: answering them is fine, and only what ends up on disk needs care. So <code>pii_detected</code> deliberately does <strong>not</strong> halt anything. It raises a Flag and triggers Redaction, and that's all.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: rules, not a model, for the first version</span>
+  <p>You could ask an AI model "does this text contain personal data?". For structured identifiers, plain rules are better: they are instant, free, run offline, give the same answer every time, and can be tested exactly. The rules here are <strong>regular expressions</strong> (patterns that describe the shape of a piece of text, like "letters, then @, then a domain") plus, for the riskier kinds, a <strong>checksum</strong>. The trade-off is that rules only find things with a recognisable shape. A person's name or home address typed into a sentence has no fixed shape, so rules cannot find it. That limit is documented, not hidden.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: checksums cut false alarms</span>
+  <p>A 16-digit number is not necessarily a card number; it could be a reference or an order id. Real card numbers satisfy a built-in arithmetic test, the <strong>Luhn check</strong>: double every second digit from the right, add everything up, and the total must end in 0. IBANs carry a check too (a remainder of 1 when the rearranged number is divided by 97), and so do Irish PPSNs. The last letter of a PPSN is computed from the seven digits:</p>
+<pre><code>1234567T   digits weighted 8,7,6,5,4,3,2   →   1·8 + 2·7 + 3·6 + 4·5 + 5·4 + 6·3 + 7·2 = 112
+           112 mod 23 = 20                  →   position 20 of "WABCDEFGHIJKLMNOPQRSTUV" (W is position 0) is T  ✓</code></pre>
+  <p>So the rule only reports a PPSN, card or IBAN if the number passes its own check. <code>1234567A</code> has the right shape but the wrong letter, so it is treated as an ordinary reference and left alone. If you have written input validators in .NET, this is the same idea as validating a check digit before accepting an ISBN.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why redact late, and why the pipeline still sees the original</span>
+  <p>If the question were redacted <em>first</em>, the later Steps would be working with <code>[REDACTED:EMAIL]</code> in place of the real text. For a question like "email me the answer at jane@x.ie" that could change what the model says. Redaction exists to protect <em>storage</em>, not to change how the question is processed, so the order is: run all four Steps on the original text, and only then build the Event with placeholders in it. If you think in event-sourcing terms, this is "scrub the data before you append the event", because once an event is appended it can never be changed.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why the answer is redacted by echo, not by scanning it (ADR-0034)</span>
+  <p>The question is scanned. The <em>answer</em> is not. Instead, wherever the answer repeats a value that was found in the question, that value is swapped for its placeholder. The reason is that answers legitimately quote the source documents, and a source document might contain a public contact email for the Central Bank. Scanning the answer would blank that out and make a correct answer worse, to protect nothing. The cost is that PII the model invents, or an echo it writes in a different format, is missed. That is also documented.</p>
+</div>
+
+<h2>What the code does now</h2>
+
+<h3>Detecting</h3>
+<p>The new file <code>track-b/src/regdocs_track_b/pii.py</code> has a function <code>detect_pii(text)</code>. It returns one <code>PiiMatch</code> per hit, with the kind, the start and end position, and the matched text:</p>
+<pre><code>detect_pii("Email jane@x.ie or call 087 123 4567")
+
+[PiiMatch(kind="EMAIL", start=6,  end=15, text="jane@x.ie"),
+ PiiMatch(kind="PHONE", start=24, end=36, text="087 123 4567")]</code></pre>
+<table>
+  <tr><th>Kind</th><th>What it matches</th><th>Extra check</th></tr>
+  <tr><td><code>IBAN</code></td><td>Two letters, two digits, then groups of letters and digits</td><td>mod-97 checksum</td></tr>
+  <tr><td><code>CARD</code></td><td>13 to 19 digits, spaces or hyphens allowed between</td><td>Luhn checksum</td></tr>
+  <tr><td><code>PPSN</code></td><td>Seven digits and one or two letters</td><td>check-letter calculation</td></tr>
+  <tr><td><code>EMAIL</code></td><td>name, <code>@</code>, domain</td><td>none</td></tr>
+  <tr><td><code>PHONE</code></td><td>Irish formats: <code>+353…</code>, <code>00353…</code>, or a leading <code>0</code></td><td>prefix can't start with 0</td></tr>
+</table>
+<p>The rules run in the order shown. A stretch of text claimed by an earlier rule is skipped by later ones, so the digits inside an IBAN are never also reported as a phone number or a card.</p>
+
+<h3>Flagging</h3>
+<p>In <code>graph.py</code>, <code>classify</code> now calls <code>detect_pii</code> on the question. If there are any matches it adds <code>"pii_detected"</code> to the graph's <code>flags</code>. It also stores the matches in the graph's state, so later code can reuse them. The Step is recorded under the model name <code>"rules"</code> (no model is involved), where before it said <code>"stub"</code>. Nothing else in the pipeline changes: <code>retrieve</code>, <code>draft</code> and <code>verify</code> run exactly as before, on the original text.</p>
+
+<h3>Redacting</h3>
+<p>When the graph finishes, <code>answer_question</code> assembles the Event. This is the one place that changes what is stored:</p>
+<pre><code>query:  redact_query(question, matches)        # replace each matched span, by position
+answer: redact_answer(final_answer, matches)   # replace repeats of the same values
+flags:  final["flags"]                         # ["pii_detected"] or []</code></pre>
+<p>A worked example, with a fake model that answers "We will reply to jane@x.ie within 30 days.":</p>
+<pre><code>Question asked   My email is jane@x.ie, how much notice must a firm give?
+Saved query      My email is [REDACTED:EMAIL], how much notice must a firm give?
+
+Model's answer   We will reply to jane@x.ie within 30 days.
+Saved answer     We will reply to [REDACTED:EMAIL] within 30 days.
+
+Saved flags      ["pii_detected"]
+Retrieved Chunk  "Write to info@centralbank.ie for queries."   (stored untouched)</code></pre>
+<p>The retrieved Chunk text is left alone on purpose. It is public source text, not something the user typed. When the answer echoes a value, it is replaced only as a whole value, so <code>jane@x.ieee</code> is not cut into <code>[REDACTED:EMAIL]ee</code>.</p>
+
+<h2>What this does not catch</h2>
+<div class="box did">
+  <span class="label">Limits, documented in the Track B README</span>
+  <p><strong>Names and addresses.</strong> "John Murphy of 12 Main Street" passes through unchanged. Finding those needs a model that understands language (named-entity recognition), which is a separate piece of work. <strong>Foreign phone numbers</strong> and Irish freephone/premium numbers are missed. <strong>Reformatted echoes.</strong> If the question says <code>087 123 4567</code> and the model writes <code>0871234567</code>, the answer is not redacted. <strong>PII the model makes up</strong> is never scanned for. <strong>Typos.</strong> A card or PPSN with a mistyped digit fails its checksum and is treated as ordinary text.</p>
+</div>
+
+<h2>Files changed</h2>
+<table>
+  <tr><th>File</th><th>What changed</th></tr>
+  <tr><td><code>track-b/src/regdocs_track_b/pii.py</code></td><td>New. The rules, the checksums, <code>detect_pii</code>, and the two redaction functions.</td></tr>
+  <tr><td><code>track-b/src/regdocs_track_b/graph.py</code></td><td><code>classify</code> runs the rules and raises the Flag; the graph state carries the matches and flags; <code>answer_question</code> redacts the Event's query and answer.</td></tr>
+  <tr><td><code>track-b/src/regdocs_track_b/testing.py</code></td><td>The recording fake chat model moved here so two test files can share it.</td></tr>
+  <tr><td><code>track-b/tests/test_graph_pii.py</code></td><td>New. Drives questions with PII through the whole graph with a fake model. The file that best shows the behaviour.</td></tr>
+  <tr><td><code>track-b/README.md</code></td><td>New "PII detection and Redaction" section, including the limits above.</td></tr>
+  <tr><td><code>docs/adr/0034-…md</code></td><td>New. Records why the answer is redacted by echo and not by scanning.</td></tr>
+  <tr><td><code>CONTEXT.md</code></td><td>The definition of Redaction now says it is driven by the same detections as the Flag.</td></tr>
+</table>
+
+<h2>Verified</h2>
+<div class="box verified">
+  <span class="label">Commands run</span>
+<pre><code>uv run pytest              # 264 passed, 2 skipped (the opt-in Ollama tests)
+uv run ruff format --check .</code></pre>
+  <p>All of the new tests run offline with a fake retriever and a fake chat model, so no database or model needs to be running for them.</p>
+</div>
+
+<h2>Try it yourself</h2>
+<p>One test shows the whole idea from question to stored Event:</p>
+<pre><code>uv run pytest track-b/tests/test_graph_pii.py::test_the_event_stores_typed_placeholders_instead_of_the_pii -v</code></pre>
+<p>It sends <em>"My email is jane@x.ie, how much notice must a firm give?"</em> through the real graph, with a fake model that answers "We will reply to jane@x.ie within 30 days.", and checks that the finished Event holds placeholders in both the query and the answer and still validates against the shared Event schema.</p>
+<p>Ways to poke at it:</p>
+<ul>
+  <li>Right after <code>event = _event(...)</code> in that test, add <code>print(event)</code> and run with <code>-s</code>. You will see the whole Event, including the <code>pii_detected</code> flag and the four Steps.</li>
+  <li>Change the fake model's answer to <code>"We will reply to jane@x.ieee"</code> and watch the assertion fail. The expected text no longer matches, because the extra letters mean it was not an echo of the email, so it is left alone.</li>
+  <li>Change the email in the question to <code>jane at x dot ie</code>. The Flag disappears and the query is stored as typed, because nothing in that text has the shape of an email. That is the rule-based limit, seen directly.</li>
+</ul>
+<p>Why this test and not the others: the detector tests in <code>test_pii.py</code> check each rule in isolation, which is useful but doesn't show how the pieces fit. This test is the only one that shows detection, the Flag, the late redaction of both fields, and schema validity in a single run, and it needs nothing running except Python.</p>
+
+<h2>Summary</h2>
+<p>Before this issue, the first pipeline Step did nothing and any personal data typed into a question was saved permanently in the audit record. Now <code>classify</code> scans the question with deterministic rules (email, Irish phone, IBAN, PPSN and card number, the last three checked with their own checksums), raises a <code>pii_detected</code> Flag that does not stop the pipeline, and hands the matches forward. The model still answers using the original text, and only when the Event is assembled are the matches replaced with typed placeholders in the stored query and answer, using the same detections that raised the Flag. Retrieved source text is never redacted. The approach finds structured identifiers but not names or addresses in ordinary sentences, and that limit is written down in the README.</p>
+
+<footer>Issue #43, Track B. Next: the prompt-injection half of classify and the halting Flags.</footer>
+</main>
+</body>
+</html>

@@ -2,13 +2,15 @@
 # four fixed Steps (classify, retrieve, draft, verify) that assembles an Event
 # valid against /schema's event.schema.json from the first run.
 #
-# classify and verify are honest stubs, recorded under the model name "stub"
-# (verify's confidence is 0.0, so nothing downstream mistakes it for a real
-# groundedness score). retrieve uses the real retriever (ADR-0032); draft
-# prompts from a versioned file and resolves its [n] markers to Citations
-# (issue #42, ADR-0010). Halting flags (ADR-0008, ADR-0009) and the real
-# classify/verify are later work, so every run here takes all four Steps and
-# raises no Flags.
+# verify is an honest stub, recorded under the model name "stub" (its
+# confidence is 0.0, so nothing downstream mistakes it for a real groundedness
+# score). classify runs the PII rules (issue #43, ADR-0008): a match raises
+# pii_detected, which never halts the run, and answer_question redacts the
+# finished Event from those same matches. Its injection half is still
+# unbuilt. retrieve uses the real retriever (ADR-0032); draft prompts from a
+# versioned file and resolves its [n] markers to Citations (issue #42,
+# ADR-0010). The halting Flags (ADR-0008, ADR-0009) and the real verify are
+# later work, so every run here takes all four Steps.
 
 import operator
 import re
@@ -24,8 +26,11 @@ from langchain_core.retrievers import BaseRetriever
 from langgraph.graph import END, START, StateGraph
 
 from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
+from regdocs_track_b.pii import PiiMatch, detect_pii, redact_answer, redact_query
 
 STUB_MODEL = "stub"
+# classify's PII half is deterministic rules, so no model is involved.
+RULES_MODEL = "rules"
 
 # The prompt is a versioned file, not a string in code: a new version is a new
 # file beside the old ones, which stay readable for Replay (ADR-0005).
@@ -38,6 +43,8 @@ LOCAL_COST = 0
 
 class PipelineState(TypedDict):
     question: str
+    pii: list[PiiMatch]
+    flags: Annotated[list[str], operator.add]
     chunks: list[Document]
     answer: str
     citations: list[dict]
@@ -129,7 +136,12 @@ def build_graph(
 
     def classify(state: PipelineState) -> dict:
         started = clock()
-        return {"steps": [_step(clock, started, "classify", STUB_MODEL)]}
+        matches = detect_pii(state["question"])
+        flags = []
+        if matches:
+            flags.append("pii_detected")
+        step = _step(clock, started, "classify", RULES_MODEL)
+        return {"pii": matches, "flags": flags, "steps": [step]}
 
     def retrieve(state: PipelineState) -> dict:
         started = clock()
@@ -179,12 +191,15 @@ def build_graph(
 
 def answer_question(graph, question: str) -> dict:
     """Run `question` through the graph and assemble the finished run's Event."""
-    final = graph.invoke({"question": question, "steps": []})
+    final = graph.invoke({"question": question, "flags": [], "steps": []})
+    # Redaction runs here, after every Step has seen the original text, so
+    # only what is stored changes (ADR-0008). Both fields use classify's
+    # matches, the same ones that raised the Flag.
     return {
         "id": str(uuid.uuid4()),
         "event_type": "QueryAnswered",
-        "query": question,
-        "answer": final["answer"],
-        "flags": [],
+        "query": redact_query(question, final["pii"]),
+        "answer": redact_answer(final["answer"], final["pii"]),
+        "flags": final["flags"],
         "steps": final["steps"],
     }

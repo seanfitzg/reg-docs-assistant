@@ -1,5 +1,6 @@
 # Fakes shared by the graph tests, so test files don't import each other.
 from langchain_core.documents import Document
+from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.retrievers import BaseRetriever
 
 
@@ -8,6 +9,14 @@ class FakeRetriever(BaseRetriever):
 
     def _get_relevant_documents(self, query, *, run_manager):
         return self.documents
+
+
+class RecordingModel(FakeListChatModel):
+    prompts: list[str]
+
+    def _call(self, messages, stop=None, run_manager=None, **kwargs):
+        self.prompts.append(messages[-1].content)
+        return super()._call(messages, stop, run_manager, **kwargs)
 
 
 def make_chunk(chunk_id, document_id, locator, text, score):
