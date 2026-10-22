@@ -22,7 +22,7 @@ uv sync --all-packages              # once, from the repo root: one shared .venv
 # source .venv/bin/activate         # macOS/Linux
 ```
 
-The retriever reuses `/store`'s `db.py` and `embed.py` (by path, not as a package) and needs the same prerequisites as the eval harness (`eval/README.md`): Postgres up, store loaded, Chunks embedded, and Ollama running with `nomic-embed-text` pulled.
+The retriever reuses `/store`'s `db` and `embed` modules (the `regdocs-store` workspace package) and needs the same prerequisites as the eval harness (`eval/README.md`): Postgres up, store loaded, Chunks embedded, and Ollama running with `nomic-embed-text` pulled.
 
 ## Running the tests
 
@@ -47,6 +47,8 @@ RUN_REAL_DRAFT=1 python -m pytest track-b/tests/test_real_draft.py
 ```
 
 ## Layout
+
+Python modules live in `src/regdocs_track_b/` (`graph.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
 
 - `graph.py` — the four-node graph, Citation resolution and Event assembly.
 - `prompts/` — versioned prompt files (`draft-v1.txt`); a new version is a new file.

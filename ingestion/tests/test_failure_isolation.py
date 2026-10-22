@@ -15,7 +15,7 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from pipeline import run_pipeline
+from regdocs_ingestion.pipeline import run_pipeline
 
 MANIFEST_ENTRY_DEFAULTS = {
     "title": "Test Document",

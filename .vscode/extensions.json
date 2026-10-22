@@ -1,0 +1,5 @@
+{
+  // Ruff formats Python on save (see ruff.toml and settings.json). VS Code
+  // offers to install it.
+  "recommendations": ["charliermarsh.ruff"]
+}

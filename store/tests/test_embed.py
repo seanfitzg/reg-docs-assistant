@@ -6,16 +6,25 @@
 import psycopg
 import pytest
 
-from embed import DOCUMENT_PREFIX, EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, embed_chunks
-from loader import load_store
+from regdocs_store.embed import (
+    DOCUMENT_PREFIX,
+    EMBEDDING_DIMENSIONS,
+    EMBEDDING_MODEL,
+    embed_chunks,
+)
+from regdocs_store.loader import load_store
 
-# Reused from test_loader.py: the isolated regdocs_test database, the skip
+# Reused from regdocs_store.testing: the isolated regdocs_test database, the skip
 # decorator, the cleanup fixture, and the fixture corpus with one Document
 # with TWO Chunking Generations (gen-1 inactive with 1 chunk, gen-2 active
 # with 2) -- the shape the active-generation-only rule (ADR-0025) needs.
-# `clean_db` looks unused but pytest finds fixtures by name in the module
-# namespace, so importing it makes it available.
-from test_loader import DB_URL, _write_fixture_corpus, clean_db, requires_postgres  # noqa: F401
+# `clean_db` is imported only so pytest finds the fixture by name.
+from regdocs_store.testing import (
+    DB_URL,
+    clean_db,  # noqa: F401
+    requires_postgres,
+    write_fixture_corpus,
+)
 
 ACTIVE_CHUNK_TEXTS = [
     "Second generation, first chunk.",
@@ -40,7 +49,7 @@ class RecordingClient:
 
 
 def _load_fixture(tmp_path):
-    output_dir, manifest_path = _write_fixture_corpus(tmp_path)
+    output_dir, manifest_path = write_fixture_corpus(tmp_path)
     load_store(output_dir, manifest_path, DB_URL)
 
 

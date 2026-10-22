@@ -35,7 +35,7 @@ uv sync --all-packages              # once, from the repo root: one shared .venv
 With the container up and `ingestion/output` already generated (see `ingestion/README.md`):
 
 ```
-python store/loader.py
+python -m regdocs_store.loader
 ```
 
 Reads `ingestion/output`'s `Document`/`Chunk` JSON plus `ingestion/manifest.json` (for `chunking_strategy` — the one field ingestion's JSON output doesn't itself carry, ADR-0014) and loads everything into the schema above, keyed by each record's own deterministic id. Safe to run repeatedly: `documents`/`chunking_generations`/`chunks` are each immutable once written, so a conflicting id is always skipped, never overwritten — nothing is ever deleted or edited in place, only added (see `loader.py`'s own docstrings for the exact semantics and the one deliberate exception: a Document's *active* Chunking Generation pointer, which is expected to change over time, ADR-0004).
@@ -55,7 +55,7 @@ ollama pull nomic-embed-text
 Ollama serves on `http://localhost:11434` (running the desktop app or `ollama serve`). With that up, the container running, and data loaded by `loader.py`:
 
 ```
-python store/embed.py
+python -m regdocs_store.embed
 ```
 
 - Safe to re-run: a Chunk that already has an embedding for this model is skipped, never recomputed or overwritten, and each embedding is committed as it's computed — so after a crash a re-run resumes where it stopped.
@@ -78,6 +78,8 @@ python -m pytest store/tests
 Needs the container from **Setup** running. Tests run against `regdocs_test`, not `regdocs` — **running the suite never touches or wipes any real data you've loaded** into `regdocs`. Tests that need Postgres skip themselves (not fail) if it isn't reachable, the same pattern `ingestion/tests` uses for corpus PDFs — see `store/tests/test_loader.py`.
 
 ## Layout
+
+Python modules live in `src/regdocs_store/` (so `loader.py` below is `regdocs_store.loader`), alongside `testing.py`, the Postgres test helpers the eval and track-b suites reuse. Tests are in `tests/`; `init/` and `docker-compose.yml` stay at the top level.
 
 - `docker-compose.yml` — the Postgres+pgvector container definition.
 - `init/001_schema.sql` — the schema: `documents`, `chunking_generations`, `chunks`, with foreign keys and indexes. Plain SQL, no migration framework (see ADR-0020/0021/0022).

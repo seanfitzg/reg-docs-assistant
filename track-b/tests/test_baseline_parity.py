@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from db import DEFAULT_DB_URL
-from embed import OllamaEmbeddingClient
-from match import case_hit
-from retriever import ChunkRetriever
+from regdocs_eval.match import case_hit
+from regdocs_store.db import DEFAULT_DB_URL
+from regdocs_store.embed import OllamaEmbeddingClient
+from regdocs_track_b.retriever import ChunkRetriever
 
 EVAL_DIR = Path(__file__).parent.parent.parent / "eval"
 BASELINE = EVAL_DIR / "runs" / "20260929T111257Z-nomic-embed-text.json"

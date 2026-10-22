@@ -33,6 +33,8 @@ Most tests are self-contained (synthetic fixtures, or a throwaway PDF built with
 
 ## Layout
 
+Python modules live in `src/regdocs_ingestion/` (so `extract.py` below is `regdocs_ingestion.extract`), tests in `tests/`; `manifest.json` stays at the top level.
+
 - `manifest.json` — the manifest (ADR-0013): one entry per document to ingest, carrying its title/publisher/published_date/source_url/supersedes/chunking_strategy. A person edits this by hand when adding a document; the pipeline never infers this metadata from the PDF itself.
 - `extract.py` — pymupdf text extraction. Two functions, for the two shapes chunking strategies need: `extract_pages` returns plain per-page text (used by `clause_numbered`); `extract_pages_with_headings` returns each page's lines with font-weight info (`is_heading`, true when every span on a line is bold), needed by `heading_sections` since a heading has no numbered marker a plain-text regex could find — bold is the only signal that distinguishes it from an ordinary sentence. (pymupdf itself was chosen over pypdf after it corrupted text on the Research Technical Papers — see the session that produced ADR-0012–0019.)
 - `clean.py` — the automatic cleanup step (ADR-0016): strips repeated headers/footers and page-number lines (bare, or "Page N"-prefixed). Two variants share the same underlying rule, for the same two shapes `extract.py` produces. Document-specific cleanup (bilingual duplication, navigation chrome) is manifest-flagged instead, and isn't built yet (issue #9).

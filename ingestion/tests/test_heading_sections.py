@@ -8,7 +8,7 @@
 # the list[list[dict]] layout shape because it needs to know both which lines
 # are headings and which page each is on.
 
-from strategies.heading_sections import chunk
+from regdocs_ingestion.strategies.heading_sections import chunk
 
 
 def test_splits_on_each_heading():

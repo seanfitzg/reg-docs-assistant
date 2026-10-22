@@ -9,8 +9,8 @@ from pathlib import Path
 import jsonschema
 import pytest
 
-from check_dataset import find_problems
-from corpus import DEFAULT_OUTPUT_DIR, load_active_chunks
+from regdocs_eval.check_dataset import find_problems
+from regdocs_eval.corpus import DEFAULT_OUTPUT_DIR, load_active_chunks
 
 EVAL_DIR = Path(__file__).parent.parent
 DATASET = EVAL_DIR / "dataset.json"
@@ -40,7 +40,7 @@ def _load(path: Path):
     ids=["eval/dataset.json", "fixtures/valid-dataset.json"],
 )
 def test_dataset_matches_schema(dataset_path):
-    # FormatChecker enforced explicitly, as in schema/tests/support.py.
+    # FormatChecker enforced explicitly, as in regdocs_schema.testing.
     jsonschema.validate(
         instance=_load(dataset_path),
         schema=_load(SCHEMA),

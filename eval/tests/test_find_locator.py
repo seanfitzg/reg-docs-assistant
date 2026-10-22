@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from corpus import load_active_chunks
-from find_locator import main, search
+from regdocs_eval.corpus import load_active_chunks
+from regdocs_eval.find_locator import main, search
 
 FIXTURE_OUTPUT = Path(__file__).parent / "fixtures" / "ingestion-output"
 

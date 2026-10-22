@@ -6,7 +6,7 @@
 
 import pymupdf
 
-from extract import extract_pages, extract_pages_with_headings
+from regdocs_ingestion.extract import extract_pages, extract_pages_with_headings
 
 
 def test_extract_pages_returns_one_string_per_page(tmp_path):

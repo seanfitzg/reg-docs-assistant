@@ -36,8 +36,8 @@ Cases go in `dataset.json`, whose shape is defined by `schema/eval-dataset.schem
 To find the exact locator for a passage, search by keyword:
 
 ```
-python eval/find_locator.py "key information document"
-python eval/find_locator.py "fitness probity" --doc doc-10-cp160-fitness-and-probity-regime
+python -m regdocs_eval.find_locator "key information document"
+python -m regdocs_eval.find_locator "fitness probity" --doc doc-10-cp160-fitness-and-probity-regime
 ```
 
 Every word must appear in a Chunk, but not necessarily next to each other, and matching ignores case. Only active-generation Chunks are searched, since those are the only ones retrieval can return. This is keyword search, so it matches words rather than meaning. That's deliberate: comparing it with the harness's embedding search later shows the difference between the two.
@@ -49,20 +49,20 @@ Every word must appear in a Chunk, but not necessarily next to each other, and m
 Prerequisites, in order (details in `store/README.md`):
 
 1. Postgres up: `docker compose up -d` from `store/`.
-2. The store loaded: `python store/loader.py`.
-3. Chunks embedded: `python store/embed.py`, with Ollama running and `nomic-embed-text` pulled.
+2. The store loaded: `python -m regdocs_store.loader`.
+3. Chunks embedded: `python -m regdocs_store.embed`, with Ollama running and `nomic-embed-text` pulled.
 
 Then:
 
 ```
-python eval/run_eval.py
+python -m regdocs_eval.run_eval
 ```
 
 - Each question is sent as `"search_query: <question>"`, the query half of ADR-0026's asymmetric prefix. Chunks were stored with `"search_document: "`.
 - The search is exact (no vector index), restricted to each Document's active Chunking Generation (ADR-0025).
 - Recall@1/3/5/10 and MRR are computed over answerable cases only, overall and by `phrasing` and `category`. Unanswerable cases record their top-1 similarity instead (ADR-0029).
 - The report is written to `runs/<UTC timestamp>-<model>.json` and never overwrites an existing one. It pins the embedding model, query prefix, k, `dataset_version` and every Document's active Chunking Generation, so reports are only compared like-for-like (ADR-0030).
-- Env vars: `STORE_DATABASE_URL` and `OLLAMA_HOST`, as for `store/embed.py`.
+- Env vars: `STORE_DATABASE_URL` and `OLLAMA_HOST`, as for `regdocs_store.embed`.
 
 The earliest report in `runs/` is the **baseline**: the score the later .NET retriever must reproduce on the same embeddings.
 
@@ -78,11 +78,13 @@ python -m pytest eval/tests
 
 ## Layout
 
+Python modules live in `src/regdocs_eval/` (so `run_eval.py` below is `regdocs_eval.run_eval`), tests in `tests/`; `dataset.json` and `runs/` stay at the top level.
+
 - `dataset.json`: the Eval Cases.
 - `corpus.py`: loads active-generation Chunks from `ingestion/output/`.
 - `check_dataset.py`: `find_problems()`, the relational checks the JSON Schema can't express.
 - `match.py`: `locator_matches()` and `case_hit()`, the Gold Locator match rule (ADR-0028). Anything it can't parse raises instead of scoring a silent miss.
 - `find_locator.py`: the keyword-search authoring helper.
-- `run_eval.py`: the eval harness. `run_eval()` returns a report and `write_report()` saves it. It reuses `store/db.py` and `store/embed.py`.
+- `run_eval.py`: the eval harness. `run_eval()` returns a report and `write_report()` saves it. It reuses `regdocs_store.db` and `regdocs_store.embed`.
 - `runs/`: committed run reports, one immutable file per run.
 - `tests/`: unit tests against small fixture copies of ingestion output (`tests/fixtures/`), plus `test_dataset.py` for the real dataset and `test_run_eval.py` for the harness.

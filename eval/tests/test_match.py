@@ -9,7 +9,7 @@
 
 import pytest
 
-from match import case_hit, locator_matches
+from regdocs_eval.match import case_hit, locator_matches
 
 # ---- clause_numbered: compare by numbering segment, not string prefix ----
 

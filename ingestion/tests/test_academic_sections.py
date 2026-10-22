@@ -5,7 +5,7 @@
 # "_wraps_" and "_no_body_ever_follows_" tests cover the one real difference:
 # a heading here can span more than one bold line.
 
-from strategies.academic_sections import chunk
+from regdocs_ingestion.strategies.academic_sections import chunk
 
 
 def test_splits_on_each_heading():

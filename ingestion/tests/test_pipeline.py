@@ -16,9 +16,13 @@ from pathlib import Path
 
 import pytest
 
-from ids import document_id_from_filename
-from pipeline import build_document_and_chunks, load_manifest, run_pipeline
-from validate import load_schema, validate_against_schema
+from regdocs_ingestion.ids import document_id_from_filename
+from regdocs_ingestion.pipeline import (
+    build_document_and_chunks,
+    load_manifest,
+    run_pipeline,
+)
+from regdocs_ingestion.validate import load_schema, validate_against_schema
 
 CORPUS_DIR = Path(__file__).parent.parent.parent / "corpus"
 CP54_PDF = CORPUS_DIR / "04-cp54-second-consultation-consumer-protection-code.pdf"
