@@ -17,6 +17,22 @@
       "justMyCode": true
     },
     {
+      // The opt-in real-judge test (needs Ollama with qwen2.5:7b-instruct).
+      // Set a breakpoint in the test or in regdocs_track_b/judge.py, then F5.
+      "name": "Debug real judge test",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "track-b/tests/test_real_judge.py::test_the_real_judge_writes_claim_lines_that_code_can_read",
+        "-s"
+      ],
+      "env": { "RUN_REAL_JUDGE": "1" },
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
       // The keyword-search authoring helper; edit "args" to change the search.
       "name": "Find locator",
       "type": "debugpy",

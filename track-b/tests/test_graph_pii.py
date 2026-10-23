@@ -16,6 +16,7 @@ from regdocs_track_b.testing import (
     RecordingModel,
     make_chunk,
     safe_classifier,
+    safe_judge,
 )
 
 EVENT_SCHEMA = load_json(
@@ -32,6 +33,8 @@ def _graph(answer="Thirty days.", chunks=CHUNKS, model=None):
         draft_model_name="fake-chat",
         classifier_model=safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
 
 

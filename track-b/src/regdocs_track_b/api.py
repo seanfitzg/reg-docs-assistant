@@ -19,6 +19,8 @@ from regdocs_track_b.retriever import ChunkRetriever
 
 DRAFT_MODEL = "qwen2.5:7b-instruct"
 CLASSIFIER_MODEL = "qwen2.5:7b-instruct"
+# Overridable so a different model can judge the drafter (ADR-0035).
+DEFAULT_JUDGE_MODEL = "qwen2.5:7b-instruct"
 
 
 class QueryRequest(BaseModel):
@@ -73,6 +75,7 @@ def create_default_app() -> FastAPI:
     from langchain_ollama import ChatOllama
 
     db_url = os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL)
+    judge_model = os.environ.get("JUDGE_MODEL") or DEFAULT_JUDGE_MODEL
     graph = build_graph(
         retriever=ChunkRetriever(
             db_url=db_url, embedding_client=OllamaEmbeddingClient()
@@ -81,5 +84,7 @@ def create_default_app() -> FastAPI:
         draft_model_name=DRAFT_MODEL,
         classifier_model=ChatOllama(model=CLASSIFIER_MODEL, temperature=0),
         classifier_model_name=CLASSIFIER_MODEL,
+        judge_model=ChatOllama(model=judge_model, temperature=0),
+        judge_model_name=judge_model,
     )
     return create_app(graph, db_url)

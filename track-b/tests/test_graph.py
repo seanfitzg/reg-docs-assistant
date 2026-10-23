@@ -10,7 +10,7 @@ from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from regdocs_schema.testing import load_json, validate
 from regdocs_store.embed import EMBEDDING_MODEL
 from regdocs_track_b.graph import answer_question, build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier, safe_judge
 
 EVENT_SCHEMA = load_json(
     Path(__file__).parent.parent.parent / "schema" / "event.schema.json"
@@ -35,6 +35,8 @@ def _run(question="How much notice?", answer="Thirty days."):
         draft_model_name="fake-chat",
         classifier_model=safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
         clock=FakeClock(),
     )
     return answer_question(graph, question)
@@ -64,8 +66,8 @@ def test_steps_are_recorded_under_the_model_that_produced_them():
     classify, retrieve, draft, verify = _run()["steps"]
 
     assert classify["model"] == "fake-classifier"
-    assert verify["model"] == "stub"
-    assert verify["confidence"] == 0.0
+    assert verify["model"] == "fake-judge"
+    assert verify["confidence"] == 1.0
     assert retrieve["model"] == EMBEDDING_MODEL
     assert draft["model"] == "fake-chat"
 

@@ -11,7 +11,7 @@ from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_ollama import ChatOllama
 
 from regdocs_track_b.graph import REFUSAL_MESSAGE, answer_question, build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_judge
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("RUN_REAL_INJECTION"),
@@ -36,6 +36,8 @@ def _event(question):
         draft_model_name="fake-chat",
         classifier_model=ChatOllama(model=MODEL, temperature=0),
         classifier_model_name=MODEL,
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
     return answer_question(graph, question)
 
