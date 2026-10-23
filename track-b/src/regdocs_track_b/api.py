@@ -9,6 +9,7 @@
 import os
 
 from fastapi import FastAPI, HTTPException
+from ollama import ResponseError
 from pydantic import BaseModel, Field
 from regdocs_store.db import DEFAULT_DB_URL
 from regdocs_store.embed import OllamaEmbeddingClient
@@ -50,7 +51,11 @@ def create_app(graph, db_url: str) -> FastAPI:
     # Plain `def`, not `async def`: the graph blocks.
     @app.post("/query")
     def query(request: QueryRequest) -> QueryResponse:
-        event, citations = run_question(graph, request.question)
+        try:
+            event, citations = run_question(graph, request.question)
+        except ResponseError as error:
+            # The model server failed (e.g. a looping model aborted by Ollama).
+            raise HTTPException(status_code=502, detail=f"model error: {error}")
         write_event(event, db_url)
         return QueryResponse(
             event_id=event["id"],

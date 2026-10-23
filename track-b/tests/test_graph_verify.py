@@ -5,6 +5,7 @@
 from pathlib import Path
 
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from ollama import ResponseError
 
 from regdocs_schema.testing import load_json, validate
 from regdocs_track_b.graph import answer_question, build_graph
@@ -120,3 +121,16 @@ def test_verify_never_retries_or_re_drafts():
     for step in event["steps"]:
         step_types.append(step["step_type"])
     assert step_types == ["classify", "retrieve", "draft", "verify"]
+
+
+class _AbortingJudge(FakeListChatModel):
+    def _call(self, messages, stop=None, run_manager=None, **kwargs):
+        raise ResponseError("prediction aborted, token repeat limit reached")
+
+
+def test_a_judge_aborted_by_ollama_leaves_the_answer_unverified_not_a_500():
+    event = _event(None, judge=_AbortingJudge(responses=[]))
+
+    assert event["answer"] == "Thirty days. [1]"
+    assert _verify_step(event)["confidence"] == 0.0
+    assert event["flags"] == ["low_confidence", "no_supporting_context"]

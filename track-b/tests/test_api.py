@@ -6,6 +6,7 @@ from pathlib import Path
 import psycopg
 from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from ollama import ResponseError
 
 from regdocs_schema.testing import load_json, validate
 from regdocs_store.testing import (
@@ -133,3 +134,17 @@ def test_no_retrieved_chunks_returns_the_fixed_not_found_with_200_and_two_steps(
         step_types.append(step["step_type"])
     assert step_types == ["classify", "retrieve"]
     validate(stored, EVENT_SCHEMA)
+
+
+class _AbortingGraph:
+    def invoke(self, state):
+        raise ResponseError("prediction aborted, token repeat limit reached")
+
+
+def test_a_model_server_error_returns_502_and_stores_nothing(clean_db):  # noqa: F811
+    client = TestClient(create_app(_AbortingGraph(), DB_URL))
+
+    response = client.post("/query", json={"question": QUESTION})
+
+    assert response.status_code == 502
+    assert "token repeat limit" in response.json()["detail"]

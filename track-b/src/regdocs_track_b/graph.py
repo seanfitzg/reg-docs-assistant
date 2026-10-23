@@ -25,6 +25,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.retrievers import BaseRetriever
 from langgraph.graph import END, START, StateGraph
+from ollama import ResponseError
 from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
 
 from regdocs_track_b.injection import reads_as_injection
@@ -221,14 +222,20 @@ def build_graph(
 
     def verify(state: PipelineState) -> dict:
         started = clock()
-        reply = judge_model.invoke(
-            verify_template.format(
-                context=_numbered_excerpts(state["chunks"]), answer=state["answer"]
-            )
-        )
         verdicts = []
+        try:
+            reply = judge_model.invoke(
+                verify_template.format(
+                    context=_numbered_excerpts(state["chunks"]),
+                    answer=state["answer"],
+                )
+            )
+        except ResponseError:
+            # Ollama aborts a run whose output loops ("token repeat limit").
+            # Same as an unreadable reply: unverified, not a failed request.
+            reply = None
         # A non-string reply (content blocks) can't be read: no verdicts.
-        if isinstance(reply.content, str):
+        if reply is not None and isinstance(reply.content, str):
             verdicts = parse_verdicts(reply.content)
         confidence = confidence_of(verdicts)
         step = _step(clock, started, "verify", judge_model_name, confidence=confidence)
