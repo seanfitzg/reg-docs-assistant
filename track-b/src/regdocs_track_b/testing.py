@@ -23,6 +23,10 @@ def safe_classifier():
     return FakeListChatModel(responses=["NO"])
 
 
+def safe_judge():
+    return FakeListChatModel(responses=["SUPPORTED: the answer matches the excerpts"])
+
+
 def make_chunk(chunk_id, document_id, locator, text, score):
     return Document(
         page_content=text,

@@ -11,6 +11,7 @@ from regdocs_track_b.testing import (
     FakeRetriever,
     RecordingModel,
     safe_classifier,
+    safe_judge,
 )
 
 
@@ -21,6 +22,8 @@ def _invoke(answer):
         draft_model_name="fake-chat",
         classifier_model=safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
     return graph.invoke({"question": "How much notice?", "steps": []})
 
@@ -75,6 +78,8 @@ def test_prompt_comes_from_a_file_and_numbers_chunks_in_rank_order(tmp_path):
         draft_model_name="fake-chat",
         classifier_model=safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
         draft_prompt_path=prompt_file,
     )
 
@@ -96,6 +101,8 @@ def test_a_missing_prompt_file_fails_when_the_graph_is_built(tmp_path):
             draft_model_name="fake-chat",
             classifier_model=safe_classifier(),
             classifier_model_name="fake-classifier",
+            judge_model=safe_judge(),
+            judge_model_name="fake-judge",
             draft_prompt_path=tmp_path / "absent.txt",
         )
 

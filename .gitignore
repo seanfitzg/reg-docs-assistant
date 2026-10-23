@@ -6,3 +6,4 @@ ingestion/output/
 **/__pycache__/
 .pytest_cache/
 track-b/.env
+.env

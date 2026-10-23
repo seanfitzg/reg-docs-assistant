@@ -9,7 +9,12 @@ import pytest
 from langchain_ollama import ChatOllama
 
 from regdocs_track_b.graph import build_graph
-from regdocs_track_b.testing import FakeRetriever, make_chunk, safe_classifier
+from regdocs_track_b.testing import (
+    FakeRetriever,
+    make_chunk,
+    safe_classifier,
+    safe_judge,
+)
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("RUN_REAL_DRAFT"),
@@ -40,6 +45,8 @@ def test_real_model_cites_the_supporting_chunk_with_a_numbered_marker():
         draft_model_name=MODEL,
         classifier_model=safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
 
     final = graph.invoke(

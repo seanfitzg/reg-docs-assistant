@@ -22,6 +22,7 @@ from regdocs_track_b.testing import (
     FakeRetriever,
     RecordingModel,
     safe_classifier,
+    safe_judge,
 )
 
 EVENT_SCHEMA = load_json(
@@ -38,6 +39,8 @@ def _graph(verdict="NO", chunks=CHUNKS, draft_model=None, classifier=None):
         draft_model_name="fake-chat",
         classifier_model=classifier or FakeListChatModel(responses=[verdict]),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
 
 
@@ -83,6 +86,8 @@ def test_the_classifier_sees_the_question_from_a_versioned_prompt_file(tmp_path)
         draft_model_name="fake-chat",
         classifier_model=classifier,
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
         injection_prompt_path=prompt_file,
     )
 
@@ -141,6 +146,8 @@ def test_safe_classifier_helper_never_flags():
             draft_model_name="fake-chat",
             classifier_model=safe_classifier(),
             classifier_model_name="fake-classifier",
+            judge_model=safe_judge(),
+            judge_model_name="fake-judge",
         ),
         ATTACK,
     )

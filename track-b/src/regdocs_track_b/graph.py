@@ -2,17 +2,16 @@
 # four fixed Steps (classify, retrieve, draft, verify) that assembles an Event
 # valid against /schema's event.schema.json from the first run.
 #
-# verify is an honest stub, recorded under the model name "stub" (its
-# confidence is 0.0, so nothing downstream mistakes it for a real groundedness
-# score). classify runs the PII rules (issue #43, ADR-0008): a match raises
+# classify runs the PII rules (issue #43, ADR-0008): a match raises
 # pii_detected, which never halts the run, and answer_question redacts the
 # finished Event from those same matches. Its injection half asks a model for
 # a YES/NO verdict (issue #46): YES halts the run at classify (ADR-0008).
 # retrieve uses the real retriever (ADR-0032) and halts the run when it finds
 # no Chunks (ADR-0009); draft prompts from a versioned file and resolves its
 # [n] markers to Citations (issue #42, ADR-0010). A halted run answers with a
-# fixed message and stores only the Steps that ran. The real verify is later
-# work.
+# fixed message and stores only the Steps that ran. verify has a judge model
+# give a verdict per claim, and code turns those into Confidence and Flags
+# (issue #47, ADR-0006); it annotates the answer and never retries.
 
 import operator
 import re
@@ -29,9 +28,9 @@ from langgraph.graph import END, START, StateGraph
 from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
 
 from regdocs_track_b.injection import reads_as_injection
+from regdocs_track_b.judge import confidence_of, flags_for, parse_verdicts
 from regdocs_track_b.pii import PiiMatch, detect_pii, redact_answer, redact_query
 
-STUB_MODEL = "stub"
 # What a halted run answers with. Fixed in code, never model-generated: a
 # model asked to refuse an injection can be talked out of it.
 REFUSAL_MESSAGE = "I can't help with that request."
@@ -46,6 +45,7 @@ DEFAULT_DRAFT_PROMPT_PATH = Path(__file__).parents[2] / "prompts" / "draft-v1.tx
 DEFAULT_INJECTION_PROMPT_PATH = (
     Path(__file__).parents[2] / "prompts" / "injection-v1.txt"
 )
+DEFAULT_VERIFY_PROMPT_PATH = Path(__file__).parents[2] / "prompts" / "verify-v1.txt"
 
 # Local-model Steps cost nothing; the first paid model arrives with the real
 # draft.
@@ -86,12 +86,15 @@ def _pin_chunk(document: Document) -> dict:
     }
 
 
-def _draft_prompt(template: str, question: str, chunks: list[Document]) -> str:
+def _numbered_excerpts(chunks: list[Document]) -> str:
     blocks = []
     for number, chunk in enumerate(chunks, start=1):
         blocks.append(f"[{number}] {chunk.page_content}")
-    formattedTemplate = template.format(context="\n\n".join(blocks), question=question)
-    return formattedTemplate
+    return "\n\n".join(blocks)
+
+
+def _draft_prompt(template: str, question: str, chunks: list[Document]) -> str:
+    return template.format(context=_numbered_excerpts(chunks), question=question)
 
 
 MARKER = re.compile(r"([ \t]*)\[(\d+)\]([ \t]*)")
@@ -139,8 +142,11 @@ def build_graph(
     draft_model_name: str,
     classifier_model: BaseChatModel,
     classifier_model_name: str,
+    judge_model: BaseChatModel,
+    judge_model_name: str,
     draft_prompt_path: Path = DEFAULT_DRAFT_PROMPT_PATH,
     injection_prompt_path: Path = DEFAULT_INJECTION_PROMPT_PATH,
+    verify_prompt_path: Path = DEFAULT_VERIFY_PROMPT_PATH,
     # Monotonic, so a wall-clock adjustment mid-run can't give a negative
     # latency.
     clock: Callable[[], float] = time.perf_counter,
@@ -148,6 +154,7 @@ def build_graph(
     # Read now, not per question, so a missing prompt fails at startup.
     draft_template = draft_prompt_path.read_text(encoding="utf-8")
     injection_template = injection_prompt_path.read_text(encoding="utf-8")
+    verify_template = verify_prompt_path.read_text(encoding="utf-8")
 
     def classify(state: PipelineState) -> dict:
         started = clock()
@@ -214,7 +221,18 @@ def build_graph(
 
     def verify(state: PipelineState) -> dict:
         started = clock()
-        return {"steps": [_step(clock, started, "verify", STUB_MODEL, confidence=0.0)]}
+        reply = judge_model.invoke(
+            verify_template.format(
+                context=_numbered_excerpts(state["chunks"]), answer=state["answer"]
+            )
+        )
+        verdicts = []
+        # A non-string reply (content blocks) can't be read: no verdicts.
+        if isinstance(reply.content, str):
+            verdicts = parse_verdicts(reply.content)
+        confidence = confidence_of(verdicts)
+        step = _step(clock, started, "verify", judge_model_name, confidence=confidence)
+        return {"flags": flags_for(confidence), "steps": [step]}
 
     graph = StateGraph(PipelineState)
     graph.add_node("classify", classify)

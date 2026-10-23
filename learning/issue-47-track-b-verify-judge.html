@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Issue #47: The verify Step and Confidence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Issue #47 — Checking the answer against its sources, and scoring how well it held up</h1>
+<p class="subtitle">The assistant's last pipeline step was a placeholder that always reported zero confidence. This issue replaces it with a real check: a second model reads the answer claim by claim and says which ones the retrieved passages actually support. Code turns those verdicts into a score and, when the score is poor, raises a warning flag. The answer is never changed or retried. Follows <a href="issue-46-track-b-injection-halts.html">issue #46's writeup</a>.</p>
+
+<h2>What the project is, and where we were</h2>
+<p>RegDocs Assistant answers questions about regulatory documents with a four-step pipeline: classify the question, retrieve relevant passages (Chunks), draft an answer that cites them, and <strong>verify</strong> it. The first three steps are real. The fourth was a stub: it recorded the model name <code>"stub"</code> and a confidence of <code>0.0</code> on every run, so the stored record said nothing true about the answer's quality.</p>
+
+<h2>The problem, and the core idea</h2>
+<p>A language model can write a confident, fluent, wrong answer. In a regulatory setting, "sounds right" is not enough: a person reviewing an answer needs to know how much of it is actually backed by the source text. The idea is to <strong>check the draft against the very passages it was written from</strong>, one claim at a time:</p>
+<pre><code>Answer:  "A firm must give 30 days' notice [1]. Fee waivers are capped at 2%."
+Passage: "A firm must give 30 days' written notice before applying a fee waiver."
+
+Judge:   SUPPORTED:   A firm must give 30 days' notice.
+         UNSUPPORTED: Fee waivers are capped at 2%.
+
+Confidence = supported / total = 1 / 2 = 0.5   -> low_confidence</code></pre>
+
+<div class="box concept">
+  <span class="label">Concept: LLM-as-judge</span>
+  <p>Using one language model to grade another model's output is called <em>LLM-as-judge</em>. It is attractive because the checking task ("does this text support that claim?") is easier than the writing task, and because it scales. It is also imperfect: the judge is a model too, so it can be wrong, it can be fooled, and a model judging its own kind of output tends to be too kind to it. That is why the result here is a <em>signal for a human to look at</em>, never a guarantee, and why the repo's roadmap measures judges against human labels with evals.</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: why code computes the score, not the model</span>
+  <p>You could ask the model "how confident are you, from 0 to 1?" Don't. Models are poorly calibrated: a 0.9 from a model does not mean it is right nine times in ten. Instead the model only supplies simple, checkable facts (one verdict per claim) and ordinary code does the arithmetic. That keeps the score reproducible, testable with scripted replies, and comparable over time. It is the same principle as citations in issue #42: let the model do what it is good at (reading), and let code do the part that must be exact (resolving, counting).</p>
+</div>
+
+<div class="box concept">
+  <span class="label">Concept: annotate, never retry (ADR-0006)</span>
+  <p>When the check finds a weak answer, the obvious move is "ask the drafting model to try again until the judge is happy". The project deliberately does not. That loop would quietly steer the pipeline toward whatever the judge approves, which is a worse failure for a compliance tool than an honestly flagged, possibly weak answer that a human can see and override. So verify only <em>annotates</em>: the answer goes out exactly as drafted, with flags, and every step runs once.</p>
+</div>
+
+<h2>What the code now does</h2>
+<h3>The judge prompt and the format (<code>prompts/verify-v1.txt</code>)</h3>
+<p>The prompt gives the model the answer and the numbered passages and asks for one line per claim in exactly the format <code>SUPPORTED: &lt;claim&gt;</code> or <code>UNSUPPORTED: &lt;claim&gt;</code>. Like the other prompts it is a versioned file, so a change is a new file beside the old one.</p>
+
+<h3>Reading and scoring (<code>judge.py</code>)</h3>
+<table>
+<tr><th>Function</th><th>Job</th></tr>
+<tr><td><code>parse_verdicts</code></td><td>Reads those lines with a regular expression. It forgives bullets, numbering and capitals, because small models rarely follow a format to the letter. Anything that isn't a claim line is ignored.</td></tr>
+<tr><td><code>confidence_of</code></td><td>Supported claims divided by all claims. No claims at all gives <code>0.0</code>.</td></tr>
+<tr><td><code>flags_for</code></td><td>Below <code>LOW_CONFIDENCE_THRESHOLD</code> (0.8) raises <code>low_confidence</code>. Exactly 0.0 also raises <code>no_supporting_context</code>.</td></tr>
+</table>
+<p>A reply with no readable claim lines scores 0.0 and raises both flags. This is "fail closed" again, as in issue #46: a check that couldn't run must not look like a check that passed.</p>
+
+<div class="box did">
+  <span class="label">Before and after</span>
+  <p><strong>Before:</strong> every Event's verify Step: <code>{"model": "stub", "confidence": 0.0}</code>, no flags ever raised.<br>
+  <strong>After:</strong> <code>{"model": "qwen2.5:7b-instruct", "confidence": 0.5}</code> with <code>"low_confidence"</code> in the Event's flags, for the half-supported example above.</p>
+</div>
+
+<h3>In the graph (<code>graph.py</code>)</h3>
+<p>The verify node formats the prompt, calls the injected judge model, and passes the reply through those three functions. Like the draft and classifier models, the judge is passed into <code>build_graph</code> with its name, so tests script it and production uses the real local model. By default it is the same Ollama model that drafts. Setting the <code>JUDGE_MODEL</code> environment variable to another Ollama model name (for example <code>JUDGE_MODEL=llama3.1:8b</code> before starting the API) makes a different model judge the drafter, which is generally better practice than a model grading itself. The Step then records that model's name. Which judge is actually best is a question for evals.</p>
+
+<h2>Files changed</h2>
+<table>
+<tr><th>File</th><th>What</th></tr>
+<tr><td><code>track-b/src/regdocs_track_b/judge.py</code></td><td>New: parser, Confidence, flag rules, threshold.</td></tr>
+<tr><td><code>track-b/prompts/verify-v1.txt</code></td><td>New: the versioned judge prompt.</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/graph.py</code></td><td>The stub is replaced; <code>build_graph</code> takes the judge model; excerpt formatting is shared with draft.</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/api.py</code>, <code>testing.py</code></td><td>Real judge in the real app; <code>safe_judge()</code> fake for tests.</td></tr>
+<tr><td><code>docs/adr/0035-...md</code></td><td>New: why the judge lists the claims, and why code scores them.</td></tr>
+<tr><td><code>track-b/README.md</code></td><td>"Verify and Confidence" section, including limits.</td></tr>
+<tr><td><code>test_judge.py</code>, <code>test_graph_verify.py</code>, <code>test_real_judge.py</code></td><td>New tests; existing tests pass the new judge parameter.</td></tr>
+</table>
+
+<h2>Try it yourself</h2>
+<p><strong>1. The scoring rules, no dependencies:</strong> <code>test_flags_follow_the_threshold_and_zero_support</code> in <code>track-b/tests/test_judge.py</code>.</p>
+<pre><code>python -m pytest track-b/tests/test_judge.py::test_flags_follow_the_threshold_and_zero_support</code></pre>
+<p>It is a table of confidence values and the flags each should produce. Change the threshold constant in <code>judge.py</code> from <code>0.8</code> to <code>0.6</code> and watch the <code>0.75</code> row fail: that is how a single number changes which answers get flagged. This is the number you would tune with evals.</p>
+<p><strong>2. The whole step through the graph:</strong> <code>test_partial_support_raises_low_confidence_only_and_keeps_the_answer</code> in <code>track-b/tests/test_graph_verify.py</code>.</p>
+<pre><code>python -m pytest track-b/tests/test_graph_verify.py::test_partial_support_raises_low_confidence_only_and_keeps_the_answer</code></pre>
+<p>A scripted fake judge replies with one supported and one unsupported line. The test checks the flag and, importantly, that the answer comes back unchanged. Edit the scripted reply (<code>HALF_SUPPORTED</code> at the top of the file) to add a third supported line and see Confidence move to about 0.67 and still be flagged.</p>
+<p><strong>3. The real model, opt-in:</strong> <code>test_the_real_judge_writes_claim_lines_that_code_can_read</code> in <code>track-b/tests/test_real_judge.py</code> (needs Ollama with <code>qwen2.5:7b-instruct</code>).</p>
+<pre><code>RUN_REAL_JUDGE=1 python -m pytest track-b/tests/test_real_judge.py</code></pre>
+<p>This is the only test that shows a real model actually follows the line format; if it ever replied in prose, Confidence would be 0.0 and the test would fail. Temporarily print the Event to see the real judge's score for the example answer.</p>
+<p>The first isolates the scoring logic, the second shows the pipeline behaviour (annotate, don't change), the third is the only contact with a real model. The other tests (parser edge cases, unreadable reply, prompt contents, no retries) vary these.</p>
+
+<footer>
+<p><strong>Summary.</strong> verify is now real. A judge model lists the answer's claims and marks each supported or unsupported against the retrieved Chunks in a strict line format. Code parses those lines, computes Confidence as the supported fraction, raises <code>low_confidence</code> below 0.8 and <code>no_supporting_context</code> when nothing is supported, and treats an unreadable reply as unverified. The Step records the real model name, the answer is returned untouched, and nothing is retried. The score is a signal for human review, not a guarantee, and its quality is not yet measured.</p>
+</footer>
+</main>
+</body>
+</html>

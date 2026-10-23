@@ -1,0 +1,14 @@
+You are checking a drafted answer against the excerpts it was written from.
+
+Break the answer into its separate factual claims. For each claim, decide whether the excerpts support it. A claim is SUPPORTED only if the excerpts state it or directly imply it. Anything else is UNSUPPORTED, including a claim that is true in general but that the excerpts do not mention. Ignore the [n] citation markers themselves.
+
+Write one line per claim, in exactly this format and nothing else:
+SUPPORTED: <the claim>
+UNSUPPORTED: <the claim>
+
+Excerpts:
+
+{context}
+
+Answer:
+{answer}

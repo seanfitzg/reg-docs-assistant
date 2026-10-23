@@ -15,7 +15,7 @@ from regdocs_store.testing import (
 )
 from regdocs_track_b.api import create_app
 from regdocs_track_b.graph import NOT_FOUND_MESSAGE, REFUSAL_MESSAGE, build_graph
-from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier
+from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_classifier, safe_judge
 
 pytestmark = requires_postgres
 
@@ -33,6 +33,8 @@ def _client(answer="Thirty days' notice. [1]", chunks=CHUNKS, classifier=None):
         draft_model_name="fake-chat",
         classifier_model=classifier or safe_classifier(),
         classifier_model_name="fake-classifier",
+        judge_model=safe_judge(),
+        judge_model_name="fake-judge",
     )
     return TestClient(create_app(graph, DB_URL))
 
