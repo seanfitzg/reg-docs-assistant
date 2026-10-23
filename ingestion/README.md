@@ -16,10 +16,12 @@ Requires the corpus PDFs to be present locally (`corpus/*.pdf` — see `corpus/S
 
 ```python
 from pathlib import Path
-from pipeline import run_pipeline
+from regdocs_ingestion.pipeline import run_pipeline
 
 run_pipeline(Path("ingestion/manifest.json"), Path("corpus"), Path("ingestion/output"))
 ```
+
+From the repo root, the same thing as a command (`python -m regdocs_ingestion`), or the whole chain (ingest, load into Postgres, embed) with `python scripts/reingest.py`. The chain needs Postgres up and Ollama running (see `store/README.md`).
 
 Writes one `Document` JSON file per manifest entry to `output/documents/<id>.json`, and its `Chunk` records (as a JSON array) to `output/chunks/<id>.json`. `output/` isn't committed — it's fully regenerable from the corpus PDFs plus `manifest.json`, the same relationship a projection has to the event store it's built from (ADR-0012's "Further Notes" territory, not written up as its own ADR).
 

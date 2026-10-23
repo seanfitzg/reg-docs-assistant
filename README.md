@@ -61,6 +61,32 @@ uv run pytest eval            # or just one folder
 
 Each folder's README has its own run commands (`python -m regdocs_store.loader`, and so on). Tests that need Postgres or Ollama skip themselves when those aren't running.
 
+## Running the whole ingestion process
+
+Turns the corpus PDFs into searchable, embedded Chunks in Postgres. Prerequisites:
+
+- the corpus PDFs in `corpus/` (see `corpus/SOURCES.md`)
+- Postgres up: `docker compose up -d` in `store/`
+- Ollama running with the embedding model pulled: `ollama pull nomic-embed-text`
+
+From the repo root, with the venv active (`.venv/Scripts/activate` on Windows):
+
+```
+python scripts/reingest.py
+```
+
+That runs three steps in order, stopping at the first failure. Each can also be run on its own:
+
+```
+python -m regdocs_ingestion       # PDFs -> Document/Chunk JSON in ingestion/output/
+python -m regdocs_store.loader    # that JSON -> Postgres
+python -m regdocs_store.embed     # embed active-generation Chunks via Ollama
+```
+
+Re-running is safe. Ingestion regenerates `ingestion/output/` (ids are deterministic, so unchanged documents produce identical files). The loader only adds: records already in Postgres are skipped, never edited or deleted, apart from each Document's pointer to its active Chunking Generation. The embed step only computes embeddings for Chunks that don't have one yet.
+
+So a re-run picks up new documents in the manifest and finishes any missing embeddings, but **edits to documents already in Postgres are not applied**. Changing a manifest entry's metadata (`title`, `publisher`, and so on), its `chunking_strategy`, the PDF, or the cleaning/chunking code updates the JSON in `ingestion/output/` only; the database keeps the first version it loaded. Re-chunking into a new Chunking Generation isn't built yet (generation 1 is hardcoded in `pipeline.py`), so to apply such a change today, reset the database (for example by removing the Docker volume in `store/`) and run the whole process again. Details in [`ingestion/README.md`](./ingestion/README.md) and [`store/README.md`](./store/README.md).
+
 ## About me
 
 Sean Fitzgerald - full-stack engineer, 25+ years, currently at Mars Capital (Dublin). [LinkedIn](https://www.linkedin.com/in/seanfitzg/)
