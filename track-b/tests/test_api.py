@@ -136,6 +136,27 @@ def test_no_retrieved_chunks_returns_the_fixed_not_found_with_200_and_two_steps(
     validate(stored, EVENT_SCHEMA)
 
 
+def test_queries_are_listed_newest_first_in_pages_of_twenty(clean_db):  # noqa: F811
+    client = _client()
+    for i in range(25):
+        client.post("/query", json={"question": f"Question {i}?"})
+
+    first = client.get("/queries").json()
+    second = client.get("/queries", params={"page": 2}).json()
+
+    assert first["total"] == 25
+    assert first["page_size"] == 20
+    assert len(first["items"]) == 20
+    assert len(second["items"]) == 5
+    assert first["items"][0]["query"] == "Question 24?"
+    assert second["items"][-1]["query"] == "Question 0?"
+    assert first["items"][0]["recorded_at"]
+
+
+def test_an_invalid_history_page_is_rejected(clean_db):  # noqa: F811
+    assert _client().get("/queries", params={"page": 0}).status_code == 422
+
+
 class _AbortingGraph:
     def invoke(self, state):
         raise ResponseError("prediction aborted, token repeat limit reached")

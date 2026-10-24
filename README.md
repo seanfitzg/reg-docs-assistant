@@ -87,6 +87,34 @@ Re-running is safe. Ingestion regenerates `ingestion/output/` (ids are determini
 
 So a re-run picks up new documents in the manifest and finishes any missing embeddings, but **edits to documents already in Postgres are not applied**. Changing a manifest entry's metadata (`title`, `publisher`, and so on), its `chunking_strategy`, the PDF, or the cleaning/chunking code updates the JSON in `ingestion/output/` only; the database keeps the first version it loaded. Re-chunking into a new Chunking Generation isn't built yet (generation 1 is hardcoded in `pipeline.py`), so to apply such a change today, reset the database (for example by removing the Docker volume in `store/`) and run the whole process again. Details in [`ingestion/README.md`](./ingestion/README.md) and [`store/README.md`](./store/README.md).
 
+## Running the API and the viewer UI
+
+Two programs run side by side: the **API** (Python, FastAPI, port 8000) does the work, and the **viewer** (React, port 5173) is a web page that talks to it. The viewer's dev server forwards anything under `/api` to the API, so the browser only ever talks to port 5173.
+
+Prerequisites: the ingestion process above has been run (Postgres has embedded Chunks), Postgres is up (`docker compose up -d` in `store/`), Ollama is running, and the chat model is pulled (`ollama pull qwen2.5:7b-instruct`).
+
+**1. Start the API** (terminal 1, repo root):
+
+```
+uv run uvicorn regdocs_track_b.api:create_default_app --factory
+```
+
+`uv run` uses the project's `.venv`. A bare `uvicorn` may resolve to a global Python install instead and fail with `ModuleNotFoundError: No module named 'regdocs_track_b'`; if you prefer a bare `uvicorn`, activate the venv first (`.venv\Scripts\activate`).
+
+Check it at `http://127.0.0.1:8000/docs`.
+
+**2. Start the UI** (terminal 2):
+
+```
+cd reg-docs-viewer
+npm install        # first time only
+npm run dev
+```
+
+Open `http://localhost:5173`. The **Query** tab runs a question and shows the answer, citations, flags and the stored Event. The **History** tab lists every question asked so far, newest first, 20 per page, each with the date it was recorded.
+
+If the UI shows `HTTP 500` or a connection error, the API isn't running or can't reach Postgres/Ollama; look at terminal 1.
+
 ## About me
 
 Sean Fitzgerald - full-stack engineer, 25+ years, currently at Mars Capital (Dublin). [LinkedIn](https://www.linkedin.com/in/seanfitzg/)
