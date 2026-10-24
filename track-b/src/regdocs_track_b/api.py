@@ -8,13 +8,13 @@
 
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from ollama import ResponseError
 from pydantic import BaseModel, Field
 from regdocs_store.db import DEFAULT_DB_URL
 from regdocs_store.embed import OllamaEmbeddingClient
 
-from regdocs_track_b.events import read_event, write_event
+from regdocs_track_b.events import list_queries, read_event, write_event
 from regdocs_track_b.graph import build_graph, run_question
 from regdocs_track_b.retriever import ChunkRetriever
 
@@ -22,6 +22,7 @@ DRAFT_MODEL = "qwen2.5:7b-instruct"
 CLASSIFIER_MODEL = "qwen2.5:7b-instruct"
 # Overridable so a different model can judge the drafter (ADR-0035).
 DEFAULT_JUDGE_MODEL = "qwen2.5:7b-instruct"
+HISTORY_PAGE_SIZE = 20
 
 
 class QueryRequest(BaseModel):
@@ -43,6 +44,19 @@ class QueryResponse(BaseModel):
     answer: str
     citations: list[CitationResponse]
     flags: list[str]
+
+
+class QueryHistoryItem(BaseModel):
+    event_id: str
+    recorded_at: str
+    query: str
+
+
+class QueryHistoryResponse(BaseModel):
+    items: list[QueryHistoryItem]
+    total: int
+    page: int
+    page_size: int
 
 
 def create_app(graph, db_url: str) -> FastAPI:
@@ -70,6 +84,15 @@ def create_app(graph, db_url: str) -> FastAPI:
         if event is None:
             raise HTTPException(status_code=404, detail="event not found")
         return event
+
+    @app.get("/queries")
+    def get_queries(page: int = Query(1, ge=1)) -> QueryHistoryResponse:
+        items, total = list_queries(
+            db_url, limit=HISTORY_PAGE_SIZE, offset=(page - 1) * HISTORY_PAGE_SIZE
+        )
+        return QueryHistoryResponse(
+            items=items, total=total, page=page, page_size=HISTORY_PAGE_SIZE
+        )
 
     return app
 

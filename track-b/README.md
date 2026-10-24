@@ -141,6 +141,7 @@ Then try it at `http://127.0.0.1:8000/docs` (FastAPI's interactive page) or:
 ```
 curl -X POST http://127.0.0.1:8000/query -H "Content-Type: application/json" -d '{"question": "What must a firm disclose?"}'
 curl http://127.0.0.1:8000/events/<event_id>
+curl "http://127.0.0.1:8000/queries?page=1"   # query history, newest first, 20 per page
 ```
 
 `STORE_DATABASE_URL` points it at a different database (default: `regdocs`). `create_app(graph, db_url)` takes an already-built graph, which is how the tests inject fakes.

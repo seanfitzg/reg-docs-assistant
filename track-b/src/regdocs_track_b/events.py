@@ -30,6 +30,34 @@ def read_event(event_id: str, db_url: str) -> dict | None:
     return row[0]
 
 
+def list_queries(db_url: str, limit: int, offset: int) -> tuple[list[dict], int]:
+    """Return one page of QueryAnswered Events, newest first, and the total count.
+
+    Each row is {"event_id", "recorded_at", "query"}; the query is the stored
+    (already Redacted) text.
+    """
+    with psycopg.connect(db_url) as conn:
+        total = conn.execute(
+            "SELECT count(*) FROM events WHERE event_type = 'QueryAnswered'"
+        ).fetchone()[0]
+        rows = conn.execute(
+            "SELECT id, recorded_at, payload->>'query' FROM events"
+            " WHERE event_type = 'QueryAnswered'"
+            " ORDER BY recorded_at DESC, id LIMIT %s OFFSET %s",
+            (limit, offset),
+        ).fetchall()
+    items = []
+    for event_id, recorded_at, query in rows:
+        items.append(
+            {
+                "event_id": event_id,
+                "recorded_at": recorded_at.isoformat(),
+                "query": query,
+            }
+        )
+    return items, total
+
+
 def write_event(event: dict, db_url: str) -> None:
     """Validate `event` and append it to the events table.
 
