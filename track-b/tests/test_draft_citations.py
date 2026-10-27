@@ -4,7 +4,6 @@
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-
 from regdocs_track_b.graph import build_graph
 from regdocs_track_b.testing import (
     CHUNKS,

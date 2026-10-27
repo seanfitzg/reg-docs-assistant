@@ -6,7 +6,6 @@ from pathlib import Path
 
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from ollama import ResponseError
-
 from regdocs_schema.testing import load_json, validate
 from regdocs_track_b.graph import answer_question, build_graph
 from regdocs_track_b.testing import (

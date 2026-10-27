@@ -30,6 +30,7 @@ from regdocs_store.embed import EMBEDDING_MODEL  # the retrieve Step's model
 
 from regdocs_track_b.injection import reads_as_injection
 from regdocs_track_b.judge import confidence_of, flags_for, parse_verdicts
+from regdocs_track_b.models import cost_of
 from regdocs_track_b.pii import PiiMatch, detect_pii, redact_answer, redact_query
 
 # What a halted run answers with. Fixed in code, never model-generated: a
@@ -48,8 +49,8 @@ DEFAULT_INJECTION_PROMPT_PATH = (
 )
 DEFAULT_VERIFY_PROMPT_PATH = Path(__file__).parents[2] / "prompts" / "verify-v1.txt"
 
-# Local-model Steps cost nothing; the first paid model arrives with the real
-# draft.
+# Steps default to cost 0 (local models, retrieve); a paid model's Step passes
+# its own cost (models.cost_of).
 LOCAL_COST = 0
 
 
@@ -172,7 +173,13 @@ def build_graph(
         if not isinstance(verdict.content, str) or reads_as_injection(verdict.content):
             flags.append("possible_prompt_injection")
             update["answer"] = REFUSAL_MESSAGE
-        step = _step(clock, started, "classify", classifier_model_name)
+        step = _step(
+            clock,
+            started,
+            "classify",
+            classifier_model_name,
+            cost=cost_of(verdict, classifier_model_name),
+        )
         update["flags"] = flags
         update["steps"] = [step]
         return update
@@ -207,7 +214,13 @@ def build_graph(
         response = chat_model.invoke(
             _draft_prompt(draft_template, state["question"], state["chunks"])
         )
-        step = _step(clock, started, "draft", draft_model_name)
+        step = _step(
+            clock,
+            started,
+            "draft",
+            draft_model_name,
+            cost=cost_of(response, draft_model_name),
+        )
         raw_answer = response.content
         answer = ""
         citations = []
@@ -238,7 +251,14 @@ def build_graph(
         if reply is not None and isinstance(reply.content, str):
             verdicts = parse_verdicts(reply.content)
         confidence = confidence_of(verdicts)
-        step = _step(clock, started, "verify", judge_model_name, confidence=confidence)
+        step = _step(
+            clock,
+            started,
+            "verify",
+            judge_model_name,
+            confidence=confidence,
+            cost=cost_of(reply, judge_model_name),
+        )
         return {"flags": flags_for(confidence), "steps": [step]}
 
     graph = StateGraph(PipelineState)

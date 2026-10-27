@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-
 from regdocs_schema.testing import load_json, validate
 from regdocs_store.embed import EMBEDDING_MODEL
 from regdocs_track_b.graph import answer_question, build_graph

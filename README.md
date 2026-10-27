@@ -96,10 +96,12 @@ Prerequisites: the ingestion process above has been run (Postgres has embedded C
 **1. Start the API** (terminal 1, repo root):
 
 ```
-uv run uvicorn regdocs_track_b.api:create_default_app --factory
+uv run python -m uvicorn regdocs_track_b.api:create_default_app --factory
 ```
 
 `uv run` uses the project's `.venv`. A bare `uvicorn` may resolve to a global Python install instead and fail with `ModuleNotFoundError: No module named 'regdocs_track_b'`; if you prefer a bare `uvicorn`, activate the venv first (`.venv\Scripts\activate`).
+
+Why `python -m uvicorn` rather than `uv run uvicorn`: on Windows machines with Smart App Control or an Application Control policy, the generated `.venv\Scripts\uvicorn.exe` launcher is unsigned and gets blocked (`An Application Control policy has blocked this file. (os error 4551)`). Running it as a module goes through the trusted `python.exe` instead. The same applies to any other console script (`uv run python -m pytest`).
 
 Check it at `http://127.0.0.1:8000/docs`.
 

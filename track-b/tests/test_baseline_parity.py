@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from regdocs_eval.match import case_hit
 from regdocs_store.db import DEFAULT_DB_URL
 from regdocs_store.embed import OllamaEmbeddingClient

@@ -7,7 +7,6 @@ import psycopg
 from fastapi.testclient import TestClient
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from ollama import ResponseError
-
 from regdocs_schema.testing import load_json, validate
 from regdocs_store.testing import (
     DB_URL,

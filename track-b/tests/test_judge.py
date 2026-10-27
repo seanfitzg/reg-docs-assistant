@@ -2,7 +2,6 @@
 # per-claim lines, computing Confidence in code, and turning it into Flags.
 
 import pytest
-
 from regdocs_track_b.judge import (
     LOW_CONFIDENCE_THRESHOLD,
     confidence_of,

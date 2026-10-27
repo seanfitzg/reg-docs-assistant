@@ -3,7 +3,6 @@
 # eval/tests/test_run_eval.py for why that makes ranking exactly predictable).
 
 import psycopg
-
 from regdocs_store.embed import EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, vector_literal
 from regdocs_store.testing import (
     DB_URL,

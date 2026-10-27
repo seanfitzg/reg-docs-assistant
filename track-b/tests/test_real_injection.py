@@ -9,7 +9,6 @@ import os
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_ollama import ChatOllama
-
 from regdocs_track_b.graph import REFUSAL_MESSAGE, answer_question, build_graph
 from regdocs_track_b.testing import CHUNKS, FakeRetriever, safe_judge
 
