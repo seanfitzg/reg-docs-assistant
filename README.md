@@ -21,16 +21,25 @@ Same architecture and event schema, built once in .NET and once in Python, both 
 - **[`/corpus`](./corpus)** - 20 public Central Bank of Ireland / CCPC documents, fully ingested (PDFs not committed; see `corpus/SOURCES.md`).
 - **[`/store`](./store)** - Postgres + pgvector (via docker-compose) holding every ingested `Document`, `Chunking Generation` and `Chunk`, plus a vector embedding per active-generation Chunk. `loader.py` loads ingestion's output; `embed.py` computes embeddings with a local [Ollama](https://ollama.com) model (`nomic-embed-text`, 768 dimensions) into a `chunk_embeddings` table keyed by Chunk and model. Both are safe to re-run, and both are covered by integration tests against an isolated test database.
 - **[`/eval`](./eval)** - the retrieval eval set: hand-written Eval Cases labelled by Gold Locator (`document_id` + locator), a JSON Schema for them, a test that every label exists in the ingested Chunks, and a keyword-search helper for writing cases. The harness that scores retrieval against it is next.
+- **[`/track-b`](./track-b)** - the Python query pipeline (FastAPI, LangChain, LangGraph), built end to end:
+  - a custom LangChain retriever over the stored embeddings;
+  - a four-Step LangGraph graph, classify -> retrieve -> draft -> verify, producing numbered Citations resolved in code;
+  - PII detection with Redaction, and a prompt-injection classifier, with both halts (injection, no Chunks retrieved);
+  - a per-claim verify judge whose Confidence is computed in code, not by the model;
+  - an append-only `events` table, with an immutability trigger, holding every Event;
+  - `POST /query` and `GET /events/{id}`, plus `GET /queries`, the paged history listing the viewer uses;
+  - the chat provider chosen at startup with `LLM_PROVIDER`: local Ollama (default) or OpenAI. Embeddings stay local (ADR-0036), and each Step records its real cost.
+- **[`/reg-docs-viewer`](./reg-docs-viewer)** - a React/Vite UI over the API: a Query tab (answer, clickable citation markers, flags, the stored Event), and a History tab listing past questions with an event-detail popup.
 - **[`/learning`](./learning)** - a self-contained HTML writeup per issue explaining what was built and the concepts behind it.
-- **30 ADRs** in [`docs/adr/`](./docs/adr).
+- **36 ADRs** in [`docs/adr/`](./docs/adr).
 
-Not built yet: retrieval itself (embedding a question, nearest-neighbour search, a vector-similarity index), the agent pipeline (classify -> retrieve -> draft -> verify), the audit-event store, and both application tracks. This section will move as that lands.
+Not built yet: Track A (the .NET twin), replay and drift checks, human-override events, hybrid search, an eval of the full pipeline's answer quality (only retrieval is scored, and the verify judge's verdict quality is unmeasured), and a run of the eval set against OpenAI. This section will move as that lands.
 
 ## How this was built
 
 - Design decisions get argued out with Claude before code is written, then recorded as ADRs - the reasoning outlives the conversation that produced it.
 - Every piece of work is a GitHub issue, its own branch, its own PR. See [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md).
-- [`CLAUDE.md`](./CLAUDE.md) sets how this project wants to be worked on: explain AI/ML concepts rather than assume them, use prior expertise (event sourcing, CQRS, regulatory reporting) as a teaching aid, comment Python more heavily than usual since it's new territory.
+- [`CLAUDE.md`](./CLAUDE.md) sets how this project wants to be worked on: explain AI/ML concepts rather than assume them, use prior expertise (event sourcing, CQRS, regulatory reporting) as a teaching aid, comment Python tersely (the non-obvious why only) and explain concepts in conversation instead.
 - The evidence is the commit history and the ADRs themselves - read `docs/adr/` in order to watch the model get sharper issue by issue.
 
 ## Layout
@@ -40,6 +49,8 @@ Not built yet: retrieval itself (embedding a question, nearest-neighbour search,
 /ingestion   pipeline turning corpus PDFs into Document/Chunk records
 /store       Postgres + pgvector: loads Documents/Chunks, embeds Chunks
 /eval        retrieval eval set (hand-written Eval Cases) + authoring tools
+/track-b     Python query pipeline: LangGraph graph, FastAPI API, event store
+/reg-docs-viewer  React UI: Query and History tabs
 /corpus      source PDFs (not committed) + manifest
 /learning    per-issue HTML writeups of what was built and why
 /docs/adr    architecture decision records
@@ -47,7 +58,7 @@ Not built yet: retrieval itself (embedding a question, nearest-neighbour search,
 CONTEXT.md   domain glossary
 ```
 
-Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md), [`store/README.md`](./store/README.md) and [`eval/README.md`](./eval/README.md).
+Each subdirectory has its own README - start with [`schema/README.md`](./schema/README.md), [`ingestion/README.md`](./ingestion/README.md), [`store/README.md`](./store/README.md) and [`eval/README.md`](./eval/README.md) and [`track-b/README.md`](./track-b/README.md).
 
 ## Python workspace
 
@@ -93,6 +104,8 @@ Two programs run side by side: the **API** (Python, FastAPI, port 8000) does the
 
 Prerequisites: the ingestion process above has been run (Postgres has embedded Chunks), Postgres is up (`docker compose up -d` in `store/`), Ollama is running, and the chat model is pulled (`ollama pull qwen2.5:7b-instruct`).
 
+To use OpenAI for the chat Steps instead, set `LLM_PROVIDER=openai` and `OPENAI_API_KEY` before starting the API (see ADR-0036). Retrieval still uses local Ollama embeddings. The default is Ollama.
+
 **1. Start the API** (terminal 1, repo root):
 
 ```
@@ -115,7 +128,7 @@ npm run dev
 
 Open `http://localhost:5173`. The **Query** tab runs a question and shows the answer, citations, flags and the stored Event. The **History** tab lists every question asked so far, newest first, 20 per page, each with the date it was recorded.
 
-If the UI shows `HTTP 500` or a connection error, the API isn't running or can't reach Postgres/Ollama; look at terminal 1.
+If the UI shows a connection error, the API isn't running; look at terminal 1. An HTTP 503 means the API can't reach Postgres (is Docker up?), and a 502 means the chat provider failed (Ollama aborted, or OpenAI refused the key or ran out of credit).
 
 ## About me
 
