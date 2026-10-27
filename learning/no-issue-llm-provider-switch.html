@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LLM provider switch: Ollama or OpenAI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-raised: #f6f7f9;
+    --bg-code: #f0f1f4;
+    --text: #1a1d23;
+    --text-dim: #565d6b;
+    --border: #dfe2e8;
+    --accent: #2f5fd6;
+    --accent-bg: #eaf0ff;
+    --good: #1d7a4c;
+    --good-bg: #e8f7ee;
+    --bug: #b3261e;
+    --bug-bg: #fdeceb;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --bg-raised: #1b1e24;
+      --bg-code: #1e2129;
+      --text: #e7e9ee;
+      --text-dim: #9aa1ad;
+      --border: #2b2f38;
+      --accent: #7ea2ff;
+      --accent-bg: #1c2740;
+      --good: #6fd39a;
+      --good-bg: #14261d;
+      --bug: #ff8a80;
+      --bug-bg: #2c1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --bg-raised: #1b1e24;
+    --bg-code: #1e2129;
+    --text: #e7e9ee;
+    --text-dim: #9aa1ad;
+    --border: #2b2f38;
+    --accent: #7ea2ff;
+    --accent-bg: #1c2740;
+    --good: #6fd39a;
+    --good-bg: #14261d;
+    --bug: #ff8a80;
+    --bug-bg: #2c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.7rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 3rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+  p { margin: 0.9rem 0; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-code);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .box {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+  }
+  .concept { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+  .concept .label { color: var(--accent); }
+  .did { background: var(--bg-raised); }
+  .bug { background: var(--bug-bg); border-color: color-mix(in srgb, var(--bug) 35%, var(--border)); }
+  .bug .label { color: var(--bug); }
+  .verified { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, var(--border)); }
+  .verified .label { color: var(--good); }
+  .label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .box p:first-child { margin-top: 0; }
+  .box p:last-child { margin-bottom: 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--text-dim); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1.25rem 0;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+  .flow .step {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+  }
+  .flow .arrow { color: var(--text-dim); }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Switching the chat model between Ollama and OpenAI</h1>
+<p class="subtitle">No issue number: branch <code>llm-provider-switch</code>, made from a question &mdash; "how do I use my OpenAI credit instead of the local model?"</p>
+
+<h2>What the project is</h2>
+<p>RegDocs Assistant answers questions about regulatory documents. You ask "how much notice must a firm give?" and it finds the relevant passages, writes an answer that cites them, and has a second model check the answer against those passages. Every run is stored as an <strong>Event</strong>: an audit record of the question, the answer and each Step taken.</p>
+
+<h2>The concept: two different kinds of model</h2>
+<div class="box concept"><span class="label">Concept</span>
+<p>The app uses language models for two different jobs, and they are not interchangeable.</p>
+<p><strong>Embedding model</strong> (<code>nomic-embed-text</code>): turns text into a list of 768 numbers, a vector that captures meaning. Chunks are embedded once and stored; a question is embedded at query time, and the database finds the stored vectors nearest to it. This is the "R" (retrieval) in RAG, retrieval-augmented generation: look up relevant text first, then let a model write an answer from it.</p>
+<p><strong>Chat model</strong> (<code>qwen2.5:7b-instruct</code>): reads text and writes text. Here it plays three roles: an injection classifier (is this question an attack?), the drafter, and the judge that checks the draft.</p>
+<p>.NET analogy: the embedding model is like the hash function behind an index. You must use the same function to write and to look up, or nothing matches. The chat model is like a service behind an interface: any implementation will do.</p></div>
+
+<h2>Where things stood</h2>
+<p>All three chat roles were hard-wired to <code>ChatOllama</code>, a model running on your own PC. That is free but slow, and a 7B model is a weak judge. You have about &euro;5 of OpenAI API credit and wanted to use it.</p>
+
+<h2>The problem and the core idea</h2>
+<p>Swapping the chat models is easy, because LangGraph only sees a common "chat model" interface. Swapping the <em>embeddings</em> is not: the database column is <code>vector(768)</code>, and OpenAI's embeddings are a different size in a different "space". You would have to re-embed everything and re-measure retrieval quality. So the idea is a <strong>hybrid</strong>: retrieval stays local, only the chat roles can move to OpenAI, and one setting chooses.</p>
+<pre><code>$env:LLM_PROVIDER = "openai"      # or "ollama" (the default)
+$env:OPENAI_API_KEY = "sk-..."
+uvicorn regdocs_track_b.api:create_default_app --factory</code></pre>
+<p>Or put those two lines in a <code>.env</code> file at the repo root (it is gitignored, so it is never committed). The app reads it at startup using <code>python-dotenv</code>; a variable already set in your terminal wins over the file. Your key lives in one local file instead of being retyped each session.</p>
+
+<h2>What the code now does</h2>
+<p><strong>1. A factory picks the model.</strong> <code>models.py</code> reads <code>LLM_PROVIDER</code> once at startup and builds the right chat object. Bad settings fail immediately with a readable message, not on the first question:</p>
+<pre><code>LLM_PROVIDER=carrier-pigeon  -> ValueError: unknown LLM_PROVIDER 'carrier-pigeon'; expected one of: ollama, openai
+LLM_PROVIDER=openai, no key  -> ValueError: LLM_PROVIDER=openai needs OPENAI_API_KEY to be set
+JUDGE_MODEL=qwen2.5:7b-instruct (with openai) -> ValueError: no price for OpenAI model 'qwen2.5:7b-instruct' ...</code></pre>
+<p>The last one matters: a <code>JUDGE_MODEL</code> left over from an Ollama session would otherwise send a nonsense model name to OpenAI, and you would find out only after paying for the draft call.</p>
+
+<p><strong>2. Cost is real now.</strong> Every Step used to be stamped <code>cost: 0</code>. For a paid model that would be a false entry in an append-only audit table. Each OpenAI reply carries token counts (<code>usage_metadata</code>), so <code>cost_of</code> multiplies them by a hand-kept price table (USD per million tokens; input and output are priced differently):</p>
+<pre><code>1,200 input tokens x $0.15/M  +  300 output tokens x $0.60/M  =  $0.00036</code></pre>
+<div class="box concept"><span class="label">Concept: tokens</span><p>Models read and bill in <em>tokens</em>, pieces of text roughly three-quarters of a word long. Output tokens cost more than input tokens. Tokens are not embeddings: embeddings are the vectors above.</p></div>
+<p>Local Ollama models are not in the table, so they still cost 0. The OpenAI provider refuses a model that is not in the table, so a paid Step can never record 0 by accident. The prices are typed in by hand, so check them against OpenAI's pricing page.</p>
+
+<p><strong>3. Provider failures become a 502.</strong> If OpenAI rejects the key, the credit runs out, or you are rate-limited, the OpenAI library raises an <code>APIError</code>. Before, only Ollama's <code>ResponseError</code> was turned into HTTP 502 ("the model server failed"); an OpenAI error would have been a 500, which looks like a bug in our own code. <code>PROVIDER_ERRORS</code> now covers both.</p>
+<div class="box did"><span class="label">A deliberate asymmetry</span><p>The verify Step still tolerates only Ollama's abort (a small model looping forever). An OpenAI error in the judge fails the whole request. That is on purpose: an exhausted quota should be loud, not disguised as a low-confidence answer. It does mean the draft call was already paid for. See ADR-0036.</p></div>
+
+<h2>Files changed</h2>
+<table>
+<tr><th>File</th><th>What changed</th></tr>
+<tr><td><code>track-b/src/regdocs_track_b/models.py</code> (new)</td><td>Provider factory, default model per provider, price table, <code>cost_of</code>, <code>PROVIDER_ERRORS</code></td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/api.py</code></td><td><code>create_default_app</code> uses the factory; <code>/query</code> catches both providers' errors</td></tr>
+<tr><td><code>track-b/src/regdocs_track_b/graph.py</code></td><td>classify, draft and verify Steps record <code>cost_of(reply, model)</code></td></tr>
+<tr><td><code>track-b/pyproject.toml</code>, <code>uv.lock</code></td><td>Adds <code>langchain-openai</code>, <code>openai</code> and <code>python-dotenv</code></td></tr>
+<tr><td><code>track-b/tests/test_provider_pipeline.py</code> (new)</td><td>Tests with no fakes: the real app, real calls</td></tr>
+<tr><td><code>docs/adr/0036-...md</code>, <code>track-b/README.md</code></td><td>The decision, and how to run it</td></tr>
+</table>
+
+<h2>About the tests</h2>
+<p>You asked for no mocks, only tests of the complete pipeline. So these tests build the same app uvicorn builds and send real requests. That has a cost: the happy-path runs need Ollama, Postgres and (for OpenAI) your key plus a fraction of a cent, so they are opt-in. Five cheap checks run by default (bad provider, missing key, unpriced model, and two for the <code>.env</code> file). The bad-key test is a <em>real</em> call to OpenAI that is refused for free.</p>
+<div class="box bug"><span class="label">Not yet run</span><p>The two happy-path tests were written but not run when this was built, because Ollama, Docker and an API key were not available in that session. Run them once before trusting the cost numbers.</p></div>
+
+<h2>Try it yourself</h2>
+<p>The one test that best teaches the process is the bad-key test: it makes a genuine network call, the failure comes from OpenAI itself, and the app turns it into a 502.</p>
+<pre><code>$env:RUN_REAL_OPENAI = "1"
+python -m pytest track-b/tests/test_provider_pipeline.py::test_openai_rejecting_the_key_is_a_502_not_a_500</code></pre>
+<p>It needs only the internet: no Ollama, Postgres or credit, because it fails at the first Step (classify). To poke at it, change <code>PROVIDER_ERRORS = (ResponseError, APIError)</code> in <code>models.py</code> to <code>(ResponseError,)</code> and rerun. It now fails with a 500, which is what a dead key would have produced before this change. Put it back afterwards.</p>
+<p>For a no-dependency one, run <code>python -m pytest track-b/tests/test_provider_pipeline.py::test_an_openai_model_with_no_price_stops_the_app_starting</code>. It shows the startup check; delete the price check in <code>build_chat_model</code> and it fails. These two were chosen over the rest because each shows a failure caught early and clearly rather than late and confusingly. Once Ollama, Postgres and your key are set up, the two happy-path tests are the ones to run (<code>RUN_REAL_PIPELINE=1</code>, plus <code>RUN_REAL_OPENAI=1</code> and <code>OPENAI_API_KEY</code> for the OpenAI one).</p>
+
+<h2>Summary</h2>
+<p>One environment variable, <code>LLM_PROVIDER</code>, now chooses whether the classifier, drafter and judge run on local Ollama or on OpenAI, while embeddings and retrieval stay local because the stored vectors are tied to one embedding model. Paid Steps record their estimated dollar cost, unpriced models are rejected at startup, and OpenAI failures return a 502 instead of a 500. The prompts were tuned on the local model, so treat the first OpenAI run as a new baseline.</p>
+</main>
+</body>
+</html>

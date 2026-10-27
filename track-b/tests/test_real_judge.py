@@ -8,7 +8,6 @@ import os
 
 import pytest
 from langchain_ollama import ChatOllama
-
 from regdocs_track_b.graph import answer_question, build_graph
 from regdocs_track_b.testing import (
     FakeRetriever,

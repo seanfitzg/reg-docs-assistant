@@ -8,7 +8,6 @@ import jsonschema
 import psycopg
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-
 from regdocs_schema.testing import load_json
 from regdocs_store.testing import (
     DB_URL,

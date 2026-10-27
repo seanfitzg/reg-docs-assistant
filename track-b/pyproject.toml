@@ -10,6 +10,12 @@ dependencies = [
     "langgraph>=1.0",
     # ChatOllama, the real chat model (opt-in tests; local, so cost 0).
     "langchain-ollama>=1.0",
+    # ChatOpenAI, the hosted alternative chosen with LLM_PROVIDER=openai.
+    "langchain-openai>=1.0",
+    # models.py catches its APIError directly.
+    "openai>=2.0",
+    # Reads OPENAI_API_KEY and LLM_PROVIDER from a .env file (api.py).
+    "python-dotenv>=1.0",
     # The retriever reuses store's db and embed modules.
     "regdocs-store",
     # The tests validate Events against schema's Event schema, and the

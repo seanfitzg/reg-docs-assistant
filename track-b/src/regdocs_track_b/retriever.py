@@ -15,7 +15,6 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from pydantic import SkipValidation
-
 from regdocs_store.db import DEFAULT_DB_URL
 from regdocs_store.embed import (
     EMBEDDING_MODEL,

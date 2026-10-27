@@ -2,7 +2,6 @@
 # (issue #43, ADR-0008). Pure functions, so nothing needs to be running.
 
 import pytest
-
 from regdocs_track_b.pii import (
     detect_pii,
     luhn_valid,

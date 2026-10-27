@@ -12,7 +12,7 @@ for document in retriever.invoke("What must a firm disclose?"):
 
 `k` is configuration, default 5 (`DEFAULT_K`). The search is pure vector search, so it reproduces the baseline run report in `eval/runs` (ADR-0030). Hybrid search is a later, separately measured change.
 
-`graph.py` is a LangGraph state graph with the four fixed Steps, classify → retrieve → draft → verify, and `answer_question(graph, question)` returns an Event that validates against `schema/event.schema.json`. classify runs the PII rules and an injection classifier described below (its Step records the classifier's model name); retrieve uses the retriever; draft prompts an injected chat model from the versioned file `prompts/draft-v1.txt`, which lists the retrieved Chunks as numbered blocks `[1]`, `[2]`, … in rank order. The model cites by number, and code resolves each `[n]` to the real Chunk's document id and locator (ADR-0010). A number with no matching Chunk is dropped from the Citations and stripped from the stored answer. Citations live in the graph's final state (`final["citations"]`), not in the Event, which the shared schema has no field for. verify asks a judge model for a verdict per claim (described below). Each node is timed with a monotonic clock and local-model Steps record cost 0.
+`graph.py` is a LangGraph state graph with the four fixed Steps, classify → retrieve → draft → verify, and `answer_question(graph, question)` returns an Event that validates against `schema/event.schema.json`. classify runs the PII rules and an injection classifier described below (its Step records the classifier's model name); retrieve uses the retriever; draft prompts an injected chat model from the versioned file `prompts/draft-v1.txt`, which lists the retrieved Chunks as numbered blocks `[1]`, `[2]`, … in rank order. The model cites by number, and code resolves each `[n]` to the real Chunk's document id and locator (ADR-0010). A number with no matching Chunk is dropped from the Citations and stripped from the stored answer. Citations live in the graph's final state (`final["citations"]`), not in the Event, which the shared schema has no field for. verify asks a judge model for a verdict per claim (described below). Each node is timed with a monotonic clock. Local-model Steps record cost 0 and an OpenAI Step records its estimated cost in USD.
 
 ## Verify and Confidence
 
@@ -24,8 +24,10 @@ verify sends the drafted answer and the numbered Chunks to a judge model with a 
 
 ```python
 event = answer_question(graph, "How much notice?")
-event["steps"][3]  # {"step_type": "verify", "model": "qwen2.5:7b-instruct", "confidence": 0.5, ...}
-event["flags"]     # ["low_confidence"]
+event["steps"][
+    3
+]  # {"step_type": "verify", "model": "qwen2.5:7b-instruct", "confidence": 0.5, ...}
+event["flags"]  # ["low_confidence"]
 ```
 
 A reply with no readable claim lines gives Confidence 0.0, so it raises both Flags: an answer that couldn't be checked is not treated as checked. Lines are read leniently (bullets, numbering and capitals are accepted), because small models don't always follow a format to the letter.
@@ -34,7 +36,7 @@ A reply with no readable claim lines gives Confidence 0.0, so it raises both Fla
 
 - The judge writes its own list of claims, so it can leave out a claim it would have had to mark unsupported. Splitting the answer into claims in code would stop that, at the cost of crude sentence boundaries.
 - The threshold 0.8 is untuned. With one claim in five unsupported the answer passes; with two in five it is flagged.
-- The judge is a 7B local model judging a 7B local model's answer (by default the same model; set `JUDGE_MODEL` to an Ollama model name to use another, for the API and for `test_real_judge.py`). It is a signal for a human to look at, not a guarantee, and a supported answer can still be wrong (a superseded source is the usual case).
+- The judge is a 7B local model judging a 7B local model's answer (by default the same model; set `JUDGE_MODEL` to another model name from the chosen provider to use another, for the API and for `test_real_judge.py`). It is a signal for a human to look at, not a guarantee, and a supported answer can still be wrong (a superseded source is the usual case).
 - Only the judge's output format is tested against a real model (`RUN_REAL_JUDGE=1 python -m pytest track-b/tests/test_real_judge.py`, needs Ollama). How good its verdicts are is not measured yet.
 
 ## Injection classifier and the two halts
@@ -144,6 +146,29 @@ curl http://127.0.0.1:8000/events/<event_id>
 curl "http://127.0.0.1:8000/queries?page=1"   # query history, newest first, 20 per page
 ```
 
+### Choosing the chat model: Ollama or OpenAI
+
+`LLM_PROVIDER` picks the model behind classify, draft and verify (ADR-0036). It is read at startup, so restart to switch.
+
+```
+uvicorn regdocs_track_b.api:create_default_app --factory              # ollama (default)
+$env:OPENAI_API_KEY = "sk-..."; $env:LLM_PROVIDER = "openai"          # PowerShell
+uvicorn regdocs_track_b.api:create_default_app --factory              # gpt-4o-mini
+```
+
+Settings can also live in a `.env` file at the repo root (gitignored, never committed), read when the app starts:
+
+```
+OPENAI_API_KEY=sk-...
+LLM_PROVIDER=openai
+```
+
+The search starts at the directory you run `uvicorn` from and walks upwards. A variable already set in the environment wins over the file. Only the app loads it: pytest does not, so a key in `.env` does not switch on the opt-in OpenAI tests.
+
+Embeddings always run on local Ollama (`nomic-embed-text`), so Ollama and Postgres must be up either way; only the question and the retrieved Chunks are sent to OpenAI. A paid Step records its estimated USD cost from a hand-kept price table in `models.py`. If OpenAI refuses the key or the credit runs out, `/query` returns 502 with `model error: ...`. `JUDGE_MODEL` must name a model the chosen provider serves. The prompts were tuned on `qwen2.5:7b-instruct`, so treat the first OpenAI run as a new baseline.
+
+`test_provider_pipeline.py` has no fakes: two startup checks run by default, and the rest are opt-in. `RUN_REAL_OPENAI=1` adds a real call with a bad key (free, network only) that must be a 502; with `OPENAI_API_KEY` and `RUN_REAL_PIPELINE=1` as well it runs the OpenAI happy path, and `RUN_REAL_PIPELINE=1` alone runs the Ollama one. The happy paths store a real Event.
+
 `STORE_DATABASE_URL` points it at a different database (default: `regdocs`). `create_app(graph, db_url)` takes an already-built graph, which is how the tests inject fakes.
 
 ## Layout
@@ -151,7 +176,8 @@ curl "http://127.0.0.1:8000/queries?page=1"   # query history, newest first, 20 
 Python modules live in `src/regdocs_track_b/` (`graph.py`, `pii.py`, `injection.py`, `judge.py`, `events.py`, `api.py`, `retriever.py`, and `testing.py`, the fakes the graph tests share), tests in `tests/`; `prompts/` stays at the top level.
 
 - `graph.py` — the four-node graph, Citation resolution and Event assembly.
-- `api.py` — the FastAPI app: `create_app` (injectable, used by tests) and `create_default_app` (real local models, used by uvicorn).
+- `api.py` — the FastAPI app: `create_app` (injectable, used by tests) and `create_default_app` (the real models for `LLM_PROVIDER`, used by uvicorn).
+- `models.py` — the chat-model factory, per-provider defaults, provider error types and `cost_of`.
 - `events.py` — `write_event` (schema validation, then the append-only insert) and `read_event`.
 - `judge.py` — reads the judge's per-claim lines and computes Confidence and the verify Flags.
 - `injection.py` — reads the classifier's YES/NO verdict, failing closed.

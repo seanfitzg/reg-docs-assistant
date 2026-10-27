@@ -8,21 +8,27 @@
 
 import os
 
-from fastapi import FastAPI, HTTPException, Query
-from ollama import ResponseError
+import psycopg
+from dotenv import find_dotenv, load_dotenv
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+from psycopg.conninfo import make_conninfo
 from pydantic import BaseModel, Field
 from regdocs_store.db import DEFAULT_DB_URL
 from regdocs_store.embed import OllamaEmbeddingClient
 
 from regdocs_track_b.events import list_queries, read_event, write_event
 from regdocs_track_b.graph import build_graph, run_question
+from regdocs_track_b.models import (
+    DEFAULT_MODELS,
+    PROVIDER_ERRORS,
+    build_chat_model,
+    provider_from_env,
+)
 from regdocs_track_b.retriever import ChunkRetriever
 
-DRAFT_MODEL = "qwen2.5:7b-instruct"
-CLASSIFIER_MODEL = "qwen2.5:7b-instruct"
-# Overridable so a different model can judge the drafter (ADR-0035).
-DEFAULT_JUDGE_MODEL = "qwen2.5:7b-instruct"
 HISTORY_PAGE_SIZE = 20
+DB_CONNECT_TIMEOUT_SECONDS = 5
 
 
 class QueryRequest(BaseModel):
@@ -62,13 +68,21 @@ class QueryHistoryResponse(BaseModel):
 def create_app(graph, db_url: str) -> FastAPI:
     app = FastAPI(title="RegDocs Assistant (Track B)")
 
+    @app.exception_handler(psycopg.OperationalError)
+    def database_unavailable(request: Request, error: psycopg.OperationalError):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "database unavailable: is Postgres (docker) running?"},
+        )
+
     # Plain `def`, not `async def`: the graph blocks.
     @app.post("/query")
     def query(request: QueryRequest) -> QueryResponse:
         try:
             event, citations = run_question(graph, request.question)
-        except ResponseError as error:
-            # The model server failed (e.g. a looping model aborted by Ollama).
+        except PROVIDER_ERRORS as error:
+            # The model server failed (e.g. a looping model aborted by Ollama,
+            # or OpenAI out of credit).
             raise HTTPException(status_code=502, detail=f"model error: {error}")
         write_event(event, db_url)
         return QueryResponse(
@@ -98,21 +112,27 @@ def create_app(graph, db_url: str) -> FastAPI:
 
 
 def create_default_app() -> FastAPI:
-    # Imported here so importing api.py (the tests do) doesn't need
-    # langchain-ollama's model client until the real app is built.
-    from langchain_ollama import ChatOllama
-
-    db_url = os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL)
-    judge_model = os.environ.get("JUDGE_MODEL") or DEFAULT_JUDGE_MODEL
+    # Searches up from the working directory (the repo root under uvicorn).
+    # Never overrides a variable already set in the environment.
+    load_dotenv(find_dotenv(usecwd=True))
+    # Without a timeout, a database that accepts the connection but never
+    # answers (Docker stopped) leaves the request hanging.
+    db_url = make_conninfo(
+        os.environ.get("STORE_DATABASE_URL", DEFAULT_DB_URL),
+        connect_timeout=DB_CONNECT_TIMEOUT_SECONDS,
+    )
+    provider = provider_from_env()
+    model_name = DEFAULT_MODELS[provider]
+    judge_model = os.environ.get("JUDGE_MODEL") or model_name
     graph = build_graph(
         retriever=ChunkRetriever(
             db_url=db_url, embedding_client=OllamaEmbeddingClient()
         ),
-        chat_model=ChatOllama(model=DRAFT_MODEL, temperature=0),
-        draft_model_name=DRAFT_MODEL,
-        classifier_model=ChatOllama(model=CLASSIFIER_MODEL, temperature=0),
-        classifier_model_name=CLASSIFIER_MODEL,
-        judge_model=ChatOllama(model=judge_model, temperature=0),
+        chat_model=build_chat_model(provider, model_name),
+        draft_model_name=model_name,
+        classifier_model=build_chat_model(provider, model_name),
+        classifier_model_name=model_name,
+        judge_model=build_chat_model(provider, judge_model),
         judge_model_name=judge_model,
     )
     return create_app(graph, db_url)
