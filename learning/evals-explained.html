@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evals Explained</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --fg: #1f2328; --muted: #5b6470; --card: #ffffff; --line: #e3e0d8;
+    --accent: #1f6feb; --good: #1a7f37; --bad: #c0392b; --warn: #9a6700;
+    --callout: #eef4ff; --code-bg: #f1efe9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --fg: #e6e6e6; --muted: #9aa3ad; --card: #1d2024; --line: #30343a;
+      --accent: #6aa5ff; --good: #4cc26b; --bad: #ff7b6b; --warn: #e3b341;
+      --callout: #1b2638; --code-bg: #25282d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 17px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.4rem; margin: 48px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.1rem; margin: 24px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .88em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .callout { background: var(--callout); border-left: 4px solid var(--accent); padding: 12px 16px;
+    border-radius: 6px; margin: 16px 0; }
+  .callout b.t { display: block; color: var(--accent); font-size: .8rem; letter-spacing: .06em;
+    text-transform: uppercase; margin-bottom: 2px; }
+  .callout p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: .93rem; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .wrap { overflow-x: auto; }
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+  .step b { color: var(--accent); }
+  .arrow { text-align: center; color: var(--muted); line-height: 1.2; padding: 2px 0; }
+  .hit { color: var(--good); font-weight: 600; } .miss { color: var(--bad); font-weight: 600; }
+  .bar { display: inline-block; height: 10px; border-radius: 3px; background: var(--accent); vertical-align: middle; }
+  .bar.p { background: var(--warn); }
+  ul { padding-left: 22px; } li { margin: 4px 0; }
+  .toc { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 18px; }
+  .toc ol { margin: 4px 0; padding-left: 20px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>How evals work in this project</h1>
+<p class="sub">A plain-English guide to the <code>/eval</code> folder: what it measures, how it scores, and what the numbers mean.</p>
+
+<div class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#what">What is an eval?</a></li>
+    <li><a href="#scope">What this project's eval measures (and doesn't)</a></li>
+    <li><a href="#flow">The whole thing in one picture</a></li>
+    <li><a href="#cases">Part 1: the Eval Cases (the questions)</a></li>
+    <li><a href="#match">Part 2: deciding if a result is a hit</a></li>
+    <li><a href="#metrics">Part 3: turning hits into numbers</a></li>
+    <li><a href="#results">The real baseline results</a></li>
+    <li><a href="#reports">Why every run is saved and never overwritten</a></li>
+    <li><a href="#reuse">Where else the eval is used</a></li>
+    <li><a href="#not">What is <em>not</em> evaluated yet</a></li>
+    <li><a href="#try">Try it yourself</a></li>
+  </ol>
+</div>
+
+<h2 id="what">1. What is an eval?</h2>
+<p>An AI system gives different-looking answers every time, and "it seems to work when I try it" doesn't tell you whether a change made it better or worse. An <b>eval</b> fixes that by turning "seems good" into a <b>number you can compare</b>.</p>
+<p>The recipe is always the same:</p>
+<ol>
+  <li>Write a fixed list of questions <em>where you already know the right answer</em>.</li>
+  <li>Run the system on all of them.</li>
+  <li>Score each result against the known answer.</li>
+  <li>Average the scores. Change something, run again, compare.</li>
+</ol>
+
+<div class="callout">
+  <b class="t">.NET analogy</b>
+  <p>An eval is a test suite with a score instead of green/red. A unit test says "this one case passes". An eval says "17 of 20 cases pass, and here is how early the right answer showed up". The labelled questions are your test fixtures. The scoring function is your assertion. The difference: AI systems are fuzzy, so you care about <em>how often and how well</em> it's right, not a single pass/fail.</p>
+</div>
+
+<h2 id="scope">2. What this project's eval measures (and doesn't)</h2>
+<p>This app answers regulatory questions using <b>RAG</b> (Retrieval-Augmented Generation). That's two stages:</p>
+<ol>
+  <li><b>Retrieve:</b> turn the question into an embedding (a list of numbers capturing its meaning) and find the stored document <em>Chunks</em> whose embeddings are closest.</li>
+  <li><b>Generate:</b> hand those Chunks to an LLM and ask it to write an answer.</li>
+</ol>
+<p>The eval in <code>/eval</code> tests <b>stage 1 only</b>. The question it asks is:</p>
+<p><b>"When someone asks this question, does the right passage come back near the top of the search results?"</b></p>
+<p>No LLM writes an answer during the eval. Why test only the first half? Because if retrieval hands the LLM the wrong passages, nothing downstream can save it. And retrieval is cheap, fast and deterministic, so it makes a clean thing to measure first.</p>
+
+<div class="callout">
+  <b class="t">Concept: embeddings</b>
+  <p>Each Chunk was converted to a vector (here by the <code>nomic-embed-text</code> model) and stored in Postgres. A question is converted the same way, and the database returns the Chunks whose vectors point in the most similar direction (cosine similarity, 1 = same meaning). The eval doesn't test the maths. It tests whether the results are <em>useful</em>.</p>
+</div>
+
+<h2 id="flow">3. The whole thing in one picture</h2>
+<p>Everything lives in <a href="../eval/src/regdocs_eval/run_eval.py"><code>run_eval.py</code></a>. Running it does this:</p>
+<div class="flow">
+  <div class="step"><b>1. Load</b> <code>dataset.json</code>: 20 hand-written questions, each labelled with where the answer lives.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>2. Embed</b> each question (with the prefix <code>"search_query: "</code>) using the local Ollama model.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>3. Retrieve</b> the top 10 nearest Chunks from Postgres (one SQL query).</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>4. Score</b> each case: is any of the 10 a <em>hit</em>? At which rank? (<code>match.py</code>)</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>5. Summarise</b> into Recall@1/3/5/10 and MRR, overall and split by question type.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>6. Save</b> a report to <code>eval/runs/&lt;timestamp&gt;-&lt;model&gt;.json</code>. Never overwritten.</div>
+</div>
+<p>The three ideas that matter are: <b>the questions</b> (step 1), <b>what counts as a hit</b> (step 4), and <b>how hits become numbers</b> (step 5). The next three sections take them in turn.</p>
+
+<h2 id="cases">4. Part 1: the Eval Cases (the questions)</h2>
+<p>Each case in <code>dataset.json</code> looks like this (shortened):</p>
+<pre><code>{
+  "id": "q01",
+  "question": "What is a disadvantage related to mortgage incentives?",
+  "phrasing": "lexical",
+  "category": "single_passage",
+  "gold_locators": [
+    { "document_id": "doc-09-cp158-consumer-protection-code",
+      "locator": "Mortgage Incentives (p. 44)" }
+  ],
+  "answer_quote": "One clear drawback regarding mortgage incentives is that..."
+}</code></pre>
+
+<h3>Gold Locators: the "right answer" label</h3>
+<p>A <b>Gold Locator</b> says where in the source the answer lives: a document plus a section reference (a clause number like <code>3.12</code>, or a heading plus page like <code>Mortgage Incentives (p. 44)</code>).</p>
+<p>Notice it is <em>not</em> a Chunk ID. Chunks are immutable: re-chunk a document and every Chunk gets a new ID. If the labels pointed at Chunk IDs, you'd have to re-label the whole eval set every time you improved the chunker. A locator comes from the document's own structure, so it survives re-chunking. This means you can compare two chunkers on the <em>same</em> questions. (ADR-0027)</p>
+<p>The <code>answer_quote</code> is only a human sanity check. It's never used for matching.</p>
+
+<h3>Two tags on every question</h3>
+<table>
+  <tr><th>Tag</th><th>Values</th><th>Why it exists</th></tr>
+  <tr><td><code>phrasing</code></td><td><code>lexical</code> / <code>paraphrase</code></td>
+    <td>Lexical questions reuse the passage's own words. Paraphrases deliberately avoid them, the way a real user who has never read the document would ask. About half of each.</td></tr>
+  <tr><td><code>category</code></td><td><code>single_passage</code>, <code>multi_locator</code>, <code>supersession</code>, <code>unanswerable</code></td>
+    <td>Different shapes of question: one answer spot, answers spread over several spots, a newer document replacing an older one, and questions the corpus cannot answer.</td></tr>
+</table>
+
+<div class="callout">
+  <b class="t">Concept: lexical overlap bias</b>
+  <p>If you write a question while staring at a passage, you'll echo its wording. Retrieval then finds it easily, and your score looks great, but real users don't know the document's wording. Rather than pretend the bias isn't there, the project <b>tags it and measures it</b>: the gap between lexical and paraphrase scores tells you how much the system understands meaning versus matching words. (ADR-0029)</p>
+</div>
+
+<p>The questions are <b>hand-written by you</b>, not generated by an LLM. LLM-drafted questions echo source wording even more, and the set would stop reflecting your judgement of what matters.</p>
+<p><b>Unanswerable</b> cases (e.g. "What is the US FDIC deposit insurance limit?", which isn't in the Irish regulatory corpus) have no Gold Locators. They are not scored for recall, because there is nothing to find. They exist for a different purpose, explained in section 6.</p>
+
+<h2 id="match">5. Part 2: deciding if a result is a hit</h2>
+<p>For each question, retrieval returns 10 Chunks, each with a document ID and locator. A Chunk is a <b>hit</b> if its locator matches a Gold Locator in the same document. That sounds trivial, but "match" needs care. The rule lives in <a href="../eval/src/regdocs_eval/match.py"><code>match.py</code></a> (ADR-0028).</p>
+
+<h3>Clause numbers: compare segments, not text</h3>
+<p>Gold <code>3.1</code> must <b>not</b> be satisfied by retrieved <code>3.12</code>. A naive <code>"3.12".startswith("3.1")</code> says yes, which would be a false hit. So the locator is split into segments (<code>["3","1"]</code> vs <code>["3","12"]</code>) and the gold's segments must be a prefix of the retrieved ones.</p>
+<table>
+  <tr><th>Gold</th><th>Retrieved</th><th>Hit?</th><th>Why</th></tr>
+  <tr><td><code>3.12</code></td><td><code>3.12</code></td><td class="hit">yes</td><td>identical</td></tr>
+  <tr><td><code>3.12</code></td><td><code>3.12(a)</code></td><td class="hit">yes</td><td>a child of the gold clause</td></tr>
+  <tr><td><code>3.1</code></td><td><code>3.12</code></td><td class="miss">no</td><td><code>"1"</code> ≠ <code>"12"</code> as whole segments</td></tr>
+</table>
+
+<h3>Heading + page: exact heading, page within ±1</h3>
+<p>For documents without clause numbers, the heading must match exactly, and the page may differ by at most one. The page is kept because it distinguishes repeated headings like "Introduction", and the ±1 tolerance absorbs a chunker that paginates slightly differently.</p>
+
+<h3>The rule is deliberately dumb</h3>
+<div class="callout">
+  <b class="t">Design principle: a deterministic grader</b>
+  <p>The match rule is plain code: no fuzzy matching, no similarity, no LLM judge. The eval is measuring the <em>retriever</em>. If the grader itself were noisy (as an LLM judge would be), you couldn't tell whether a score changed because retrieval improved or because the grader wobbled. One thing varies at a time.</p>
+</div>
+<p>And if the rule can't understand a locator, it <b>raises an error</b> instead of returning "no match". A silent "no match" would be counted as a retrieval failure, producing a plausible but wrong number. A loud crash is better than a quiet lie. The harness does the same if the database has no embeddings: it stops rather than scoring every question a miss.</p>
+
+<h2 id="metrics">6. Part 3: turning hits into numbers</h2>
+<p>For each answerable case, the harness records one thing: the <b>rank of the first hit</b> (1 = top result), or "none" if nothing in the top 10 was a hit. Everything else is arithmetic on those ranks.</p>
+
+<h3>Recall@k: "was it in the top k?"</h3>
+<p>Recall@3 = the fraction of questions whose first correct Chunk appeared in the top 3. Simple and readable. Why does k matter? Because the LLM in stage 2 is only handed the top few Chunks (Track B's default is 5). A right answer at rank 9 is as good as missing.</p>
+
+<h3>MRR: "how <em>high</em> was it?"</h3>
+<p>Recall@k can't tell rank 1 from rank 3. <b>Mean Reciprocal Rank</b> scores each case as <code>1 / rank</code> (rank 1 = 1.0, rank 2 = 0.5, rank 4 = 0.25, a miss = 0) and averages them. It rewards putting the right Chunk <em>first</em>.</p>
+
+<h3>Worked example</h3>
+<p>Three questions. The first hit lands at rank 1, rank 2, and never:</p>
+<table>
+  <tr><th>Case</th><th class="n">First hit rank</th><th class="n">in top 1?</th><th class="n">in top 3?</th><th class="n">1/rank</th></tr>
+  <tr><td>A</td><td class="n">1</td><td class="n">✓</td><td class="n">✓</td><td class="n">1.00</td></tr>
+  <tr><td>B</td><td class="n">2</td><td class="n">✗</td><td class="n">✓</td><td class="n">0.50</td></tr>
+  <tr><td>C</td><td class="n">none</td><td class="n">✗</td><td class="n">✗</td><td class="n">0.00</td></tr>
+  <tr><td><b>Result</b></td><td></td><td class="n"><b>Recall@1 = 1/3</b></td><td class="n"><b>Recall@3 = 2/3</b></td><td class="n"><b>MRR = 1.5/3 = 0.50</b></td></tr>
+</table>
+
+<h3>Where do unanswerable questions fit?</h3>
+<p>They're left out of every metric (there's no right Chunk, so "recall" is meaningless). Vector search always returns the 10 nearest Chunks, even for a nonsense question; it never says "nothing found". So for these cases the harness records the <b>top-1 similarity score</b> instead: how confident the best <em>wrong</em> match looked. Later, if answerable questions score clearly higher than unanswerable ones, you could set a threshold ("below 0.75, say we don't know"). If the two overlap heavily, that's a finding too. (ADR-0029/0030)</p>
+
+<h2 id="results">7. The real baseline results</h2>
+<p>The first run (<code>eval/runs/20260929T111257Z-nomic-embed-text.json</code>) scored 18 answerable and 2 unanswerable cases with <code>nomic-embed-text</code>, k=10.</p>
+
+<div class="wrap">
+<table>
+  <tr><th>Group</th><th class="n">Cases</th><th class="n">Recall@1</th><th class="n">Recall@3</th><th class="n">Recall@5</th><th class="n">Recall@10</th><th class="n">MRR</th></tr>
+  <tr><td><b>Overall</b></td><td class="n">18</td><td class="n">0.67</td><td class="n">0.83</td><td class="n">0.89</td><td class="n">0.89</td><td class="n">0.75</td></tr>
+  <tr><td>phrasing = lexical</td><td class="n">9</td><td class="n">0.89</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">0.93</td></tr>
+  <tr><td>phrasing = paraphrase</td><td class="n">9</td><td class="n">0.44</td><td class="n">0.67</td><td class="n">0.78</td><td class="n">0.78</td><td class="n">0.56</td></tr>
+  <tr><td>category = single_passage</td><td class="n">13</td><td class="n">0.62</td><td class="n">0.77</td><td class="n">0.85</td><td class="n">0.85</td><td class="n">0.70</td></tr>
+  <tr><td>category = multi_locator</td><td class="n">3</td><td class="n">0.67</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">0.78</td></tr>
+  <tr><td>category = supersession</td><td class="n">2</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td></tr>
+</table>
+</div>
+
+<h3>How to read it</h3>
+<ul>
+  <li><b>Overall Recall@1 = 0.67:</b> for 12 of the 18 questions, the very top result was correct. By rank 5, 16 of 18 were found. Two questions (q06, q08, both paraphrases) never surfaced in the top 10.</li>
+  <li><b>The big finding is the phrasing gap.</b> Lexical Recall@1 is 0.89; paraphrase is 0.44. When the question reuses the document's words, retrieval is excellent. When it's asked the way a real person would ask, it roughly halves. That is exactly the lexical-overlap bias the tags were designed to expose, and it's the main reason to try improvements such as hybrid (keyword + vector) search.</li>
+  <li><b>Small numbers.</b> With 2 to 3 cases per category, one question flipping changes a row by 33 to 50 points. Treat the by-category rows as hints, not conclusions. The overall and by-phrasing rows (9 each) are more trustworthy.</li>
+  <li><b>Unanswerable:</b> the two cases had top-1 similarities of 0.727 and 0.705. The weakest <em>correct</em> hit was 0.652, so the scores overlap, and a simple threshold would not cleanly separate the two groups with this model. Thin data (2 cases), but an early finding.</li>
+</ul>
+
+<h2 id="reports">8. Why every run is saved and never overwritten</h2>
+<p>A score means nothing without knowing what produced it. Change the embedding model, how a document was chunked, the question set, or k, and the number moves. So each run writes a new JSON file recording:</p>
+<ul>
+  <li><b>Config:</b> embedding model, query prefix, k, <code>dataset_version</code>, and every document's active chunking generation.</li>
+  <li><b>Summary:</b> the table above.</li>
+  <li><b>One line per case:</b> its hit rank and similarity scores, plus the full top-10 retrieved, so a miss is <em>investigable</em> ("why did q06 not appear?").</li>
+</ul>
+<p>Files are opened in mode <code>"x"</code>, which fails if the file already exists, so history can't be overwritten. Two reports are only compared when their configs match, like-for-like. (ADR-0030)</p>
+
+<div class="callout">
+  <b class="t">Event sourcing analogy</b>
+  <p>Run reports are append-only, like your event store: you never edit a past run, you add a new one beside it. The harness even reads the database in a <code>REPEATABLE READ</code>, read-only transaction so every search in one run sees the same frozen snapshot.</p>
+</div>
+
+<h2 id="reuse">9. Where else the eval is used</h2>
+<p>The first report is the <b>baseline</b>: the score any later retriever must reproduce on identical data. Track B's LangChain retriever reuses the same SQL and the same <code>match.py</code> rule, and the opt-in test <code>track-b/tests/test_baseline_parity.py</code> runs every answerable case through it and checks recall equals the baseline. If Python and .NET scored differently on the same embeddings, that would point to a porting bug (a missing query prefix, wrong distance operator), not the model. So the eval doubles as a regression test for the port.</p>
+
+<h2 id="not">10. What is <em>not</em> evaluated yet</h2>
+<ul>
+  <li><b>Answer quality.</b> Nothing yet checks whether the LLM's drafted answer is correct or faithful to the Chunks. This eval stops at retrieval.</li>
+  <li><b>The verify judge.</b> Track B's <code>verify</code> step uses an LLM to mark each claim in an answer as supported or unsupported and computes a Confidence score (ADR-0035). The source notes that its 0.8 threshold is "a first guess, to be revisited once verify has evals". So the judge itself has no eval yet, and that's a natural next step (compare its verdicts against human labels).</li>
+  <li><b>Hybrid search.</b> Planned as a separate, measured change: you'd run the same eval before and after and compare reports.</li>
+</ul>
+
+<h2 id="try">11. Try it yourself</h2>
+
+<h3>Test 1 (no dependencies): the match rule</h3>
+<p><code>eval/tests/test_match.py::test_clause_does_not_match_a_different_clause</code></p>
+<pre><code>python -m pytest eval/tests/test_match.py::test_clause_does_not_match_a_different_clause -v</code></pre>
+<p><b>Shows:</b> the "3.1 is not 3.12" rule from section 5, the single most instructive piece of the grader.<br>
+<b>Poke at it:</b> open <code>match.py</code> and change <code>_clause_covers</code> to <code>return ".".join(retrieved_segments).startswith(".".join(gold_segments))</code>. Rerun and watch it fail. That's the naive bug the rule exists to prevent.<br>
+<b>Why this one:</b> it needs nothing running and shows the rule's reason for existing in one failing case.</p>
+
+<h3>Test 2 (needs Postgres, not Ollama): the metrics</h3>
+<p><code>eval/tests/test_run_eval.py::test_recall_and_mrr_over_answerable_cases_only</code></p>
+<pre><code>python -m pytest eval/tests/test_run_eval.py::test_recall_and_mrr_over_answerable_cases_only -v</code></pre>
+<p><b>Shows:</b> hand-built vectors and a fake embedder produce predictable ranks, and the test checks Recall@k and MRR come out as the arithmetic in section 6 says, with unanswerable cases excluded.<br>
+<b>Poke at it:</b> print the <code>report["summary"]["overall"]</code> inside the test, or change a fixture vector so a case ranks differently and watch MRR move.<br>
+<b>Why this one:</b> it is the clearest end-to-end illustration of ranks becoming numbers. It skips itself if the test Postgres container isn't up (<code>docker compose up -d</code> in <code>store/</code>).</p>
+
+<h3>See a real report</h3>
+<p>Open <code>eval/runs/20260929T111257Z-nomic-embed-text.json</code> and look at case <code>q06</code>: <code>hit_rank</code> is <code>null</code>, and its <code>retrieved</code> list shows what came back instead. That is how you debug a miss. To run the real thing: <code>python -m regdocs_eval.run_eval</code> (needs Postgres loaded and embedded, plus Ollama).</p>
+
+<h2>Summary</h2>
+<p>The project's eval measures one thing: given a hand-written question, does retrieval put the right passage near the top? Each question is labelled with a Gold Locator (a stable document-structure reference, not a Chunk ID). A deterministic, structure-aware rule decides hits. The first hit's rank becomes Recall@k and MRR, broken down by lexical vs paraphrase phrasing and by question category. Every run is saved as an immutable report pinning its configuration, so numbers are only compared like-for-like. The baseline shows strong results on lexical questions and a big drop on paraphrases, which is the evidence for the next improvement. Answer quality and the verify judge have no evals yet.</p>
+
+</main>
+</body>
+</html>

@@ -1,8 +1,32 @@
 # RegDocs Assistant
 
-A RAG and multi-step agent system for answering questions about Irish financial-regulation documents, with every answer backed by an immutable, replayable audit trail.
+**Ask a question about Irish financial regulation and get a cited, confidence-scored answer, plus a tamper-proof record of exactly how that answer was produced.**
 
-It's also a portfolio project documenting how I use [Claude Code](https://claude.com/product/claude-code) to build software - see [How this was built](#how-this-was-built) below.
+An end-to-end AI system, built from scratch: it ingests 20 Central Bank of Ireland / CCPC regulatory PDFs, finds the relevant passages with vector search (RAG), and runs a four-step LangGraph agent (classify -> retrieve -> draft -> verify) that drafts an answer with numbered citations and then checks it claim by claim. Every interaction is stored as an immutable, append-only event, so any answer can be audited later. A React UI sits over a FastAPI backend.
+
+Built by [Sean Fitzgerald](https://www.linkedin.com/in/seanfitzg/) (25+ years in .NET, including regulatory reporting at Bank of America) to learn AI engineering hands-on, developed throughout with [Claude Code](https://claude.com/product/claude-code).
+
+## Skills and technologies
+
+| Area | What's used |
+|---|---|
+| **AI / LLM engineering** | Retrieval-augmented generation (RAG), vector embeddings and semantic search, multi-step agent orchestration, LLM-as-judge verification, prompt-injection detection, PII redaction, retrieval evals (Recall@k, MRR) against a hand-labelled gold set |
+| **Python** | LangGraph, LangChain, FastAPI, PyMuPDF, psycopg, pytest, uv workspaces, Ruff |
+| **Models** | Ollama (local `qwen2.5` chat, `nomic-embed-text` embeddings) or OpenAI, switchable at startup |
+| **Data** | PostgreSQL + pgvector, Docker Compose, JSON Schema contracts |
+| **Frontend** | React 19, TypeScript, Vite |
+| **Architecture** | Event sourcing (append-only store, immutability enforced by a database trigger), schema-first contracts, 36 Architecture Decision Records |
+| **Engineering practice** | TDD (~270 tests, including integration tests against an isolated database), one issue -> one branch -> one PR, AI-assisted development with Claude Code |
+
+## Highlights
+
+- **Auditable by design.** Each answer is stored as an immutable Event recording the question, retrieved passages, model and prompt version, per-step cost, confidence and flags. Corrections are new events, never edits.
+- **Citations you can trust.** The model cites numbered passages, and the citations are resolved in code against what was actually retrieved, not taken on the model's word.
+- **Confidence computed, not guessed.** A separate judge step checks each claim against its sources, and the confidence score is calculated in code from those verdicts.
+- **Guardrails.** Personal data is redacted before it reaches the model; prompt-injection attempts and questions with no relevant source material halt the pipeline instead of producing an answer.
+- **Measured, not eyeballed.** Retrieval quality is scored against a hand-written eval set, split by lexical vs paraphrased questions to expose keyword-overlap bias.
+
+The rest of this README covers the problem in more depth, current status, how it was built, and how to run it.
 
 ## The problem
 
@@ -20,7 +44,7 @@ Same architecture and event schema, built once in .NET and once in Python, both 
 - **[`/ingestion`](./ingestion)** - turns the corpus into `Document`/`Chunk` records: PDF extraction, cleanup, three chunking strategies, deterministic ids, per-document failure isolation, schema validation on write.
 - **[`/corpus`](./corpus)** - 20 public Central Bank of Ireland / CCPC documents, fully ingested (PDFs not committed; see `corpus/SOURCES.md`).
 - **[`/store`](./store)** - Postgres + pgvector (via docker-compose) holding every ingested `Document`, `Chunking Generation` and `Chunk`, plus a vector embedding per active-generation Chunk. `loader.py` loads ingestion's output; `embed.py` computes embeddings with a local [Ollama](https://ollama.com) model (`nomic-embed-text`, 768 dimensions) into a `chunk_embeddings` table keyed by Chunk and model. Both are safe to re-run, and both are covered by integration tests against an isolated test database.
-- **[`/eval`](./eval)** - the retrieval eval set: hand-written Eval Cases labelled by Gold Locator (`document_id` + locator), a JSON Schema for them, a test that every label exists in the ingested Chunks, and a keyword-search helper for writing cases. The harness that scores retrieval against it is next.
+- **[`/eval`](./eval)** - the retrieval eval set: hand-written Eval Cases labelled by Gold Locator (`document_id` + locator), a JSON Schema for them, a test that every label exists in the ingested Chunks, and a keyword-search helper for writing cases, and a harness that runs retrieval over the set and reports Recall@1/3/5/10 and MRR.
 - **[`/track-b`](./track-b)** - the Python query pipeline (FastAPI, LangChain, LangGraph), built end to end:
   - a custom LangChain retriever over the stored embeddings;
   - a four-Step LangGraph graph, classify -> retrieve -> draft -> verify, producing numbered Citations resolved in code;
