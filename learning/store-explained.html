@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Store Explained</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --fg: #1f2328; --muted: #5b6470; --card: #ffffff; --line: #e3e0d8;
+    --accent: #1f6feb; --accent-soft: #dde9ff; --good: #1a7f37; --bad: #c0392b; --warn: #9a6700;
+    --callout: #eef4ff; --code-bg: #f1efe9; --edge: #6b7480;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --fg: #e6e6e6; --muted: #9aa3ad; --card: #1d2024; --line: #30343a;
+      --accent: #6aa5ff; --accent-soft: #22324d; --good: #4cc26b; --bad: #ff7b6b; --warn: #e3b341;
+      --callout: #1b2638; --code-bg: #25282d; --edge: #8b95a1;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 17px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.4rem; margin: 48px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.1rem; margin: 24px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .88em; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .callout { background: var(--callout); border-left: 4px solid var(--accent); padding: 12px 16px;
+    border-radius: 6px; margin: 16px 0; }
+  .callout b.t { display: block; color: var(--accent); font-size: .8rem; letter-spacing: .06em;
+    text-transform: uppercase; margin-bottom: 2px; }
+  .callout p { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: .93rem; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .wrap { overflow-x: auto; }
+  .flow { display: flex; flex-direction: column; margin: 16px 0; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+  .step b { color: var(--accent); }
+  .arrow { text-align: center; color: var(--muted); line-height: 1.2; padding: 2px 0; }
+  .ok { color: var(--good); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+  ul { padding-left: 22px; } li { margin: 4px 0; }
+  .toc { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 18px; }
+  .toc ol { margin: 4px 0; padding-left: 20px; }
+  a { color: var(--accent); }
+  figure { margin: 16px 0; }
+  figcaption { color: var(--muted); font-size: .88rem; margin-top: 6px; }
+  .diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; overflow-x: auto; }
+  .diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+  svg .box { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  svg .head { fill: var(--accent-soft); }
+  svg .tname { fill: var(--fg); font: 600 14px ui-monospace, Consolas, monospace; }
+  svg .col { fill: var(--fg); font: 12px ui-monospace, Consolas, monospace; }
+  svg .typ { fill: var(--muted); font: 11px ui-monospace, Consolas, monospace; }
+  svg .key { font: 700 9.5px system-ui, sans-serif; }
+  svg .pk { fill: var(--warn); } svg .fk { fill: var(--accent); }
+  svg .sep { stroke: var(--line); stroke-width: 1; }
+  svg .edge { fill: none; stroke: var(--edge); stroke-width: 1.6; }
+  svg .edge.ptr { stroke-dasharray: 5 4; }
+  svg .elabel { fill: var(--muted); font: 11px system-ui, sans-serif; }
+  svg .note { fill: var(--muted); font: italic 11px system-ui, sans-serif; }
+  svg .arrowhead { fill: var(--edge); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>How the store works</h1>
+<p class="sub">A plain-English guide to the <code>/store</code> folder: the Postgres database, its tables, how data gets in, and why it's built the way it is.</p>
+
+<div class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#what">What the store is</a></li>
+    <li><a href="#flow">Where it sits in the pipeline</a></li>
+    <li><a href="#diagram">The tables at a glance (diagram)</a></li>
+    <li><a href="#tables">Each table in plain words</a></li>
+    <li><a href="#immutable">Big idea 1: nothing is ever edited</a></li>
+    <li><a href="#generations">Big idea 2: Chunking Generations and the active pointer</a></li>
+    <li><a href="#composite">Big idea 3: the composite foreign keys</a></li>
+    <li><a href="#embeddings">Big idea 4: embeddings and pgvector</a></li>
+    <li><a href="#events">Big idea 5: the append-only events table</a></li>
+    <li><a href="#loader">How the loader fills the tables</a></li>
+    <li><a href="#query">How retrieval reads it</a></li>
+    <li><a href="#setup">Two databases and the init scripts</a></li>
+    <li><a href="#not">What isn't built yet</a></li>
+    <li><a href="#try">Try it yourself</a></li>
+  </ol>
+</div>
+
+<h2 id="what">1. What the store is</h2>
+<p>The store is a <b>Postgres database running in Docker</b>, with the <b>pgvector</b> extension added so Postgres can hold and search embedding vectors. It's where everything the app knows ends up living:</p>
+<ul>
+  <li>the regulatory <b>Documents</b> (about 20 of them),</li>
+  <li>the <b>Chunks</b> those Documents were cut into (roughly 2,000),</li>
+  <li>an <b>embedding</b> for every searchable Chunk,</li>
+  <li>and an append-only log of <b>Events</b> recording every question the app answered.</li>
+</ul>
+<p>Before the store existed, ingestion wrote JSON files to <code>ingestion/output/</code>. Those files are still produced, but they're treated as a regenerable by-product, not the real storage (ADR-0012). The store is the source of truth that retrieval, the eval harness and Track B all query.</p>
+
+<div class="callout">
+  <b class="t">.NET analogy</b>
+  <p>Think of <code>/store</code> as the database project in a .NET solution: a set of numbered SQL scripts that build the schema, plus two small console apps (<code>loader.py</code>, <code>embed.py</code>) that populate it. There's no ORM and no migration framework like EF Migrations. It's plain SQL files, run in filename order (ADR-0020/0021/0022).</p>
+</div>
+
+<h2 id="flow">2. Where it sits in the pipeline</h2>
+<div class="flow">
+  <div class="step"><b>Ingestion</b> reads the PDFs and writes Document and Chunk JSON to <code>ingestion/output/</code>.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b><code>loader.py</code></b> reads that JSON (plus <code>manifest.json</code>) and inserts <code>documents</code>, <code>chunking_generations</code> and <code>chunks</code> rows.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b><code>embed.py</code></b> sends each active Chunk's text to the local Ollama model and stores the 768-number vector in <code>chunk_embeddings</code>.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>Retrieval</b> (the eval harness, Track B's retriever) embeds a question and asks Postgres for the nearest Chunk vectors.</div>
+  <div class="arrow">▼</div>
+  <div class="step"><b>Track B</b> writes one row to <code>events</code> for every question it answers.</div>
+</div>
+<p>The loader is deliberately a <em>separate</em> script, not a step inside ingestion (ADR-0020). Ingestion stays a pure "PDFs in, JSON out" transformation that runs and tests without a database, and the loader can be re-run on its own after a schema change without re-parsing every PDF.</p>
+
+<h2 id="diagram">3. The tables at a glance</h2>
+<figure>
+<div class="diagram">
+<svg viewBox="0 0 800 560" role="img" aria-label="Entity-relationship diagram of the five store tables">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="arrowhead" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <!-- documents: x40 y20 w290, 7 rows -->
+  <g>
+    <rect class="box" x="40" y="20" width="290" height="184" rx="6"/>
+    <path class="head" d="M46,20 h278 a6,6 0 0 1 6,6 v24 h-290 v-24 a6,6 0 0 1 6,-6 z"/>
+    <text class="tname" x="52" y="40">documents</text>
+    <text class="key pk" x="48" y="65">PK</text><text class="col" x="72" y="65">id</text><text class="typ" x="322" y="65" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="72" y2="72"/>
+    <text class="col" x="72" y="87">title</text><text class="typ" x="322" y="87" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="94" y2="94"/>
+    <text class="col" x="72" y="109">publisher</text><text class="typ" x="322" y="109" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="116" y2="116"/>
+    <text class="col" x="72" y="131">published_date</text><text class="typ" x="322" y="131" text-anchor="end">date</text>
+    <line class="sep" x1="40" x2="330" y1="138" y2="138"/>
+    <text class="col" x="72" y="153">source_url</text><text class="typ" x="322" y="153" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="160" y2="160"/>
+    <text class="key fk" x="48" y="175">FK</text><text class="col" x="72" y="175">active_chunking_generation_id</text><text class="typ" x="322" y="175" text-anchor="end">null</text>
+    <line class="sep" x1="40" x2="330" y1="182" y2="182"/>
+    <text class="key fk" x="48" y="197">FK</text><text class="col" x="72" y="197">supersedes</text><text class="typ" x="322" y="197" text-anchor="end">text null</text>
+  </g>
+
+  <!-- chunking_generations: x480 y20 w300, 4 rows -->
+  <g>
+    <rect class="box" x="480" y="20" width="300" height="118" rx="6"/>
+    <path class="head" d="M486,20 h288 a6,6 0 0 1 6,6 v24 h-300 v-24 a6,6 0 0 1 6,-6 z"/>
+    <text class="tname" x="492" y="40">chunking_generations</text>
+    <text class="key pk" x="488" y="65">PK</text><text class="col" x="512" y="65">id</text><text class="typ" x="772" y="65" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="72" y2="72"/>
+    <text class="key fk" x="488" y="87">FK</text><text class="col" x="512" y="87">document_id</text><text class="typ" x="772" y="87" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="94" y2="94"/>
+    <text class="col" x="512" y="109">chunking_strategy</text><text class="typ" x="772" y="109" text-anchor="end">text CHECK</text>
+    <line class="sep" x1="480" x2="780" y1="116" y2="116"/>
+    <text class="col" x="512" y="131">created_at</text><text class="typ" x="772" y="131" text-anchor="end">timestamptz</text>
+  </g>
+
+  <!-- chunks: x480 y230 w300, 5 rows -->
+  <g>
+    <rect class="box" x="480" y="230" width="300" height="140" rx="6"/>
+    <path class="head" d="M486,230 h288 a6,6 0 0 1 6,6 v24 h-300 v-24 a6,6 0 0 1 6,-6 z"/>
+    <text class="tname" x="492" y="250">chunks</text>
+    <text class="key pk" x="488" y="275">PK</text><text class="col" x="512" y="275">id</text><text class="typ" x="772" y="275" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="282" y2="282"/>
+    <text class="key fk" x="488" y="297">FK</text><text class="col" x="512" y="297">document_id</text><text class="typ" x="772" y="297" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="304" y2="304"/>
+    <text class="key fk" x="488" y="319">FK</text><text class="col" x="512" y="319">chunking_generation_id</text><text class="typ" x="772" y="319" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="326" y2="326"/>
+    <text class="col" x="512" y="341">locator</text><text class="typ" x="772" y="341" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="348" y2="348"/>
+    <text class="col" x="512" y="363">text</text><text class="typ" x="772" y="363" text-anchor="end">text</text>
+  </g>
+
+  <!-- chunk_embeddings: x480 y420 w300, 4 rows -->
+  <g>
+    <rect class="box" x="480" y="420" width="300" height="118" rx="6"/>
+    <path class="head" d="M486,420 h288 a6,6 0 0 1 6,6 v24 h-300 v-24 a6,6 0 0 1 6,-6 z"/>
+    <text class="tname" x="492" y="440">chunk_embeddings</text>
+    <text class="key pk" x="488" y="465">PK</text>
+    <text class="col" x="512" y="465">chunk_id</text><text class="typ" x="772" y="465" text-anchor="end">text · FK</text>
+    <line class="sep" x1="480" x2="780" y1="472" y2="472"/>
+    <text class="key pk" x="488" y="487">PK</text><text class="col" x="512" y="487">embedding_model</text><text class="typ" x="772" y="487" text-anchor="end">text</text>
+    <line class="sep" x1="480" x2="780" y1="494" y2="494"/>
+    <text class="col" x="512" y="509">embedding</text><text class="typ" x="772" y="509" text-anchor="end">vector(768)</text>
+    <line class="sep" x1="480" x2="780" y1="516" y2="516"/>
+    <text class="col" x="512" y="531">created_at</text><text class="typ" x="772" y="531" text-anchor="end">timestamptz</text>
+  </g>
+
+  <!-- events: x40 y340 w290, 4 rows -->
+  <g>
+    <rect class="box" x="40" y="340" width="290" height="118" rx="6"/>
+    <path class="head" d="M46,340 h278 a6,6 0 0 1 6,6 v24 h-290 v-24 a6,6 0 0 1 6,-6 z"/>
+    <text class="tname" x="52" y="360">events</text>
+    <text class="key pk" x="48" y="385">PK</text><text class="col" x="72" y="385">id</text><text class="typ" x="322" y="385" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="392" y2="392"/>
+    <text class="col" x="72" y="407">event_type</text><text class="typ" x="322" y="407" text-anchor="end">text</text>
+    <line class="sep" x1="40" x2="330" y1="414" y2="414"/>
+    <text class="col" x="72" y="429">recorded_at</text><text class="typ" x="322" y="429" text-anchor="end">timestamptz</text>
+    <line class="sep" x1="40" x2="330" y1="436" y2="436"/>
+    <text class="col" x="72" y="451">payload</text><text class="typ" x="322" y="451" text-anchor="end">jsonb</text>
+    <text class="note" x="40" y="478">No foreign keys: a standalone audit log.</text>
+    <text class="note" x="40" y="494">A trigger rejects every UPDATE and DELETE.</text>
+  </g>
+
+  <!-- Edges: arrows point from the referencing (child) table to the referenced (parent) one -->
+  <!-- chunking_generations.document_id -> documents -->
+  <path class="edge" d="M480,50 H332" marker-end="url(#arr)"/>
+  <text class="elabel" x="405" y="44" text-anchor="middle">document_id</text>
+  <!-- documents.active_chunking_generation_id -> chunking_generations (nullable pointer) -->
+  <path class="edge ptr" d="M330,110 H478" marker-end="url(#arr)"/>
+  <text class="elabel" x="405" y="104" text-anchor="middle">active generation</text>
+  <!-- documents.supersedes -> documents (self) -->
+  <path class="edge ptr" d="M40,197 H22 V61 H38" marker-end="url(#arr)"/>
+  <text class="elabel" x="16" y="129" text-anchor="middle" transform="rotate(-90 16 129)">supersedes</text>
+  <!-- chunks.chunking_generation_id -> chunking_generations -->
+  <path class="edge" d="M630,230 V140" marker-end="url(#arr)"/>
+  <text class="elabel" x="638" y="190">chunking_generation_id</text>
+  <!-- chunks.document_id -> documents -->
+  <path class="edge" d="M480,297 H185 V206" marker-end="url(#arr)"/>
+  <text class="elabel" x="300" y="290" text-anchor="middle">document_id</text>
+  <!-- chunk_embeddings.chunk_id -> chunks -->
+  <path class="edge" d="M630,420 V372" marker-end="url(#arr)"/>
+  <text class="elabel" x="638" y="400">chunk_id</text>
+</svg>
+</div>
+<figcaption>Each arrow points from the table holding the foreign key to the table it references, so it reads "many of these belong to one of those". Dashed arrows are nullable pointers. <b>PK</b> = primary key, <b>FK</b> = foreign key. The composite keys aren't drawn as separate arrows; they're covered in <a href="#composite">section 7</a>.</figcaption>
+</figure>
+
+<p>Read top to bottom, the diagram says: a <b>Document</b> has one or more <b>Chunking Generations</b> and points at one of them as active. Each Generation has many <b>Chunks</b>. Each Chunk can have one <b>embedding per model</b>. <b>Events</b> sit on their own.</p>
+
+<h2 id="tables">4. Each table in plain words</h2>
+<div class="wrap">
+<table>
+  <tr><th>Table</th><th>One row is…</th><th>Example</th><th>Defined in</th></tr>
+  <tr><td><code>documents</code></td><td>One regulatory publication at a point in time.</td><td><code>doc-04-cp54-second-consultation-consumer-protection-code</code></td><td><code>init/001_schema.sql</code></td></tr>
+  <tr><td><code>chunking_generations</code></td><td>One run of a chunking strategy over one Document: "this Document, cut this way".</td><td><code>doc-04-…-gen-1</code>, strategy <code>clause_numbered</code></td><td><code>init/001_schema.sql</code></td></tr>
+  <tr><td><code>chunks</code></td><td>One searchable, citable passage, with its locator (where it is in the Document) and its text.</td><td>locator <code>3.12</code> or <code>Mortgage Incentives (p. 44)</code></td><td><code>init/001_schema.sql</code></td></tr>
+  <tr><td><code>chunk_embeddings</code></td><td>One Chunk's vector, produced by one named embedding model.</td><td>(<code>…-chunk-007</code>, <code>nomic-embed-text</code>, [0.013, -0.041, … 768 numbers])</td><td><code>init/003_chunk_embeddings.sql</code></td></tr>
+  <tr><td><code>events</code></td><td>One thing that happened: a question answered, an answer flagged or overridden.</td><td><code>event_type = 'QueryAnswered'</code>, full detail in <code>payload</code></td><td><code>init/004_events.sql</code></td></tr>
+</table>
+</div>
+
+<h3>Why typed columns for most tables, but JSONB for events?</h3>
+<p>Documents and Chunks have exactly one fixed shape, defined once in <code>/schema</code>. Typed columns let Postgres enforce <code>NOT NULL</code> and foreign keys, and let queries join on <code>document_id</code> directly (ADR-0022).</p>
+<p>Events differ: a <code>QueryAnswered</code> has different fields from an <code>AnswerOverridden</code>, so no fixed column set fits all of them. That's the one place a JSONB blob is right. Two fields audit queries filter on first, <code>event_type</code> and <code>recorded_at</code>, are pulled out into real columns (ADR-0031).</p>
+
+<h2 id="immutable">5. Big idea 1: nothing is ever edited</h2>
+<p>Every row in the store is <b>immutable once written</b>. The loader never updates, deletes or truncates. Every insert goes through one helper in <code>db.py</code>:</p>
+<pre><code>INSERT INTO chunks (id, document_id, ...) VALUES (...)
+ON CONFLICT (id) DO NOTHING</code></pre>
+<p>If a row with that id already exists, it's silently skipped, <em>not</em> overwritten. So running the loader twice is a safe no-op, and running it after adding a new Document only adds the new rows.</p>
+<p>That works because every id is <b>deterministic</b>: derived from stable inputs such as the PDF filename (<code>doc-04-…</code>, <code>doc-04-…-gen-1</code>, <code>doc-04-…-gen-1-chunk-007</code>), never random. The same input always produces the same id.</p>
+
+<div class="callout">
+  <b class="t">Event sourcing analogy</b>
+  <p>This is your event store's "append, never rewrite" rule applied to reference data. A correction to a Document isn't an edit. It's a <em>new</em> Document with <code>supersedes</code> pointing at the old one, the way a compensating event is appended rather than history rewritten. A side effect worth knowing: if you fix a typo in ingested JSON without changing the id, the loader ignores the fix. The original row wins, on purpose.</p>
+</div>
+
+<p><b>The one deliberate exception</b> is <code>documents.active_chunking_generation_id</code>. It's a pointer that is <em>meant</em> to move, so the loader re-applies it on every run (ADR-0004). <code>supersedes</code> is set only the first time a Document is loaded.</p>
+
+<h2 id="generations">6. Big idea 2: Chunking Generations and the active pointer</h2>
+<p>"Chunking" means cutting a long PDF into passages small enough to search and hand to an LLM. There's more than one way to do it: by numbered clause, by heading, by academic section. You'll want to try better chunkers over time.</p>
+<p>The naive approach would be to delete a Document's old Chunks and insert new ones. That breaks two things:</p>
+<ul>
+  <li><b>Replay.</b> An old Event cites specific Chunks. If they're deleted, you can't reconstruct what the app saw when it answered.</li>
+  <li><b>Comparison.</b> You can't run the eval against the old chunking and the new one side by side.</li>
+</ul>
+<p>So instead, each re-chunking produces a new <b>Chunking Generation</b>: a fresh, complete set of Chunks with new ids. Old generations stay in the table. The Document carries one pointer, <code>active_chunking_generation_id</code>, saying which generation retrieval should search.</p>
+<pre><code>documents
+  doc-04   active_chunking_generation_id = doc-04-gen-2   ← retrieval searches this one
+
+chunking_generations
+  doc-04-gen-1   clause_numbered    (kept, never searched)
+  doc-04-gen-2   heading_sections   (active)</code></pre>
+<div class="callout">
+  <b class="t">Not built yet</b>
+  <p>The store is ready for multiple generations, but ingestion doesn't produce them yet. <code>pipeline.py</code> hardcodes <code>generation_number = 1</code>, so every run writes the same <code>…-gen-1</code> ids. Rerunning ingestion after changing a Document's chunking does <em>not</em> create <code>gen-2</code>. Instead, the loader keeps the existing <code>gen-1</code> rows, adds any extra new Chunk ids into <code>gen-1</code>, and leaves the old strategy in place. To truly re-chunk today, reset the database (<code>docker compose down -v</code>, which also wipes <code>events</code>) and reload.</p>
+</div>
+<p>Why a single pointer on the Document, rather than an <code>is_active</code> flag on each generation? A flag could, through one bug, end up true on two generations or false on all of them. One pointer can only ever name one (ADR-0004).</p>
+
+<h2 id="composite">7. Big idea 3: the composite foreign keys</h2>
+<p>This is the subtlest part of <code>001_schema.sql</code>. A plain foreign key proves a referenced row <em>exists</em>, but not that it belongs to the right parent.</p>
+<p>Consider this bad row:</p>
+<pre><code>documents:  id = doc-04,  active_chunking_generation_id = doc-09-gen-1</code></pre>
+<p>A plain FK on <code>active_chunking_generation_id</code> would accept it, because <code>doc-09-gen-1</code> does exist. But it's <b>doc-09's</b> generation, so retrieval for doc-04 would silently search another Document's Chunks.</p>
+<p>The fix is to make the foreign key cover <b>two columns</b>:</p>
+<pre><code>-- give (document_id, id) its own identity to point at
+ALTER TABLE chunking_generations ADD CONSTRAINT ... UNIQUE (document_id, id);
+
+-- "my id AND my active generation" must match "a generation's document_id AND its id"
+ALTER TABLE documents ADD CONSTRAINT fk_documents_active_chunking_generation
+    FOREIGN KEY (id, active_chunking_generation_id)
+    REFERENCES chunking_generations (document_id, id);</code></pre>
+<table>
+  <tr><th>documents row</th><th>Plain FK</th><th>Composite FK</th></tr>
+  <tr><td><code>doc-04</code> → <code>doc-04-gen-2</code></td><td class="ok">accepted</td><td class="ok">accepted</td></tr>
+  <tr><td><code>doc-04</code> → <code>doc-09-gen-1</code></td><td class="no">accepted (bug!)</td><td class="ok">rejected</td></tr>
+  <tr><td><code>doc-04</code> → <code>NULL</code> (not chunked yet)</td><td class="ok">accepted</td><td class="ok">accepted (a NULL skips the check)</td></tr>
+</table>
+<p><code>chunks</code> uses the same trick, with <code>(document_id, chunking_generation_id)</code>, so a Chunk can't claim a generation that belongs to a different Document from the one it claims.</p>
+
+<div class="callout">
+  <b class="t">DDD analogy</b>
+  <p>It's an aggregate invariant ("a Document's active generation is one of <em>its own</em> generations") pushed down into the database, so no code path, test fixture or hand-typed SQL can break it. The project's rule throughout is <em>constraints, not prose</em>: if the domain says it, the schema enforces it. The <code>CHECK</code> on <code>chunking_strategy</code> is the same idea.</p>
+</div>
+
+<p>One consequence: <code>documents</code> and <code>chunking_generations</code> reference each other, a circular dependency. You can't create both foreign keys in one <code>CREATE TABLE</code>, which is why <code>001_schema.sql</code> adds the active-pointer FK afterwards with <code>ALTER TABLE</code>. The loader faces the same chicken-and-egg problem (<a href="#loader">section 10</a>).</p>
+
+<h2 id="embeddings">8. Big idea 4: embeddings and pgvector</h2>
+
+<div class="callout">
+  <b class="t">Concept: embeddings</b>
+  <p>An <b>embedding</b> is a list of numbers (here 768 of them) that a neural network produces from a piece of text. The model is trained so that texts with similar <em>meaning</em> produce vectors pointing in similar <em>directions</em>. "Banks must hold minimum capital" and "Credit institutions are required to maintain minimum own funds" share few words but end up close together. A recipe for bread ends up far away.</p>
+  <p>Search then becomes geometry: embed the question, find the stored vectors pointing most nearly the same way. That's the "retrieval" in RAG.</p>
+</div>
+
+<p><code>embed.py</code> uses <code>nomic-embed-text</code>, a small model run locally by Ollama, so no data leaves the machine and no API costs are incurred. <b>pgvector</b> adds a <code>vector(768)</code> column type and distance operators such as <code>&lt;=&gt;</code> (cosine distance) to Postgres. Postgres rejects a vector of any other length at insert time, so a wrong-sized model can't slip in unnoticed.</p>
+
+<h3>Three design decisions</h3>
+<ol>
+  <li><b>A separate table keyed by <code>(chunk_id, embedding_model)</code>, not an <code>embedding</code> column on <code>chunks</code></b> (ADR-0024). A column would be overwritten the first time you tried a second model, and the eval could no longer compare the two. As a separate table, a second model just adds rows beside the first. It's the same "old stays, new is additive" pattern as Chunking Generations.</li>
+  <li><b>Only the active generation is embedded</b> (ADR-0025). Embedding is the one expensive step: a model call per Chunk. Inactive generations are never searched, so embedding them would be wasted work.</li>
+  <li><b>Chunk text is prefixed with <code>"search_document: "</code> before embedding</b> (ADR-0026), and questions later with <code>"search_query: "</code>. <code>nomic-embed-text</code> was trained this way: it places stored passages and search questions in vector space differently. Leave the prefix off and search still works, just measurably worse. The prefix is only sent to the model. <code>chunks.text</code> is stored exactly as ingested.</li>
+</ol>
+
+<h3>Built to resume after a crash</h3>
+<p>The loader runs in one big transaction: all or nothing. <code>embed.py</code> deliberately doesn't. It uses <b>autocommit</b>, saving each embedding the moment it's computed, and its query only selects Chunks that don't yet have an embedding for this model:</p>
+<pre><code>SELECT chunks.id, chunks.text
+FROM chunks
+JOIN documents                              -- only the active generation
+  ON chunks.document_id = documents.id
+ AND chunks.chunking_generation_id = documents.active_chunking_generation_id
+LEFT JOIN chunk_embeddings                  -- ...that isn't embedded yet
+  ON chunk_embeddings.chunk_id = chunks.id
+ AND chunk_embeddings.embedding_model = 'nomic-embed-text'
+WHERE chunk_embeddings.chunk_id IS NULL</code></pre>
+<p>So if Ollama dies at Chunk 1,400, re-running picks up at 1,401. And it fails <em>loudly</em> on the first error, so a systemic problem (Ollama not running, model not pulled) shows up on Chunk 1, not after an hour.</p>
+
+<h2 id="events">9. Big idea 5: the append-only events table</h2>
+<p>Every question Track B answers becomes an Event row: what was asked (with personal data already redacted), which Chunks were cited, any flags raised. This is the audit trail, and it must never change after being written.</p>
+<p>Instead of trusting every caller to behave, <code>004_events.sql</code> installs a <b>trigger</b> that fires before any <code>UPDATE</code> or <code>DELETE</code> and raises an error:</p>
+<pre><code>CREATE TRIGGER events_are_immutable
+    BEFORE UPDATE OR DELETE ON events
+    FOR EACH ROW EXECUTE FUNCTION reject_event_change();
+-- → ERROR: events is append-only: UPDATE is not allowed</code></pre>
+<p>A correction is always a new Event. <code>recorded_at</code> is stamped by the database's clock (<code>DEFAULT now()</code>), not passed in by the app, so it can't be forged or skewed. The app validates each Event against its JSON Schema <em>before</em> inserting. The database stores the payload without re-checking its shape.</p>
+<p>One deliberate gap: row triggers don't fire on <code>TRUNCATE</code>. That stays a privileged, deliberate act, and it's how the test helpers clear the test database between tests.</p>
+
+<h2 id="loader">10. How the loader fills the tables</h2>
+<p><code>loader.py</code> first validates the JSON in memory: every Chunk's Document exists, every strategy is valid, every active pointer names a real generation. Errors come out as clear messages, not raw foreign-key violations. Then, in <b>one transaction</b>, it writes in four phases. The order is forced by the circular references:</p>
+<div class="wrap">
+<table>
+  <tr><th>Phase</th><th>Writes</th><th>Why in this order</th></tr>
+  <tr><td>1</td><td><code>documents</code>, <b>without</b> <code>supersedes</code> or the active pointer</td><td>Those two fields can point at rows that don't exist yet.</td></tr>
+  <tr><td>2</td><td><code>chunking_generations</code></td><td>Needs its Document, which now exists.</td></tr>
+  <tr><td>3</td><td><code>UPDATE documents</code>: set <code>supersedes</code> (new Documents only) and the active pointer (always)</td><td>The rows both fields point at now exist.</td></tr>
+  <tr><td>4</td><td><code>chunks</code></td><td>Needs both its Document and its Generation.</td></tr>
+</table>
+</div>
+<p>If anything fails, the whole load rolls back. Unlike ingestion, where one corrupt PDF shouldn't stop the others, a failure here means validated JSON doesn't fit the schema. That's a bug worth stopping for.</p>
+<p>Chunking Generations aren't their own JSON files: they only appear as ids on Chunks. The loader derives them from the Chunks and reads each one's <code>chunking_strategy</code> from <code>ingestion/manifest.json</code>.</p>
+
+<h2 id="query">11. How retrieval reads it</h2>
+<p>This is (simplified) the entire retriever used by the eval harness and Track B. It's one SQL statement:</p>
+<pre><code>SELECT chunks.document_id, chunks.locator,
+       1 - (chunk_embeddings.embedding &lt;=&gt; :question_vector) AS similarity
+FROM chunk_embeddings
+JOIN chunks      ON chunks.id = chunk_embeddings.chunk_id
+JOIN documents   ON documents.id = chunks.document_id
+               AND documents.active_chunking_generation_id = chunks.chunking_generation_id
+WHERE chunk_embeddings.embedding_model = 'nomic-embed-text'
+ORDER BY chunk_embeddings.embedding &lt;=&gt; :question_vector
+LIMIT 10</code></pre>
+<ul>
+  <li><code>&lt;=&gt;</code> is pgvector's cosine distance: 0 = same direction, 1 = unrelated. <code>1 - distance</code> turns it into a similarity score.</li>
+  <li><code>ORDER BY distance LIMIT 10</code> is "give me the 10 nearest neighbours".</li>
+  <li>The join on <code>active_chunking_generation_id</code> is where the active pointer earns its keep: old generations never come back.</li>
+  <li>Filtering on <code>embedding_model</code> is where the <code>(chunk_id, embedding_model)</code> key earns its keep: a second model's vectors could sit in the same table without interfering.</li>
+</ul>
+
+<h2 id="setup">12. Two databases and the init scripts</h2>
+<p><code>docker compose up -d</code> in <code>store/</code> starts <code>pgvector/pgvector:pg16</code>. On the <b>first</b> start with an empty volume, Postgres runs every file in <code>init/</code> in filename order:</p>
+<table>
+  <tr><th>File</th><th>Does</th></tr>
+  <tr><td><code>001_schema.sql</code></td><td>Enables pgvector; creates <code>documents</code>, <code>chunking_generations</code>, <code>chunks</code>, their keys and indexes.</td></tr>
+  <tr><td><code>002_test_database.sql</code></td><td>Creates a second database, <code>regdocs_test</code>, and re-runs 001 inside it.</td></tr>
+  <tr><td><code>003_chunk_embeddings.sql</code></td><td>Adds <code>chunk_embeddings</code> to <b>both</b> databases.</td></tr>
+  <tr><td><code>004_events.sql</code></td><td>Adds <code>events</code> and its trigger to <b>both</b> databases.</td></tr>
+</table>
+<p><b>Why two databases?</b> Tests wipe tables between runs. Pointing them at <code>regdocs_test</code> means running the test suite can never destroy the real data you loaded into <code>regdocs</code>. Tests that need Postgres skip themselves (rather than fail) if the container isn't up.</p>
+<p><b>How 003 and 004 reach both databases</b> without a duplicate copy of the SQL: each file sets a psql variable as a "done" flag, reconnects to <code>regdocs_test</code> and re-includes itself. On the second pass the flag is set, so it doesn't loop forever.</p>
+<div class="callout">
+  <b class="t">Gotcha</b>
+  <p>Init scripts only run against an <b>empty</b> volume. If you change a schema file later, <code>docker compose up</code> won't re-apply it. Either reset (<code>docker compose down -v</code>, then <code>up -d</code>, then re-run the loader and embedder) or apply the single file by hand with <code>psql -f</code>, as <code>store/README.md</code> shows.</p>
+</div>
+
+<h2 id="not">13. What isn't built yet</h2>
+<ul>
+  <li><b>No vector index</b> (<code>hnsw</code> / <code>ivfflat</code>). Every search compares the question against all ~2,000 vectors. At this size that's instant, and it's <em>exact</em>. Approximate indexes can miss true neighbours, which would muddy the eval's measurements. An index needs tuning against real query patterns, so it's deferred until it's needed.</li>
+  <li><b>No GIN index on <code>events.payload</code>.</b> Deferred until a JSONB query is actually slow.</li>
+  <li><b>Inactive generations have no embeddings.</b> If a Replay ever needs period-accurate <em>vectors</em> (not just period-accurate text), they won't exist. That's a known, accepted gap (ADR-0025).</li>
+</ul>
+
+<h2 id="try">14. Try it yourself</h2>
+<p>All of these need the container running (<code>docker compose up -d</code> in <code>store/</code>). None need Ollama: the tests inject a fake embedding client.</p>
+
+<h3>Test 1: only the active generation gets embedded</h3>
+<p><code>store/tests/test_embed.py::test_embeds_only_chunks_of_the_active_generation</code></p>
+<pre><code>python -m pytest store/tests/test_embed.py::test_embeds_only_chunks_of_the_active_generation -v</code></pre>
+<p><b>Shows:</b> the loader and embedder working together. The fixture corpus has one Document with <em>two</em> generations: gen-1 (inactive, one Chunk) and gen-2 (active, two Chunks). After <code>embed_chunks</code>, only the two gen-2 Chunks have embeddings, and the fake client was called exactly twice.<br>
+<b>Poke at it:</b> in <code>embed.py</code>, delete the line <code>AND chunks.chunking_generation_id = documents.active_chunking_generation_id</code> and rerun. The inactive Chunk gets embedded too and the test fails. That one join line is the whole of ADR-0025.<br>
+<b>Why this one:</b> in one test it exercises the loader, Chunking Generations, the active pointer and the embeddings table, which is most of this page.</p>
+
+<h3>Test 2: the events table refuses edits</h3>
+<p><code>store/tests/test_events_table.py::test_delete_on_events_is_rejected</code></p>
+<pre><code>python -m pytest store/tests/test_events_table.py::test_delete_on_events_is_rejected -v</code></pre>
+<p><b>Shows:</b> a <code>DELETE FROM events</code> raises the trigger's "append-only" error, and the row is still there afterwards. The guarantee lives in the database, not in Python.<br>
+<b>Why this one:</b> it's short and pure SQL, so the database-enforced rule is easy to see.</p>
+
+<h3>Poke the real data directly</h3>
+<pre><code>cd store
+docker compose exec postgres psql -U regdocs -d regdocs</code></pre>
+<pre><code>-- how many Chunks per Document, active generation only
+SELECT d.id, count(*) FROM documents d
+JOIN chunks c ON c.chunking_generation_id = d.active_chunking_generation_id
+GROUP BY d.id ORDER BY d.id;
+
+-- try to break the composite FK (this should fail)
+UPDATE documents SET active_chunking_generation_id = 'doc-09-cp158-consumer-protection-code-gen-1'
+WHERE id LIKE 'doc-04%';
+
+-- see the first 5 of a Chunk's 768 numbers
+SELECT chunk_id, (embedding::real[])[1:5] FROM chunk_embeddings LIMIT 3;</code></pre>
+<p>For a feel of what similarity scores look like, run <code>python -m regdocs_store.explore_embeddings</code> (needs Ollama). It's a throwaway learning script that compares a handful of sentences and prints their similarity matrix, with and without the prefixes.</p>
+
+<h2>Summary</h2>
+<p>The store is a Postgres + pgvector database with five tables. <code>documents</code>, <code>chunking_generations</code> and <code>chunks</code> hold the corpus in typed columns. They're filled by a loader that only ever inserts, and protected by composite foreign keys so a Document's active pointer, and every Chunk, can only refer to a generation of the right Document. Re-chunking adds a new generation instead of replacing the old one, and the active pointer decides which one retrieval searches. <code>chunk_embeddings</code> holds one 768-number vector per Chunk per model, computed locally by Ollama for active Chunks only, with an asymmetric prefix the model relies on. Retrieval is one SQL query ordering by cosine distance. <code>events</code> is an append-only JSONB audit log whose immutability is enforced by a trigger. Throughout, the rule is the event-sourcing one: old data stays, new data is added beside it, and the schema enforces the domain's rules rather than leaving them to convention.</p>
+
+</main>
+</body>
+</html>
